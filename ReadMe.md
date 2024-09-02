@@ -8,7 +8,7 @@ Simplify attendance and resource management.
 Create a hub for announcements and course materials.
 🤝 Looking for Collaborators! I'm on the lookout for passionate developers, designers, and anyone interested in making a difference in education tech. Whether you're experienced or just starting out, let's connect and make Uni Connect better together!
 
-Feel free to check out [**Uni Konnect**](https://github.com/mikesplore/Uni-Konnect) and drop me a message if you're interested in contributing. Let's build something amazing!
+Feel free to check out [**Uni Connect**](https://github.com/mikesplore/Uni-Connect) and drop me a message if you're interested in contributing. Let's build something amazing!
 
 
 ## 🌐 Socials:
