@@ -1,5 +1,14 @@
 # 💫 About Me:
-I am currently working on Uni Connect Project<br>Currently Learning Kotlin and Jetpack Compose<br>I am looking for collaborators for my project
+I'm currently working on Uni Connect, a student management system designed to enhance the learning experience by enabling students to share resources, engage in discussions, manage resources, and stay up-to-date with course materials and announcements. I'm learning Kotlin and Jetpack Compose to bring this vision to life.
+
+🚀 Project Goals:
+
+Streamline student collaboration and resource sharing.
+Simplify attendance and resource management.
+Create a hub for announcements and course materials.
+🤝 Looking for Collaborators! I'm on the lookout for passionate developers, designers, and anyone interested in making a difference in education tech. Whether you're experienced or just starting out, let's connect and make Uni Connect better together!
+
+Feel free to check out [**Uni Konnect**](https://github.com/mikesplore/Uni-Konnect) and drop me a message if you're interested in contributing. Let's build something amazing!
 
 
 ## 🌐 Socials:
