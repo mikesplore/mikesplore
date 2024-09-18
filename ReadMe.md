@@ -1,14 +1,28 @@
-# 💫 About Me:
-I'm currently working on Uni Connect, a student management system designed to enhance the learning experience by enabling students to share resources, engage in discussions, manage resources, and stay up-to-date with course materials and announcements. I'm learning Kotlin and Jetpack Compose to bring this vision to life.
+# 💫 About Me
 
-🚀 Project Goals:
+Hi! My name is **Michael Odhiambo**. I am a **Computer Science** student at **Technical University of Mombasa**, passionate about technology and its potential to improve education. I'm currently working on **Uni Connect**, a student management system designed to streamline the academic experience and enhance student collaboration.
 
-Streamline student collaboration and resource sharing.
-Simplify attendance and resource management.
-Create a hub for announcements and course materials.
-🤝 Looking for Collaborators! I'm on the lookout for passionate developers, designers, and anyone interested in making a difference in education tech. Whether you're experienced or just starting out, let's connect and make Uni Connect better together!
+## 🎓 Education
+I'm pursuing a **Bachelors of Science in Computer Science** at **Technical University of Mombasa**. My coursework and personal projects have allowed me to develop skills in software development, with a special focus on Android development using **Kotlin** and **Jetpack Compose**.
 
-Feel free to check out [**Uni Connect**](https://github.com/mikesplore/Uni-Connect) and drop me a message if you're interested in contributing. Let's build something amazing!
+## 🚀 Project: Uni Connect
+The **Uni Connect** project is my way of combining technology with education. The app is designed to:
+
+- Facilitate **student collaboration** by enabling resource sharing and discussions.
+- Simplify **attendance and resource management** for both students and educators.
+- Serve as a centralized hub for **announcements** and **course materials**.
+
+## 🤝 Collaboration
+I'm always looking to improve **Uni Connect**, and I’d love to collaborate with other passionate individuals in the education tech space! Whether you're a developer, designer, or just someone interested in the intersection of technology and learning, feel free to reach out.
+
+You can check out **[Uni Connect](https://github.com/mikesplore/Uni-Connect)** and message me if you want to contribute. Together, let's make a meaningful difference in education!
+
+## 🌱 Skills
+- **Languages**: Kotlin, Java
+- **Tools**: Jetpack Compose, Firebase, Room Database
+- **Areas of Interest**: Mobile App Development, Educational Technology, UI/UX Design
+
+Let’s connect and create something amazing!
 
 
 ## 🌐 Socials:
