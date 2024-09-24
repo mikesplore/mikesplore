@@ -1,28 +1,29 @@
 # 💫 About Me
 
-Hi! My name is **Michael Odhiambo**. I am a **Computer Science** student at **Technical University of Mombasa**, passionate about technology and its potential to improve education. I'm currently working on **Uni Connect**, a student management system designed to streamline the academic experience and enhance student collaboration.
+Hi! My name is **Michael Odhiambo**. I am a **Computer Science** student at **Technical University of Mombasa**, passionate about technology and its potential to improve various industries. I’ve recently completed **Uni Connect**, a student management system, and I’m now working on **My Keja**, a house/room management system.
 
 ## 🎓 Education
 I'm pursuing a **Bachelors of Science in Computer Science** at **Technical University of Mombasa**. My coursework and personal projects have allowed me to develop skills in software development, with a special focus on Android development using **Kotlin** and **Jetpack Compose**.
 
-## 🚀 Project: Uni Connect
-The **Uni Connect** project is my way of combining technology with education. The app is designed to:
+## 🚀 Current Project: My Keja
+**My Keja** is my latest venture into solving everyday challenges through technology. This app aims to:
 
-- Facilitate **student collaboration** by enabling resource sharing and discussions.
-- Simplify **attendance and resource management** for both students and educators.
-- Serve as a centralized hub for **announcements** and **course materials**.
+- Facilitate **house browsing**, allowing users to search, filter, and view available houses/rooms.
+- Provide a seamless way to **manage bookings**, room allocations, and favorites.
+- Enhance **user experience** with intuitive navigation and detailed house information.
 
 ## 🤝 Collaboration
-I'm always looking to improve **Uni Connect**, and I’d love to collaborate with other passionate individuals in the education tech space! Whether you're a developer, designer, or just someone interested in the intersection of technology and learning, feel free to reach out.
+If you're a developer, designer, or just someone interested in property management solutions or mobile development, feel free to reach out! I’d love to hear your ideas or collaborate on future projects.
 
-You can check out **[Uni Connect](https://github.com/mikesplore/Uni-Connect)** and message me if you want to contribute. Together, let's make a meaningful difference in education!
+You can check out **[My Keja](https://github.com/mikesplore/My-Keja)** (coming soon) and contact me if you're interested in contributing.
 
 ## 🌱 Skills
 - **Languages**: Kotlin, Java
 - **Tools**: Jetpack Compose, Firebase, Room Database
-- **Areas of Interest**: Mobile App Development, Educational Technology, UI/UX Design
+- **Areas of Interest**: Mobile App Development, Property Management Systems, UI/UX Design
 
-Let’s connect and create something amazing!
+Let’s connect and build something great together!
+
 
 
 ## 🌐 Socials:
