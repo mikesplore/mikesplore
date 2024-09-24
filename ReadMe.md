@@ -15,7 +15,7 @@ I'm pursuing a **Bachelors of Science in Computer Science** at **Technical Unive
 ## 🤝 Collaboration
 If you're a developer, designer, or just someone interested in property management solutions or mobile development, feel free to reach out! I’d love to hear your ideas or collaborate on future projects.
 
-You can check out **[My Keja](https://github.com/mikesplore/My-Keja)** (coming soon) and contact me if you're interested in contributing.
+You can check out **[My Keja](https://github.com/mikesplore/MyKeja)** (coming soon) and contact me if you're interested in contributing.
 
 ## 🌱 Skills
 - **Languages**: Kotlin, Java
