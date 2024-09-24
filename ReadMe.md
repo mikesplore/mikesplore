@@ -20,7 +20,7 @@ You can check out **[My Keja](https://github.com/mikesplore/MyKeja)** (coming so
 ## 🌱 Skills
 - **Languages**: Kotlin, Java
 - **Tools**: Jetpack Compose, Firebase, Room Database
-- **Areas of Interest**: Mobile App Development, Property Management Systems, UI/UX Design
+- **Areas of Interest**: Mobile App Development, Property Management Systems
 
 Let’s connect and build something great together!
 
