@@ -6,7 +6,7 @@ I’m **Michael Odhiambo**, a **Computer Science** student at **Technical Univer
 - Focus on **Android development** using **Kotlin** and **Jetpack Compose**.
 
 ### 🚀 Current Project
-Working on **My Keja**, a house management app that:
+Working on [My Keja](#https://githu.com/mikesplore/My-Keja), a house management app that:
 - Lets users browse, search, and filter available rooms.
 - Facilitates booking and room allocation.
 
