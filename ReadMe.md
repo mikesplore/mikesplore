@@ -1,29 +1,20 @@
-# 💫 About Me
+## 👋 About Me
+I’m **Michael Odhiambo**, a **Computer Science** student at **Technical University of Mombasa**, passionate about using technology to solve real-world problems.
 
-Hi! My name is **Michael Odhiambo**. I am a **Computer Science** student at **Technical University of Mombasa**, passionate about technology and its potential to improve various industries. I’ve recently completed **Uni Connect**, a student management system, and I’m now working on **My Keja**, a house/room management system.
+### 🎓 Education
+- **BSc. in Computer Science** at **TUM**.
+- Focus on **Android development** using **Kotlin** and **Jetpack Compose**.
 
-## 🎓 Education
-I'm pursuing a **Bachelors of Science in Computer Science** at **Technical University of Mombasa**. My coursework and personal projects have allowed me to develop skills in software development, with a special focus on Android development using **Kotlin** and **Jetpack Compose**.
+### 🚀 Current Project
+Working on **My Keja**, a house management app that:
+- Lets users browse, search, and filter available rooms.
+- Facilitates booking and room allocation.
 
-## 🚀 Current Project: My Keja
-**My Keja** is my latest venture into solving everyday challenges through technology. This app aims to:
-
-- Facilitate **house browsing**, allowing users to search, filter, and view available houses/rooms.
-- Provide a seamless way to **manage bookings**, room allocations, and favorites.
-- Enhance **user experience** with intuitive navigation and detailed house information.
-
-## 🤝 Collaboration
-If you're a developer, designer, or just someone interested in property management solutions or mobile development, feel free to reach out! I’d love to hear your ideas or collaborate on future projects.
-
-You can check out **[My Keja](https://github.com/mikesplore/MyKeja)** (coming soon) and contact me if you're interested in contributing.
-
-## 🌱 Skills
+### 🌱 Skills
 - **Languages**: Kotlin, Java
 - **Tools**: Jetpack Compose, Firebase, Room Database
-- **Areas of Interest**: Mobile App Development, Property Management Systems
 
-Let’s connect and build something great together!
-
+Let’s connect!
 
 
 ## 🌐 Socials:
