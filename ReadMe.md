@@ -1,5 +1,5 @@
 ## 👋 About Me
-I’m **Michael Odhiambo**, a **Computer Science** student at **Technical University of Mombasa**, passionate about using technology to solve real-world problems.
+I’m **Mike**, a **Computer Science** student at **Technical University of Mombasa**, passionate about using technology to solve real-world problems.
 
 ### 🎓 Education
 - **BSc. in Computer Science** at **TUM**.
