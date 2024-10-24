@@ -9,6 +9,7 @@ I’m **Mike**, a **Computer Science** student at **Technical University of Momb
 Working on [My Keja](https://github.com/mikesplore/MyKeja), a house management app that:
 - Lets users browse, search, and filter available rooms.
 - Facilitates booking and room allocation.
+- Lets users chat and discuss issues with the house owners and managers
 
 ### 🌱 Skills
 - **Languages**: Kotlin, Java
