@@ -1,5 +1,5 @@
 # 💫 About Me:
-I'm Mike, an Android developer specializing in Jetpack Compose and Kotlin, currently pursuing a BSc in Computer Science at the Technical University of Mombasa.
+I'm Michael, an Android developer specializing in Jetpack Compose and Kotlin, currently pursuing a BSc in Computer Science at the Technical University of Mombasa.
 
 
 ## 🌐 Socials:
