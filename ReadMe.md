@@ -6,7 +6,7 @@ I enjoy building innovative solutions for everyday challenges and continuously e
 ## 🌟 Projects:
 - **Uni Connect:** A class management system for organizing class schedules and assignments. Utilizes **Firebase** and **Room** for backend storage.  
 - **PC Controller:** An app for controlling basic PC functions, featuring backend integration with **Ktor** and **Room**.
-- **Automatic Timetable Generator:** An algorithm for generating Timetable, featuring variety of Algorithms and Parallel Processing via Kotlin Coroutines
+- **Timetable Management System:** A Timetable Management website that creates and manages timetables.
 
 I am passionate about creating fully functional apps using **Jetpack Compose**, and I'm always eager to learn and explore more as I grow in the tech field.
 
