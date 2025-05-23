@@ -1,14 +1,5 @@
 # 💫 About Me:
-Hi there! I'm Mike, an Android developer specializing in **Jetpack Compose** and **Kotlin**, with backend integration using **Firebase** and **Ktor**. I'm currently pursuing a **BSc in Computer Science** at the **Technical University of Mombasa**.  
-
-I enjoy building innovative solutions for everyday challenges and continuously expanding my skill set as new technologies emerge.
-
-## 🌟 Projects:
-- **Uni Connect:** A class management system for organizing class schedules and assignments. Utilizes **Firebase** and **Room** for backend storage.  
-- **PC Controller:** An app for controlling basic PC functions, featuring backend integration with **Ktor** and **Room**.
-- **Timetable Management System:** A Timetable Management website that creates and manages timetables.
-
-I am passionate about creating fully functional apps using **Jetpack Compose**, and I'm always eager to learn and explore more as I grow in the tech field.
+Want to know me? Head over to [my portfolio](https://mikesplore.github.io/portfolio)
 
 ## 🌐 Socials:
 [![Instagram](https://img.shields.io/badge/Instagram-%23E4405F.svg?logo=Instagram&logoColor=white)](https://instagram.com/mikesplore)  
