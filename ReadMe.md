@@ -1,5 +1,5 @@
 # 💫 About Me:
-Want to know me? Head over to [my portfolio](https://mikesplore.github.io/portfolio)
+Detailed information about me in [my portfolio](https://mikesplore.me)
 
 ## 🌐 Socials:
 [![Instagram](https://img.shields.io/badge/Instagram-%23E4405F.svg?logo=Instagram&logoColor=white)](https://instagram.com/pandeylore)  
