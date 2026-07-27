@@ -1,12 +1,5 @@
 # 💫 About Me:
-Detailed information about me in [my portfolio](https://mikesplore.me)
-
-## 🌐 Socials:
-[![Instagram](https://img.shields.io/badge/Instagram-%23E4405F.svg?logo=Instagram&logoColor=white)](https://instagram.com/pandeylore)  
-
-# 💻 Tech Stack:
-![Firebase](https://img.shields.io/badge/firebase-a08021?style=for-the-badge&logo=firebase&logoColor=ffcd34)  
-![Kotlin](https://img.shields.io/badge/kotlin-%237F52FF.svg?style=for-the-badge&logo=kotlin&logoColor=white)  
+Head over to [my portfolio](https://mikesplore.me)
 
 # 📊 GitHub Stats:
 ![](https://github-readme-stats.vercel.app/api?username=mikesplore&theme=dark&hide_border=false&include_all_commits=false&count_private=false)<br/>
