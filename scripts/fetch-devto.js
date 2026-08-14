@@ -19,6 +19,8 @@ const entries = articles.map((article) => ({
   blurb: oneLine(article.description) || 'Dev.to article',
   link: article.url,
   tags: (article.tag_list || []).slice(0, 5),
+  readTime: article.reading_time_minutes ?? 0,
+  thumbnail: article.cover_image || article.social_image || '',
 }));
 
 writeEntries('entries.devto.json', entries);

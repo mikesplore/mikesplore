@@ -89,6 +89,8 @@ const entries = repos
       blurb: override?.blurb || oneLine(repo.description) || 'GitHub repository',
       link: override?.link || repo.html_url,
       tags,
+      stars: repo.stargazers_count ?? 0,
+      thumbnail: repo.owner?.avatar_url || '',
     };
   });
 

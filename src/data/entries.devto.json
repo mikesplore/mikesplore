@@ -5,7 +5,9 @@
     "title": "Building a Secure Remote Execution Agent for AI: Loopback-Only REST, Outbound Tunnels, and MCP Integration",
     "blurb": "If you are designing infrastructure where AI or mobile clients need authenticated access to Linux...",
     "link": "https://dev.to/mikesplore/building-a-secure-remote-execution-agent-for-ai-loopback-only-rest-outbound-tunnels-and-mcp-202h",
-    "tags": []
+    "tags": [],
+    "readTime": 3,
+    "thumbnail": "https://media2.dev.to/dynamic/image/width=1000,height=420,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fqcebqnlv4j65nnc5vglt.png"
   },
   {
     "date": "2026-08-08",
@@ -17,7 +19,9 @@
       "mcp",
       "ai",
       "llm"
-    ]
+    ],
+    "readTime": 3,
+    "thumbnail": "https://media2.dev.to/dynamic/image/width=1000,height=420,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2F20dk77huyhn9kxenxwj5.png"
   },
   {
     "date": "2026-08-05",
@@ -29,7 +33,9 @@
       "kotlin",
       "nginx",
       "containers"
-    ]
+    ],
+    "readTime": 6,
+    "thumbnail": "https://media2.dev.to/dynamic/image/width=1000,height=420,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fginf1mcgvlc8lwdijash.png"
   },
   {
     "date": "2026-07-18",
@@ -42,7 +48,9 @@
       "linux",
       "productivity",
       "showdev"
-    ]
+    ],
+    "readTime": 4,
+    "thumbnail": "https://media2.dev.to/dynamic/image/width=1000,height=420,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fszrxqu8v3av23r6edsci.png"
   },
   {
     "date": "2026-06-12",
@@ -55,7 +63,9 @@
       "ai",
       "automation",
       "discuss"
-    ]
+    ],
+    "readTime": 2,
+    "thumbnail": "https://media2.dev.to/dynamic/image/width=1000,height=420,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.amazonaws.com%2Fuploads%2Farticles%2Fg1jghrn9hhq8b59ko3z6.png"
   },
   {
     "date": "2025-12-07",
@@ -63,7 +73,9 @@
     "title": "Building with AI: A Deep Dive Into My Gemini-Powered Projects",
     "blurb": "Over the year, I’ve been experimenting with AI APIs, search engines, and creative automation —…",
     "link": "https://dev.to/mikesplore/building-with-ai-a-deep-dive-into-my-gemini-powered-projects-j09",
-    "tags": []
+    "tags": [],
+    "readTime": 3,
+    "thumbnail": "https://media2.dev.to/dynamic/image/width=1000,height=500,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fdbc8chd6jarqdku7m6xd.png"
   },
   {
     "date": "2025-07-20",
@@ -76,7 +88,9 @@
       "backend",
       "authentication",
       "rbac"
-    ]
+    ],
+    "readTime": 3,
+    "thumbnail": "https://media2.dev.to/dynamic/image/width=1000,height=500,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fwiai2tsgj08sn093tkwj.png"
   },
   {
     "date": "2025-07-13",
@@ -88,7 +102,9 @@
       "kotlin",
       "programming",
       "coding"
-    ]
+    ],
+    "readTime": 4,
+    "thumbnail": "https://media2.dev.to/dynamic/image/width=1000,height=500,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fo4k0snflnjlx8nd50erk.png"
   },
   {
     "date": "2025-07-12",
@@ -98,7 +114,9 @@
     "link": "https://dev.to/mikesplore/api-vs-endpoint-whats-the-difference-with-real-full-stack-code-587p",
     "tags": [
       "kotlin"
-    ]
+    ],
+    "readTime": 3,
+    "thumbnail": "https://media2.dev.to/dynamic/image/width=1000,height=500,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2F5qvbkydd22e934zt693p.png"
   },
   {
     "date": "2025-07-09",
@@ -109,7 +127,9 @@
     "tags": [
       "kotlin",
       "programming"
-    ]
+    ],
+    "readTime": 6,
+    "thumbnail": "https://media2.dev.to/dynamic/image/width=1000,height=500,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Flmk2xhdgry7h0t49xr99.png"
   },
   {
     "date": "2025-07-09",
@@ -119,6 +139,8 @@
     "link": "https://dev.to/mikesplore/building-an-ai-documentation-agent-with-cohere-5ajm",
     "tags": [
       "kotlin"
-    ]
+    ],
+    "readTime": 2,
+    "thumbnail": "https://media2.dev.to/dynamic/image/width=1000,height=500,fit=cover,gravity=auto,format=auto/https%3A%2F%2Fdev-to-uploads.s3.us-east-2.amazonaws.com%2Fuploads%2Farticles%2Fjy5s9ant0remk5utsjdb.png"
   }
 ]
