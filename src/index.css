@@ -1,0 +1,129 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+[data-theme='light'] {
+  --color-page: #f8f6f2;
+  --color-card: #fff7ed;
+  --color-elevated: #f3f1ed;
+  --color-ink: #1c1917;
+  --color-muted: #57534e;
+  --color-subtle: #a8a29e;
+  --color-line: transparent;
+  --color-divider: rgba(28, 25, 23, 0.1);
+  --color-accent: #c2410c;
+  --color-accent-soft: #fff7ed;
+  --color-on-accent: #ffffff;
+  --color-teal: #0f766e;
+  --color-teal-soft: #f0fdfa;
+  --color-hover: rgba(28, 25, 23, 0.04);
+  --color-nav: #2563eb;
+  color-scheme: light;
+}
+
+[data-theme='dark'] {
+  --color-page: #141210;
+  --color-card: #1c1917;
+  --color-elevated: #252220;
+  --color-ink: #f5f5f4;
+  --color-muted: #a8a29e;
+  --color-subtle: #78716e;
+  --color-line: transparent;
+  --color-divider: rgba(255, 255, 255, 0.04);
+  --color-accent: #f59e0b;
+  --color-accent-soft: #2a2010;
+  --color-on-accent: #1a1614;
+  --color-teal: #2dd4bf;
+  --color-teal-soft: #132825;
+  --color-hover: rgba(255, 255, 255, 0.05);
+  --color-nav: #60a5fa;
+  color-scheme: dark;
+}
+
+:root {
+  font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background-color: var(--color-page);
+  color: var(--color-ink);
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  scroll-behavior: smooth;
+}
+
+#root {
+  width: 100%;
+  max-width: 100%;
+}
+
+a {
+  font-weight: 500;
+  text-decoration: inherit;
+}
+
+@layer components {
+  .chip {
+    border-radius: 9999px;
+    background-color: var(--color-elevated);
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+    color: var(--color-muted);
+  }
+
+  .chip-active {
+    background-color: var(--color-accent-soft);
+    color: var(--color-accent);
+  }
+
+  .divider {
+    height: 1px;
+    border: none;
+    background-color: var(--color-divider);
+  }
+
+  .scroll-pills {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scroll-pills::-webkit-scrollbar {
+    display: none;
+  }
+
+  .project-card {
+    background-color: var(--color-elevated);
+  }
+
+  .project-card:hover {
+    background-color: var(--color-card);
+  }
+
+  [data-theme='dark'] .project-card {
+    background-color: var(--color-card);
+  }
+
+  [data-theme='dark'] .project-card:hover {
+    background-color: var(--color-elevated);
+  }
+}

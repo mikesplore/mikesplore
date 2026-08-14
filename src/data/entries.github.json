@@ -1,0 +1,268 @@
+[
+  {
+    "date": "2026-07-28",
+    "type": "project",
+    "title": "gatekeeperd",
+    "blurb": "Automatically blocks client websites when payment due has passed, and manage paid projects.",
+    "link": "https://gatekeeperd.mikesplore.me",
+    "tags": [
+      "Kotlin"
+    ]
+  },
+  {
+    "date": "2026-06-30",
+    "type": "project",
+    "title": "vela chat",
+    "blurb": "Web version for Vela client",
+    "link": "https://github.com/mikesplore/vela-chat",
+    "tags": [
+      "TypeScript"
+    ]
+  },
+  {
+    "date": "2026-06-15",
+    "type": "project",
+    "title": "vela android",
+    "blurb": "Remote controller for PC",
+    "link": "https://github.com/mikesplore/vela-android",
+    "tags": [
+      "Kotlin"
+    ]
+  },
+  {
+    "date": "2026-06-04",
+    "type": "project",
+    "title": "FarmPulse",
+    "blurb": "Crop-first weather + AI insights + tree health scanner",
+    "link": "https://github.com/mikesplore/FarmPulse",
+    "tags": [
+      "Kotlin"
+    ]
+  },
+  {
+    "date": "2026-05-14",
+    "type": "project",
+    "title": "VelaAI",
+    "blurb": "This is the Vela AI Chatbot",
+    "link": "https://github.com/mikesplore/VelaAI",
+    "tags": [
+      "TypeScript"
+    ]
+  },
+  {
+    "date": "2026-05-10",
+    "type": "project",
+    "title": "velavps",
+    "blurb": "GitHub repository",
+    "link": "https://github.com/mikesplore/velavps",
+    "tags": [
+      "Python"
+    ]
+  },
+  {
+    "date": "2026-05-10",
+    "type": "project",
+    "title": "vela",
+    "blurb": "GitHub repository",
+    "link": "https://github.com/mikesplore/vela",
+    "tags": [
+      "Python"
+    ]
+  },
+  {
+    "date": "2026-04-25",
+    "type": "project",
+    "title": "Kipepeo Intelligence",
+    "blurb": "Credit Calculator",
+    "link": "https://github.com/mikesplore/Kipepeo-Intelligence",
+    "tags": [
+      "TypeScript"
+    ]
+  },
+  {
+    "date": "2026-04-21",
+    "type": "hobby",
+    "title": "sentinel",
+    "blurb": "GitHub repository",
+    "link": "https://github.com/mikesplore/sentinel",
+    "tags": [
+      "Python"
+    ]
+  },
+  {
+    "date": "2026-04-21",
+    "type": "hobby",
+    "title": "LinuxAutomation",
+    "blurb": "GitHub repository",
+    "link": "https://github.com/mikesplore/LinuxAutomation",
+    "tags": [
+      "Python"
+    ]
+  },
+  {
+    "date": "2025-12-16",
+    "type": "hobby",
+    "title": "EehSawa",
+    "blurb": "A sarcastic AI assistant built with Next.js and Genkit to generate witty replies in multiple…",
+    "link": "https://github.com/mikesplore/EehSawa",
+    "tags": [
+      "TypeScript"
+    ]
+  },
+  {
+    "date": "2025-12-14",
+    "type": "hobby",
+    "title": "KenTube",
+    "blurb": "GitHub repository",
+    "link": "https://github.com/mikesplore/KenTube",
+    "tags": [
+      "TypeScript"
+    ]
+  },
+  {
+    "date": "2025-12-12",
+    "type": "project",
+    "title": "dyad",
+    "blurb": "Free, local, open-source AI app builder ✨ v0 / lovable / Bolt alternative 🌟 Star if you like it!",
+    "link": "https://github.com/mikesplore/dyad",
+    "tags": []
+  },
+  {
+    "date": "2025-12-10",
+    "type": "project",
+    "title": "quickscore",
+    "blurb": "GitHub repository",
+    "link": "https://github.com/mikesplore/quickscore",
+    "tags": [
+      "TypeScript"
+    ]
+  },
+  {
+    "date": "2025-12-08",
+    "type": "hobby",
+    "title": "tutorai",
+    "blurb": "GitHub repository",
+    "link": "https://github.com/mikesplore/tutorai",
+    "tags": [
+      "TypeScript"
+    ]
+  },
+  {
+    "date": "2025-12-04",
+    "type": "hobby",
+    "title": "github wrapped",
+    "blurb": "AI-powered roast of your GitHub year. Spotify Wrapped vibes meet brutal coding reality checks.",
+    "link": "https://github.com/mikesplore/github-wrapped",
+    "tags": [
+      "TypeScript"
+    ]
+  },
+  {
+    "date": "2025-12-01",
+    "type": "project",
+    "title": "quizbase",
+    "blurb": "A retrieval-locked Quizlet assistant that searches flashcards and returns exact answers (no AI…",
+    "link": "https://github.com/mikesplore/quizbase",
+    "tags": [
+      "TypeScript"
+    ]
+  },
+  {
+    "date": "2025-11-29",
+    "type": "project",
+    "title": "Afara Dada Code",
+    "blurb": "Afara Dada Code is an AI agent designed to bridge the gender funding gap in African technology. It…",
+    "link": "https://github.com/mikesplore/Afara-Dada-Code",
+    "tags": []
+  },
+  {
+    "date": "2025-11-20",
+    "type": "project",
+    "title": "style ai studio",
+    "blurb": "Web application that leverages generative AI to revolutionize how users visualize and manage…",
+    "link": "https://github.com/mikesplore/style-ai-studio",
+    "tags": [
+      "TypeScript"
+    ]
+  },
+  {
+    "date": "2025-11-18",
+    "type": "project",
+    "title": "Zawadi Tunu",
+    "blurb": "A smart agent built using the Agent Development Kit (ADK) and Vertex AI Memory Bank. It remembers…",
+    "link": "https://github.com/mikesplore/Zawadi-Tunu",
+    "tags": [
+      "Jupyter Notebook"
+    ]
+  },
+  {
+    "date": "2025-10-25",
+    "type": "project",
+    "title": "StoryLoom",
+    "blurb": "An AI powered story generator, translator and reader. With a quiz",
+    "link": "https://github.com/mikesplore/StoryLoom",
+    "tags": [
+      "TypeScript"
+    ]
+  },
+  {
+    "date": "2025-10-22",
+    "type": "hobby",
+    "title": "AnimalQuiz",
+    "blurb": "GitHub repository",
+    "link": "https://github.com/mikesplore/AnimalQuiz",
+    "tags": [
+      "Python"
+    ]
+  },
+  {
+    "date": "2025-06-30",
+    "type": "project",
+    "title": "Tuya",
+    "blurb": "GitHub repository",
+    "link": "https://github.com/mikesplore/Tuya",
+    "tags": [
+      "Kotlin"
+    ]
+  },
+  {
+    "date": "2025-02-27",
+    "type": "project",
+    "title": "Timetable Frontend",
+    "blurb": "GitHub repository",
+    "link": "https://github.com/mikesplore/Timetable-Frontend",
+    "tags": [
+      "JavaScript"
+    ]
+  },
+  {
+    "date": "2025-01-24",
+    "type": "hobby",
+    "title": "PC Controller",
+    "blurb": "A backend for PC Controller",
+    "link": "https://github.com/mikesplore/PC-Controller",
+    "tags": [
+      "Kotlin"
+    ]
+  },
+  {
+    "date": "2024-09-19",
+    "type": "project",
+    "title": "MyKeja",
+    "blurb": "A Room Management System developed using MVVM architecture and Jetpack Compose",
+    "link": "https://github.com/mikesplore/MyKeja",
+    "tags": [
+      "Kotlin"
+    ]
+  },
+  {
+    "date": "2024-07-17",
+    "type": "project",
+    "title": "Uni Connect",
+    "blurb": "A comprehensive student management app that facilitates resource sharing, discussions, attendance…",
+    "link": "https://github.com/mikesplore/Uni-Connect",
+    "tags": [
+      "Kotlin"
+    ]
+  }
+]
