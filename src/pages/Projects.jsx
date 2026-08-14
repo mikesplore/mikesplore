@@ -12,18 +12,15 @@ const Projects = () => {
             className="group flex items-center gap-4 p-4 sm:p-5 transition-colors hover:bg-accent/5"
           >
             <div className="h-14 w-20 shrink-0 overflow-hidden rounded-md bg-elevated">
-              {project.cardImage ? (
-                <img
-                  src={project.cardImage}
-                  alt={`${project.title} preview`}
-                  className="h-full w-full object-cover"
-                  loading="lazy"
-                />
-              ) : (
-                <div className="flex h-full items-center justify-center text-xs text-subtle">
-                  No image
-                </div>
-              )}
+              <img
+                src={
+                  project.cardImage ||
+                  `https://ui-avatars.com/api/?name=${encodeURIComponent(project.title)}`
+                }
+                alt={`${project.title} preview`}
+                className="h-full w-full object-cover"
+                loading="lazy"
+              />
             </div>
 
             <div className="min-w-0 flex-1">

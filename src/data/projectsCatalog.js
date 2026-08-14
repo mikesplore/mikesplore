@@ -14,10 +14,11 @@ export const projectsCatalog = [
     status: 'source-only',
     stack: ['Python', 'FastAPI', 'MCP', 'HTTP', 'STDIO'],
     tags: ['AI', 'MCP', 'Tooling', 'Remote Control'],
-    cardImage: 'https://i.ibb.co/y5TD8KW/unstacked2.jpg',
+    cardImage: 'https://i.ibb.co/Fktsm4DQ/vela.webp',
     gallery: [
       'https://i.ibb.co/y5TD8KW/unstacked2.jpg',
       'https://i.ibb.co/y5TD8KW/unstacked2.jpg',
+      
     ],
     links: {
       repo: 'https://github.com/mikesplore/vela-mcp',
@@ -38,11 +39,12 @@ export const projectsCatalog = [
     type: 'problem-solving',
     status: 'live',
     stack: ['Go', 'Paystack API', 'SQLite', 'nginx', 'Traefik'],
-    tags: ['Payments', 'Infrastructure', 'SaaS'],
-    cardImage: '/projects/gatekeeperd/cover.png',
+    tags: ['Payments', 'Infrastructure'],
+    cardImage: 'https://i.ibb.co/JwzrKLv1/gatekeeperd.png',
     gallery: [
-      '/projects/gatekeeperd/screenshot-1.png',
-      '/projects/gatekeeperd/screenshot-2.png',
+      'https://i.ibb.co/4n6k3GHD/projects.png',
+      'https://i.ibb.co/PzsZnQj0/containers.png',
+      'https://i.ibb.co/LzVDMtxY/blocked.png'
     ],
     links: {
       repo: 'https://github.com/mikesplore/gatekeeperd',
@@ -64,7 +66,7 @@ export const projectsCatalog = [
     status: 'source-only',
     stack: ['Kotlin', 'Python', 'FastAPI', 'LLM Function Calling'],
     tags: ['Android', 'AI', 'Remote Control', 'NLP'],
-    cardImage: '/projects/vela/cover.png',
+    cardImage: 'https://i.ibb.co/Fktsm4DQ/vela.webp',
     gallery: [
       '/projects/vela/screenshot-1.png',
       '/projects/vela/screenshot-2.png',
@@ -89,7 +91,7 @@ export const projectsCatalog = [
     status: 'live',
     stack: ['Django', 'PostgreSQL', 'JavaScript', 'Constraint Satisfaction'],
     tags: ['Education', 'Scheduling', 'Web App'],
-    cardImage: '/projects/tessera/cover.png',
+    cardImage: 'https://i.ibb.co/Mkx4D15n/tessera.png',
     gallery: [
       '/projects/tessera/screenshot-1.png',
       '/projects/tessera/screenshot-2.png',
@@ -114,7 +116,7 @@ export const projectsCatalog = [
     status: 'source-only',
     stack: ['Next.js', 'Google Gemini AI', 'Tailwind CSS'],
     tags: ['Fintech', 'AI', 'Hackathon'],
-    cardImage: '/projects/quickscore/cover.png',
+    cardImage: '',
     gallery: [
       '/projects/quickscore/screenshot-1.png',
       '/projects/quickscore/screenshot-2.png',
@@ -137,7 +139,7 @@ export const projectsCatalog = [
     status: 'source-only',
     stack: ['Python', 'Tuya API', 'M-Pesa API', 'PostgreSQL'],
     tags: ['IoT', 'Payments', 'Backend'],
-    cardImage: '/projects/tuya/cover.png',
+    cardImage: '',
     gallery: ['/projects/tuya/screenshot-1.png'],
     links: {
       repo: 'https://github.com/mikesplore/tuyampesa',
@@ -159,7 +161,7 @@ export const projectsCatalog = [
     status: 'source-only',
     stack: ['Python', 'scikit-learn', 'Pandas', 'Streamlit'],
     tags: ['Fintech', 'ML', 'Hackathon Winner'],
-    cardImage: '/projects/kipepeo/cover.png',
+    cardImage: '',
     gallery: ['/projects/kipepeo/screenshot-1.png'],
     links: {
       repo: 'https://github.com/mikesplore/Kipepeo-Intelligence',
@@ -181,7 +183,7 @@ export const projectsCatalog = [
     status: 'source-only',
     stack: ['React', 'GitHub API', 'LLM API'],
     tags: ['Fun', 'GitHub', 'AI'],
-    cardImage: '/projects/git-roast/cover.png',
+    cardImage: 'https://i.ibb.co/2bgQjGc/gitroast.png',
     gallery: ['/projects/git-roast/screenshot-1.png'],
     links: {
       repo: 'https://github.com/mikesplore/github-wrapped',
@@ -201,7 +203,7 @@ export const projectsCatalog = [
     status: 'source-only',
     stack: ['Next.js', 'Google Gemini', 'Cloudinary'],
     tags: ['Fashion', 'Generative AI', 'Creative'],
-    cardImage: '/projects/styleai/cover.png',
+    cardImage: '',
     gallery: ['/projects/styleai/screenshot-1.png'],
     links: {
       repo: 'https://github.com/mikesplore/style-ai-studio',
@@ -223,7 +225,7 @@ export const projectsCatalog = [
     status: 'source-only',
     stack: ['React', 'LLM API', 'Image Generation API'],
     tags: ['Education', 'Children', 'AI', 'Multilingual'],
-    cardImage: '/projects/storyloom/cover.png',
+    cardImage: '',
     gallery: ['/projects/storyloom/screenshot-1.png'],
     links: {
       repo: 'https://github.com/mikesplore/StoryLoom',
@@ -245,7 +247,7 @@ export const projectsCatalog = [
     status: 'source-only',
     stack: ['Python', 'Elasticsearch', 'Quizlet API'],
     tags: ['Education', 'Search', 'Flashcards'],
-    cardImage: '/projects/quizbase/cover.png',
+    cardImage: '',
     gallery: ['/projects/quizbase/screenshot-1.png'],
     links: {
       repo: 'https://github.com/mikesplore/QuizBase',
@@ -267,7 +269,7 @@ export const projectsCatalog = [
     status: 'source-only',
     stack: ['Kotlin', 'Android CameraX', 'QR Scanning'],
     tags: ['Android', 'Education', 'Verification'],
-    cardImage: '/projects/admission-scanner/cover.png',
+    cardImage: '',
     gallery: ['/projects/admission-scanner/screenshot-1.png'],
     links: {
       repo: 'https://github.com/mikesplore/StudentAdmissionScanner',
@@ -287,7 +289,7 @@ export const projectsCatalog = [
     status: 'source-only',
     stack: ['Python', 'scikit-learn', 'Flask'],
     tags: ['AI', 'Hardware', 'Recommendations'],
-    cardImage: '/projects/machine-recommender/cover.png',
+    cardImage: '',
     gallery: ['/projects/machine-recommender/screenshot-1.png'],
     links: {
       repo: '',
@@ -309,7 +311,7 @@ export const projectsCatalog = [
     status: 'source-only',
     stack: ['Kotlin', 'Firebase', 'Jetpack Compose'],
     tags: ['Android', 'Education', 'Community'],
-    cardImage: '/projects/uni-connect/cover.png',
+    cardImage: '',
     gallery: ['/projects/uni-connect/screenshot-1.png'],
     links: {
       repo: 'https://github.com/mikesplore/Uni-Connect',
