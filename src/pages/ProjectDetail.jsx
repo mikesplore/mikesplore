@@ -26,7 +26,6 @@ const ProjectDetail = () => {
     );
   }
 
-  const hasGallery = project.gallery && project.gallery.length > 0;
   const hasDetails = project.details;
   const hasRepo = project.links?.repo;
   const hasDemo = project.links?.demo;
@@ -43,8 +42,22 @@ const ProjectDetail = () => {
       </Link>
 
       {/* Main content */}
-      <SectionCard>
+      <section className="rounded-2xl bg-card p-5 sm:p-6">
         <div className="space-y-4">
+          {/* Hero cover image */}
+          <div className="relative -mx-4 -mt-4 sm:-mx-5 sm:-mt-5 overflow-hidden rounded-t-xl">
+            <img
+              src={
+                project.cardImage ||
+                `https://ui-avatars.com/api/?name=${encodeURIComponent(project.title)}&size=512`
+              }
+              alt={`${project.title} cover`}
+              className="h-48 sm:h-64 w-full object-cover"
+              loading="lazy"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-elevated via-elevated/40 to-transparent" />
+          </div>
+
           {/* Header */}
           <div>
             <h1 className="text-2xl font-bold text-ink">{project.title}</h1>
@@ -72,33 +85,6 @@ const ProjectDetail = () => {
             </h2>
             <p className="text-muted leading-relaxed">{project.overview}</p>
           </div>
-
-          {/* Gallery */}
-          {hasGallery && (
-            <div>
-              <h2 className="text-sm font-semibold text-ink uppercase tracking-wide mb-3">
-                Gallery
-              </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {project.gallery.map((img, idx) => (
-                  <a
-                    key={idx}
-                    href={img}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block rounded-lg overflow-hidden bg-elevated hover:opacity-90 transition-opacity"
-                  >
-                    <img
-                      src={img}
-                      alt={`${project.title} screenshot ${idx + 1}`}
-                      className="w-full h-48 object-cover"
-                      loading="lazy"
-                    />
-                  </a>
-                ))}
-              </div>
-            </div>
-          )}
 
           {/* Stack */}
           {project.stack && project.stack.length > 0 && (
@@ -175,7 +161,7 @@ const ProjectDetail = () => {
             </span>
           </div>
         </div>
-      </SectionCard>
+      </section>
     </div>
   );
 };

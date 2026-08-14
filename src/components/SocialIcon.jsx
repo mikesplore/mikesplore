@@ -30,6 +30,12 @@ const SocialIcon = ({ name, className = 'w-4 h-4' }) => {
           <path d="M12 2L2 7l10 5 10-5-10-5zm0 7L2 14l10 5 10-5-10-5zm0 7l-7.5 3.75L12 22l7.5-3.75L12 16z" />
         </svg>
       );
+    case 'Kaggle':
+      return (
+        <svg className={className} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M18.825 23.859c-.022.092-.117.141-.281.141h-3.139c-.187 0-.351-.082-.492-.248l-5.178-6.589-1.448 1.374v5.111c0 .235-.117.352-.351.352H5.505c-.235 0-.352-.117-.352-.352V.352c0-.235.117-.352.352-.352h2.431c.235 0 .351.117.351.352v15.635l5.531-5.605c.164-.187.328-.281.492-.281h3.139c.164 0 .258.094.281.281a.47.47 0 0 1-.117.445l-6.211 6.102 6.398 7.84c.117.141.164.281.023.372z" />
+        </svg>
+      );
     case 'Email':
       return (
         <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">

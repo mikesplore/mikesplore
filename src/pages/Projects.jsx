@@ -9,9 +9,9 @@ const Projects = () => {
         <li key={project.id}>
           <Link
             to={`/projects/${project.id}`}
-            className="group flex items-center gap-4 p-4 sm:p-5 transition-colors hover:bg-accent/5"
+            className="group flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:gap-4 sm:p-5 transition-colors hover:bg-accent/5"
           >
-            <div className="h-14 w-20 shrink-0 overflow-hidden rounded-md bg-elevated">
+            <div className="h-36 w-full shrink-0 overflow-hidden rounded-lg bg-elevated sm:h-24 sm:w-24">
               <img
                 src={
                   project.cardImage ||
@@ -24,14 +24,14 @@ const Projects = () => {
             </div>
 
             <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                <h2 className="text-sm font-semibold text-ink group-hover:text-teal transition-colors">
+              <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                <h2 className="text-base font-medium text-ink group-hover:text-teal transition-colors">
                   {project.title}
                 </h2>
                 <span className="text-xs text-subtle">{project.tagline}</span>
               </div>
 
-              <p className="mt-0.5 truncate text-sm text-muted">{project.summary}</p>
+              <p className="mt-1.5 text-sm leading-relaxed text-muted">{project.summary}</p>
 
               {(project.links?.repo || project.links?.demo) && (
                 <div className="mt-1.5 flex flex-wrap items-center gap-3 text-xs font-medium">

@@ -18,6 +18,7 @@ export const socialLinks = [
   { name: 'Dev.to', url: 'https://dev.to/mikesplore', label: 'dev.to' },
   { name: 'Google Dev', url: 'https://g.dev/mikesplore', label: 'Google Developers' },
   { name: 'Lablab', url: 'https://lablab.ai/u/@mikesplore', label: 'Lablab' },
+  { name: 'Kaggle', url: 'https://www.kaggle.com/mikesplore', label: 'Kaggle' },
   { name: 'X', url: `https://x.com/${xUsername}`, label: 'X' },
   { name: 'Email', url: 'mailto:mikepremium8@gmail.com', label: 'Email' },
 ];
@@ -69,6 +70,7 @@ export const hackathons = [
     year: '2026',
     organization: 'Online · Devpost',
     link: 'https://openai.devpost.com/',
+    image: 'https://i.ibb.co/35kmXBzH/openai.png',
   },
   {
     title: 'Build with Gemma - GDG Pwani',
@@ -77,6 +79,7 @@ export const hackathons = [
     year: '2026',
     organization: 'GDG Pwani · Mombasa, Kenya',
     link: 'https://gdg.community.dev/events/details/google-gdg-pwani-presents-build-with-gemma-hackathon-pwani/',
+    image: 'https://i.ibb.co/6cPW5KFk/gemma.png',
   },
   {
     title: 'Lablab AI Native Builder Hackathon',
@@ -85,6 +88,7 @@ export const hackathons = [
     year: '2026',
     organization: 'Online',
     link: 'https://lablab.ai/u/@mikesplore',
+    image: 'https://lablab.ai/_next/image?url=https%3A%2F%2Fstorage.googleapis.com%2Flablab-static-eu%2Fevents%2FNATIVELY_BUILDER_Tumbnail--1-_zfz0anjcyxnp71k7x100wzs3.jpg&w=828&q=75',
   },
   {
     title: 'Lablab AI Hackathon Act II',
@@ -93,6 +97,7 @@ export const hackathons = [
     year: '2026',
     organization: 'Online',
     link: 'https://lablab.ai/u/@mikesplore',
+    image: 'https://lablab.ai/_next/image?url=https%3A%2F%2Fstorage.googleapis.com%2Flablab-static-eu%2Fimages%2Fevents%2Fpn62mtt8xm33vu67q8z0673s%2Fpn62mtt8xm33vu67q8z0673s_imageLink_or8is3enggyc9v517ljnbxua.jpg&w=3840&q=75',
   },
   {
     title: 'Build With AI Hackathon',
@@ -102,6 +107,7 @@ export const hackathons = [
     year: '2026',
     organization: 'Sote Hub',
     link: 'https://github.com/mikesplore/Kipepeo-Intelligence',
+    image: 'https://i.ibb.co/BVW6D6br/buildathon.jpg',
   },
   {
     title: 'Ubunifu Hackathon',
@@ -111,6 +117,7 @@ export const hackathons = [
     organization: 'WesterWelle Startup Haus',
     year: '2025',
     link: 'https://github.com/mikesplore/quickscore',
+    image: 'https://i.ibb.co/1tzPVchx/ubunifu.jpg',
   },
   {
     title: 'Zindi Hackathon',
@@ -119,5 +126,6 @@ export const hackathons = [
     year: '2025',
     organization: 'Technical University of Mombasa',
     link: 'https://zindi.africa',
+    image: '',
   },
 ];
