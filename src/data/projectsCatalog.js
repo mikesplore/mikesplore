@@ -1,5 +1,27 @@
 export const projectsCatalog = [
   {
+    id: 'coastech',
+    title: 'Coastech',
+    tagline: 'Full-stack DTC ecommerce platform for modern online stores',
+    summary:
+      'A production-ready ecommerce platform with a Next.js storefront, Medusa commerce backend, Paystack payments, customer accounts, order tracking, and an admin operations dashboard.',
+    overview:
+      'Coastech is a full-stack direct-to-consumer ecommerce platform built for end-to-end online shopping operations. Customers can browse products, manage carts and accounts, complete checkout with Paystack, and track their orders from one storefront.',
+    details:
+      'The project combines a TypeScript and Next.js storefront with Medusa-powered commerce services. It brings together product catalog and variant selection, cart and promotion support, multi-step checkout, customer order history, payment processing, and administrative operations in one deployable system.',
+    platform: 'web',
+    type: 'problem-solving',
+    status: 'live',
+    stack: ['Next.js', 'TypeScript', 'Medusa', 'Paystack', 'PostgreSQL'],
+    tags: ['Ecommerce', 'Payments', 'Next.js', 'TypeScript'],
+    cardImage: '',
+    gallery: [],
+    links: {
+      repo: 'https://github.com/mikesplore/coastech',
+      demo: 'https://coastech.mikesplore.me',
+    },
+  },
+  {
     id: 'vela-mcp',
     title: 'Vela MCP Server',
     tagline: 'MCP server exposing Vela RemotePC endpoints as tools for AI clients',

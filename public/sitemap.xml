@@ -49,6 +49,12 @@
     <priority>0.6</priority>
   </url>
   <url>
+    <loc>https://mikesplore.me/projects/coastech</loc>
+    <lastmod>2026-08-20</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+  <url>
     <loc>https://mikesplore.me/projects/farmpulse</loc>
     <lastmod>2026-07-11</lastmod>
     <changefreq>monthly</changefreq>

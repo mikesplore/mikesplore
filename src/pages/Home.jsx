@@ -70,8 +70,7 @@ const Home = () => {
         <section className="space-y-3">
           <h2 className="text-xl font-semibold text-ink">What I'm Looking For</h2>
           <p>
-            I'm looking for my next full-time role, somewhere I can work on real engineering problems alongside
-            people who care about rigor, ownership, and building things that last.
+            I’m looking for a team where I can apply my systems architecture skills to scale distributed infrastructure and ship reliable AI-powered products.
           </p>
         </section>
       </div>
