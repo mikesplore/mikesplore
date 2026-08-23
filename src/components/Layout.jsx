@@ -29,7 +29,7 @@ const Layout = () => {
     const pageTitle = metadata.title === 'Michael Odhiambo'
       ? metadata.title
       : `${metadata.title} | Michael Odhiambo`;
-    const canonicalUrl = `https://mikesplore.me${pathname === '/' ? '/' : pathname}`;
+    const canonicalUrl = `https://www.mikesplore.me${pathname === '/' ? '/' : pathname}`;
 
     document.title = pageTitle;
 

@@ -1,12 +1,4 @@
 {
-  "redirects": [
-    {
-      "source": "/(.*)",
-      "has": [{ "type": "host", "value": "www.mikesplore.me" }],
-      "destination": "https://mikesplore.me/$1",
-      "permanent": true
-    }
-  ],
   "rewrites": [{
     "source": "/(.*)",
     "destination": "/index.html"
