@@ -23,7 +23,7 @@ export const certificates = [
   },
   {
     title: 'Redis Associate Developer',
-    image: unstackedLabsImage,
+    image: redis,
   },
     
 ];
