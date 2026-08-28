@@ -2,7 +2,7 @@ import aws from './certificates/AWS.png';
 import lablabImage from './certificates/LabLabAI.png';
 import unstackedLabsImage from './certificates/UnstackedLabs.png';
 import zindiImage from './certificates/Zindi.png';
-import redis from './certificates/Redis Associate Develope.png';
+import redis from './certificates/redis.png';
 
 export const certificates = [
   {
