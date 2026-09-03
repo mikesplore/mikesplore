@@ -124,6 +124,15 @@ def list_assets(db: Session = Depends(get_db)):
     return [{"id": asset.id, "asset_type": asset.asset_type, "url": asset.url, "label": asset.label} for asset in db.scalars(select(SiteAsset)).all()]
 
 
+@app.delete("/assets/{asset_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_service_key)])
+def delete_asset(asset_id: int, db: Session = Depends(get_db)):
+    asset = db.get(SiteAsset, asset_id)
+    if not asset:
+        raise HTTPException(status_code=404, detail="Asset not found")
+    db.delete(asset)
+    db.commit()
+
+
 @app.post("/assets", response_model=dict, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_service_key)])
 def upload_asset(asset_type: str = Form(...), label: str = Form(""), file: UploadFile = File(...), db: Session = Depends(get_db)):
     from .config import settings
