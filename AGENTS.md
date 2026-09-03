@@ -347,6 +347,12 @@ This phase was completed before the schema and backend work.
   required settings through environment variables and does not create a repository `.env`; local
   `.env` files remain supported, without overriding already-injected environment values.
 
+### Render database driver fix (2026-09-04)
+
+- Render's managed Postgres URL may use `postgres://` or `postgresql://`, which makes SQLAlchemy
+  select the uninstalled psycopg2 driver by default. Normalize those URLs to the installed
+  `postgresql+psycopg` driver for both application startup and Alembic migrations.
+
 ## Open items to resolve during the work, not before
 
 - Exact Telegram bot library (`python-telegram-bot` vs `aiogram`) — pick one during Phase 4,

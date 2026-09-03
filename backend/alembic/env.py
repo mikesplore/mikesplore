@@ -20,7 +20,12 @@ if not os.getenv("DATABASE_URL"):
 target_metadata = None
 
 def database_url():
-    return os.environ["DATABASE_URL"]
+    url = os.environ["DATABASE_URL"]
+    if url.startswith("postgres://"):
+        return "postgresql+psycopg://" + url[len("postgres://"):]
+    if url.startswith("postgresql://"):
+        return "postgresql+psycopg://" + url[len("postgresql://"):]
+    return url
 
 def run_migrations_offline():
     context.configure(url=database_url(), literal_binds=True, dialect_opts={"paramstyle": "named"})
