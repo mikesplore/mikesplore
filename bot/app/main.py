@@ -323,6 +323,7 @@ async def document(message: types.Message):
     if not is_admin(message):
         await message.answer("Document ingestion is restricted to the administrator.")
         return
+    asset_type = "certificate"
     try:
         await message.answer("File received. Uploading it now…")
         await show_typing(message)
@@ -352,8 +353,8 @@ async def document(message: types.Message):
             result = await upload_certificate(message.caption or filename, filename, buffer.getvalue(), mime_type)
             await message.answer(f"Certificate uploaded: {html.escape(result['title'], quote=False)}")
     except Exception:
-        logger.exception("Certificate upload failed")
-        await message.answer("I couldn't upload that certificate. Please check R2 configuration and try again.")
+        logger.exception("%s upload failed", asset_type)
+        await message.answer(f"I couldn't upload that {asset_type}. Please check R2 configuration and try again.")
 
 
 def format_preview(entry: dict) -> str:
