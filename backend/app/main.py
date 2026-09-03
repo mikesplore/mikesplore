@@ -198,6 +198,7 @@ def get_setting(key: str, db: Session = Depends(get_db)):
 @app.get("/search")
 def search_portfolio(q: str = Query(min_length=1), page: int = Query(default=1, ge=1), page_size: int = Query(default=5, ge=1, le=50), db: Session = Depends(get_db)):
     term = f"%{q}%"
+    terms = [word.lower() for word in re.findall(r"[a-z0-9]+", q.lower()) if len(word) > 2]
     query = select(Entry).where(Entry.is_visible.is_(True), or_(Entry.title.ilike(term), Entry.blurb.ilike(term), cast(Entry.tags, String).ilike(term), cast(Entry.links, String).ilike(term))).order_by(Entry.custom_order, Entry.date.desc().nullslast())
     total = db.scalar(select(func.count()).select_from(query.subquery())) or 0
     entries = db.scalars(query.offset((page - 1) * page_size).limit(page_size)).all()
