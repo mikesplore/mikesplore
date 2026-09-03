@@ -4,3 +4,4 @@ uvicorn>=0.34,<1
 groq>=0.26,<1
 httpx>=0.28,<1
 pydantic-settings>=2,<3
+python-dotenv>=1,<2

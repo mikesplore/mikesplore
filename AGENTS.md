@@ -230,6 +230,13 @@ This phase was completed before the schema and backend work.
 - All secrets (Groq API key, Telegram bot token, service API key, `ADMIN_TELEGRAM_ID`, DB URL)
   via environment variables, never committed.
 
+### Environment configuration update (2026-09-03)
+
+- Added root `.env.example` plus `frontend/.env.example`; real `.env` files remain uncommitted.
+- Backend and bot explicitly call `python-dotenv`'s `load_dotenv()` before constructing settings.
+- Added `python-dotenv` to both Python service dependency lists. Vite loads `VITE_*` variables from
+  the frontend environment automatically.
+
 ## Open items to resolve during the work, not before
 
 - Exact Telegram bot library (`python-telegram-bot` vs `aiogram`) — pick one during Phase 4,
