@@ -239,6 +239,14 @@ This phase was completed before the schema and backend work.
 - Consolidated backend and bot Python dependencies into the single root `requirements.txt`; the
   services share one environment and deployment dependency manifest.
 
+### Data import update (2026-09-03)
+
+- Added `backend/scripts/seed_entries.py`, a repeatable upsert importer for the existing dev.to and
+  GitHub JSON snapshots. It maps `articles` to `article` and GitHub `project`/`hobby` to the
+  unified `project` type, while preserving provider/type metadata in `source`.
+- The importer covers timeline snapshots only. Curated project, event, hackathon, and profile
+  collections still need dedicated import mappings.
+
 ## Open items to resolve during the work, not before
 
 - Exact Telegram bot library (`python-telegram-bot` vs `aiogram`) — pick one during Phase 4,
