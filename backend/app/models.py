@@ -44,3 +44,13 @@ class Profile(Base):
     availability_detail: Mapped[str | None] = mapped_column(Text)
     about: Mapped[str | None] = mapped_column(Text)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class Certificate(Base):
+    __tablename__ = "certificates"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    title: Mapped[str] = mapped_column(String(255))
+    image_url: Mapped[str] = mapped_column(Text)
+    custom_order: Mapped[int] = mapped_column(Integer, default=0)
+    is_visible: Mapped[bool] = mapped_column(Boolean, default=True)

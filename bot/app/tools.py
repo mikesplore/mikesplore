@@ -32,6 +32,13 @@ async def get_profile() -> dict:
         return response.json()
 
 
+async def list_certificates() -> list[dict]:
+    async with httpx.AsyncClient(base_url=settings.backend_url, timeout=10) as client:
+        response = await client.get("/certificates")
+        response.raise_for_status()
+        return [{"title": item["title"], "certificate_id": item["id"]} for item in response.json()]
+
+
 async def search_portfolio(query: str, page: int = 1) -> dict:
     async with httpx.AsyncClient(base_url=settings.backend_url, timeout=10) as client:
         response = await client.get("/search", params={"q": query, "page": page, "page_size": 5})
@@ -61,12 +68,17 @@ TOOLS = [{
         "description": "Search all public portfolio content and profile information. Use this first for broad or ambiguous questions.",
         "parameters": {"type": "object", "properties": {"query": {"type": "string"}, "page": {"type": "integer", "minimum": 1, "default": 1}}, "required": ["query"]},
     },
+}, {
+    "type": "function",
+    "function": {"name": "list_certificates", "description": "List available public certificates. Use this for certificate questions; files are sent separately by the bot.", "parameters": {"type": "object", "properties": {}, "required": []}},
 }]
 
 
 async def execute_tool(name: str, arguments: dict):
     if name == "get_profile":
         return await get_profile()
+    if name == "list_certificates":
+        return await list_certificates()
     if name == "search_portfolio":
         return await search_portfolio(arguments["query"], arguments.get("page", 1))
     if name != "list_entries":

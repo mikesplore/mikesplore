@@ -5,7 +5,7 @@ from uuid import UUID
 
 from .auth import require_service_key
 from .db import get_db
-from .models import Entry, Profile
+from .models import Certificate, Entry, Profile
 from .schemas import EntryCreate, EntryRead, EntryUpdate
 
 app = FastAPI(title="mikesplore portfolio API", version="1.0.0")
@@ -22,6 +22,11 @@ def get_profile(db: Session = Depends(get_db)):
     if not profile:
         raise HTTPException(status_code=404, detail="Profile not found")
     return {key: getattr(profile, key) for key in ("name", "tagline", "location", "focus", "experience", "availability_status", "availability_detail", "about")}
+
+
+@app.get("/certificates")
+def list_certificates(db: Session = Depends(get_db)):
+    return db.scalars(select(Certificate).where(Certificate.is_visible.is_(True)).order_by(Certificate.custom_order)).all()
 
 
 @app.get("/search")

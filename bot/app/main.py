@@ -4,6 +4,8 @@ from aiogram.enums import ParseMode
 from aiogram.filters import Command
 from fastapi import FastAPI, Header, HTTPException, Request
 import logging
+from pathlib import Path
+from .tools import list_certificates
 
 from .config import settings
 from .llm import answer
@@ -41,6 +43,22 @@ async def add_command(message: types.Message):
         return
     awaiting_entry.add(message.from_user.id)
     await message.answer("Send the entry instruction as text. Use /cancel to discard it.")
+
+
+@dispatcher.message(lambda message: message.text and "certificate" in message.text.lower())
+async def certificates(message: types.Message):
+    try:
+        items = await list_certificates()
+        root = Path(__file__).resolve().parents[3]
+        files = {"AWS Credential": "AWS.png", "LabLab AI": "LabLabAI.png", "Unstacked Labs": "UnstackedLabs.png", "Zindi": "Zindi.png", "Redis Associate Developer": "rediscredential.png"}
+        await message.answer(f"I found {len(items)} certificates. Sending them directly:")
+        for item in items:
+            filename = files.get(item["title"])
+            if filename:
+                await message.answer_document(types.FSInputFile(root / "frontend/src/data/certificates" / filename), caption=item["title"])
+    except Exception:
+        logger.exception("Certificate lookup failed")
+        await message.answer("I couldn't retrieve the certificates right now. Please try again shortly.")
 
 
 @dispatcher.message()
