@@ -38,7 +38,7 @@ class EntryUpdate(BaseModel):
     content_type: ContentType | None = None
     title: str | None = Field(default=None, min_length=1, max_length=255)
     blurb: str | None = None
-    date: date | None = None
+    date: DateValue | None = None
     year: int | None = Field(default=None, ge=1900, le=2200)
     is_visible: bool | None = None
     is_featured: bool | None = None
