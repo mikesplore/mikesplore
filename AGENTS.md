@@ -220,6 +220,8 @@ This phase was completed before the schema and backend work.
   service API key. Failed writes retain the pending preview for retry.
 - Document messages are rejected with guidance to send text. Full document extraction remains
   deferred because no document parsing policy/dependency has been selected yet.
+- Corrected admin message routing so public questions remain on the read path; entry extraction
+  now starts only after the administrator explicitly sends `/add`.
 
 ## Phase 6 — Deployment
 

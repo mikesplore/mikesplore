@@ -11,6 +11,7 @@ bot = Bot(settings.telegram_bot_token)
 dispatcher = Dispatcher()
 app = FastAPI(title="mikesplore Telegram bot")
 pending: dict[int, dict] = {}
+awaiting_entry: set[int] = set()
 
 
 def is_admin(message: types.Message) -> bool:
@@ -24,7 +25,17 @@ async def start(message: types.Message):
 
 @dispatcher.message(Command("help"))
 async def help_command(message: types.Message):
-    await message.answer("Use /start, /help, or ask a question about the public portfolio.")
+    admin_hint = " Admins can use /add to create an entry." if is_admin(message) else ""
+    await message.answer("Use /start, /help, or ask a question about the public portfolio." + admin_hint)
+
+
+@dispatcher.message(Command("add"))
+async def add_command(message: types.Message):
+    if not is_admin(message):
+        await message.answer("That command is restricted to the administrator.")
+        return
+    awaiting_entry.add(message.from_user.id)
+    await message.answer("Send the entry instruction as text. Use /cancel to discard it.")
 
 
 @dispatcher.message()
@@ -32,6 +43,7 @@ async def question(message: types.Message):
     if is_admin(message) and message.text:
         if message.text.strip().lower() in {"/cancel", "cancel"}:
             pending.pop(message.from_user.id, None)
+            awaiting_entry.discard(message.from_user.id)
             await message.answer("Cancelled.")
             return
         if message.text.strip().lower() in {"/confirm", "confirm"}:
@@ -46,13 +58,15 @@ async def question(message: types.Message):
                 pending[message.from_user.id] = entry
                 await message.answer("The backend rejected the entry. The preview is still pending.")
             return
-        try:
-            entry = await extract_entry(message.text)
-            pending[message.from_user.id] = entry
-            await message.answer("Preview (send /confirm to save, /cancel to discard):\n\n" + format_preview(entry))
-        except Exception:
-            await message.answer("I couldn't extract a valid entry. Please provide a clearer instruction.")
-        return
+        if message.from_user.id in awaiting_entry:
+            try:
+                entry = await extract_entry(message.text)
+                pending[message.from_user.id] = entry
+                awaiting_entry.discard(message.from_user.id)
+                await message.answer("Preview (send /confirm to save, /cancel to discard):\n\n" + format_preview(entry))
+            except Exception:
+                await message.answer("I couldn't extract a valid entry. Please provide a clearer instruction.")
+            return
     await message.answer(await answer(message.text or ""))
 
 
