@@ -239,6 +239,8 @@ This phase was completed before the schema and backend work.
 - Added public `/bucket-list` and `/assets` routes with SQLAlchemy models for the remaining
   existing collections. Frontend runtime adapters and import/seed mappings for these collections
   are still pending.
+- Migrated the Bucket List page to fetch `/bucket-list` at runtime, preserving its progress
+  calculation and presentation with loading/error states.
 - Reduced Groq tool payloads to compact public display fields and capped results at 20 entries to
   stay within model token-per-minute limits.
 - Added backend and tool pagination with a default page size of 5. The LLM is instructed to offer

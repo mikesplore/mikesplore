@@ -1,6 +1,29 @@
-import { bucketListItems, bucketListMeta } from '../data/bucketList';
+import { useEffect, useState } from 'react';
+import { fetchBucketList } from '../lib/portfolioApi';
+
+const bucketListMeta = {
+  title: 'Bucket List',
+  description: 'Things I need to do before I die.',
+};
 
 const BucketList = () => {
+  const [bucketListItems, setBucketListItems] = useState([]);
+  const [status, setStatus] = useState('loading');
+
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchBucketList(controller.signal).then((items) => {
+      setBucketListItems(items);
+      setStatus('ready');
+    }).catch((error) => {
+      if (error.name !== 'AbortError') setStatus('error');
+    });
+    return () => controller.abort();
+  }, []);
+
+  if (status === 'loading') return <p className="py-8 text-center text-base text-subtle">Loading bucket list…</p>;
+  if (status === 'error') return <p className="py-8 text-center text-base text-subtle">Bucket list is temporarily unavailable.</p>;
+
   const done = bucketListItems.filter((item) => item.done);
   const remaining = bucketListItems.filter((item) => !item.done);
   const total = bucketListItems.length;

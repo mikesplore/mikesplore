@@ -18,3 +18,13 @@ export async function fetchTimelineEntries(signal) {
   const entries = await response.json();
   return entries.map(toTimelineEntry);
 }
+
+async function fetchJson(path, signal) {
+  const response = await fetch(`${API_BASE_URL}${path}`, { signal });
+  if (!response.ok) throw new Error(`Portfolio API request failed (${response.status})`);
+  return response.json();
+}
+
+export function fetchBucketList(signal) {
+  return fetchJson('/bucket-list', signal);
+}
