@@ -1,5 +1,6 @@
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Query, UploadFile, status
 import boto3
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import cast, or_, select, String
 from sqlalchemy.orm import Session
 from uuid import UUID
@@ -11,6 +12,8 @@ from .models import BucketListItem, Certificate, Education, Entry, Profile, Prof
 from .schemas import EntryCreate, EntryRead, EntryUpdate
 
 app = FastAPI(title="mikesplore portfolio API", version="1.0.0")
+from .config import settings
+app.add_middleware(CORSMiddleware, allow_origins=[settings.frontend_origin], allow_credentials=False, allow_methods=["GET", "POST", "PATCH", "DELETE"], allow_headers=["*"])
 
 
 def slugify(value: str) -> str:

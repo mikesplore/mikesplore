@@ -309,6 +309,10 @@ This phase was completed before the schema and backend work.
 - Fixed seed slug generation to collapse duplicate hyphens and added migration `0002` to repair
   slugs already imported. This prevents valid database rows from failing API response validation.
 
+### Backend integration update (2026-09-04)
+
+- Added configurable CORS for the frontend origin via `FRONTEND_ORIGIN`.
+
 ## Open items to resolve during the work, not before
 
 - Exact Telegram bot library (`python-telegram-bot` vs `aiogram`) — pick one during Phase 4,
