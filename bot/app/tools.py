@@ -32,6 +32,14 @@ async def get_profile() -> dict:
         return response.json()
 
 
+async def search_portfolio(query: str, page: int = 1) -> dict:
+    async with httpx.AsyncClient(base_url=settings.backend_url, timeout=10) as client:
+        response = await client.get("/search", params={"q": query, "page": page, "page_size": 5})
+        response.raise_for_status()
+        result = response.json()
+        return {"profile": result.get("profile"), "entries": [{"type": item.get("content_type"), "title": item.get("title"), "blurb": item.get("blurb"), "date": item.get("date"), "tags": item.get("tags", []), "url": item.get("links", {}).get("url")} for item in result.get("entries", [])]}
+
+
 TOOLS = [{
     "type": "function",
     "function": {
@@ -46,12 +54,21 @@ TOOLS = [{
         "description": "Get verified public profile information about Michael Odhiambo.",
         "parameters": {"type": "object", "properties": {}, "required": []},
     },
+}, {
+    "type": "function",
+    "function": {
+        "name": "search_portfolio",
+        "description": "Search all public portfolio content and profile information. Use this first for broad or ambiguous questions.",
+        "parameters": {"type": "object", "properties": {"query": {"type": "string"}, "page": {"type": "integer", "minimum": 1, "default": 1}}, "required": ["query"]},
+    },
 }]
 
 
 async def execute_tool(name: str, arguments: dict):
+    if name == "get_profile":
+        return await get_profile()
+    if name == "search_portfolio":
+        return await search_portfolio(arguments["query"], arguments.get("page", 1))
     if name != "list_entries":
-        if name == "get_profile":
-            return await get_profile()
         raise ValueError(f"Unknown tool: {name}")
     return await list_entries(arguments.get("content_type"), arguments.get("page", 1))

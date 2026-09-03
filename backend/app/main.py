@@ -1,5 +1,5 @@
 from fastapi import Depends, FastAPI, HTTPException, Query, status
-from sqlalchemy import select
+from sqlalchemy import cast, or_, select, String
 from sqlalchemy.orm import Session
 from uuid import UUID
 
@@ -22,6 +22,16 @@ def get_profile(db: Session = Depends(get_db)):
     if not profile:
         raise HTTPException(status_code=404, detail="Profile not found")
     return {key: getattr(profile, key) for key in ("name", "tagline", "location", "focus", "experience", "availability_status", "availability_detail", "about")}
+
+
+@app.get("/search")
+def search_portfolio(q: str = Query(min_length=1), page: int = Query(default=1, ge=1), page_size: int = Query(default=5, ge=1, le=50), db: Session = Depends(get_db)):
+    term = f"%{q}%"
+    query = select(Entry).where(Entry.is_visible.is_(True), or_(Entry.title.ilike(term), Entry.blurb.ilike(term), cast(Entry.tags, String).ilike(term), cast(Entry.links, String).ilike(term))).order_by(Entry.custom_order, Entry.date.desc().nullslast())
+    entries = db.scalars(query.offset((page - 1) * page_size).limit(page_size)).all()
+    profile = db.get(Profile, 1) if any(word in q.lower() for word in ("who", "michael", "person", "about", "background")) else None
+    profile_data = None if not profile else {key: getattr(profile, key) for key in ("name", "tagline", "location", "focus", "experience", "availability_status", "availability_detail", "about")}
+    return {"profile": profile_data, "entries": entries}
 
 
 @app.get("/entries", response_model=list[EntryRead])

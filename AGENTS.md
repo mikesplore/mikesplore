@@ -228,6 +228,8 @@ This phase was completed before the schema and backend work.
   verified profile data. Added a profile seed command.
 - Enabled Telegram HTML parsing with a formatter for the LLM's common Markdown output, so headings,
   emphasis, links, and code render reliably without MarkdownV2 escaping errors.
+- Added public `/search` across visible entries and profile context, plus a compact paginated
+  `search_portfolio` LLM tool for broad or ambiguous user questions.
 - Reduced Groq tool payloads to compact public display fields and capped results at 20 entries to
   stay within model token-per-minute limits.
 - Added backend and tool pagination with a default page size of 5. The LLM is instructed to offer
