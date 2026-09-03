@@ -1,8 +1,8 @@
 from datetime import date
 from uuid import uuid4
 
-from backend.app.main import list_entries
-from backend.app.models import Entry
+from app.main import list_entries
+from app.models import Entry
 
 
 class FakeSession:
