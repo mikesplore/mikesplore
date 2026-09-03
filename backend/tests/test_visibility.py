@@ -19,5 +19,5 @@ class FakeSession:
 def test_public_list_excludes_invisible_entries():
     visible = Entry(id=uuid4(), slug="visible", content_type="project", title="Visible", blurb="ok", date=date.today(), is_visible=True)
     hidden = Entry(id=uuid4(), slug="hidden", content_type="project", title="Hidden", blurb="no", date=date.today(), is_visible=False)
-    result = list_entries(db=FakeSession([visible, hidden]))
+    result = list_entries(page=1, page_size=5, db=FakeSession([visible, hidden]))
     assert result == [visible]
