@@ -1,0 +1,47 @@
+[
+  {
+    "category": "Languages",
+    "skills": [
+      "Python",
+      "Kotlin",
+      "JavaScript"
+    ]
+  },
+  {
+    "category": "Backend & APIs",
+    "skills": [
+      "FastAPI",
+      "Ktor",
+      "Django",
+      "RESTful APIs"
+    ]
+  },
+  {
+    "category": "Frontend & Mobile",
+    "skills": [
+      "React",
+      "Vite",
+      "Jetpack Compose",
+      "Kotlin Multiplatform"
+    ]
+  },
+  {
+    "category": "DevOps & Systems",
+    "skills": [
+      "Docker",
+      "Linux System Tools",
+      "systemd",
+      "nmcli",
+      "bash"
+    ]
+  },
+  {
+    "category": "AI Integration",
+    "skills": [
+      "LLM Tool Calling",
+      "Fireworks AI API",
+      "Agent Architecture",
+      "WebSocket Tunnels"
+    ]
+  }
+]

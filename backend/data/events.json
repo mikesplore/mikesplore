@@ -1,0 +1,138 @@
+[
+  {
+    "title": "Google I/O Extended Pwani",
+    "date": "2026-08-01",
+    "location": "Westerwelle Startup Haus, Mombasa",
+    "blurb": "Attended Google I/O Extended Pwani - sessions on the latest Google ecosystem updates, AI tools, and developer platforms.",
+    "image": "https://i.ibb.co/ccK8dWKF/Screenshot-From-2026-08-05-17-11-37.png",
+    "link": ""
+  },
+  {
+    "title": "Cursor Mombasa Meetup",
+    "date": "2026-07-12",
+    "location": "Second Cup Cafe, Nyali",
+    "blurb": "Networked with local developers and received Cursor credits.",
+    "image": "https://i.ibb.co/tMrqcCzp/cursor.jpg",
+    "link": ""
+  },
+  {
+    "title": "AWS Community Day Pwani",
+    "date": "2026-07-05",
+    "location": "Swahilipot Hub, Mombasa",
+    "blurb": "Volunteered for event logistics and attended keynote/panel sessions on cloud infrastructure.",
+    "image": "https://i.ibb.co/qFXg4rQX/aws.jpg",
+    "link": ""
+  },
+  {
+    "title": "Binance Meetup Mombasa",
+    "date": "2026-06-14",
+    "location": "Premium Inn, Mombasa",
+    "blurb": "Introduction to the platform, user use cases, and setup of my first wallet.",
+    "image": "https://i.ibb.co/4Rx3WH1R/binance.jpg",
+    "link": ""
+  },
+  {
+    "title": "AI Pizza",
+    "date": "2026-06-01",
+    "location": "Pure Pearl Foundation, Nyali",
+    "blurb": "Casual discussions and presentations on AI applications and industry trends.",
+    "image": "https://i.ibb.co/XxW4dVxB/aipizza.jpg",
+    "link": ""
+  },
+  {
+    "title": "AI Buildathon",
+    "date": "2026-04-12",
+    "location": "Sote Hub, Mombasa",
+    "blurb": "Built a project using Google Cloud credits and won first place (KES 5,000).",
+    "image": "https://i.ibb.co/BVW6D6br/buildathon.jpg",
+    "link": ""
+  },
+  {
+    "title": "Ubunifu Hackathon",
+    "date": "2025-12-06",
+    "location": "WesterWelle Startup Haus, Mombasa",
+    "blurb": "Worked in a team to build and present a functional prototype, winning €1,000.",
+    "image": "https://i.ibb.co/1tzPVchx/ubunifu.jpg",
+    "link": ""
+  },
+  {
+    "title": "WesterWelle Community Party",
+    "date": "2025-12-18",
+    "location": "WesterWelle Startup Haus, Mombasa",
+    "blurb": "End-of-year community networking, games, and discussions on local startups.",
+    "image": "https://i.ibb.co/j97TfLmf/westerwellecommunity.jpg",
+    "link": ""
+  },
+  {
+    "title": "Google DevFest Mombasa 2025",
+    "date": "2025-11-08",
+    "location": "Light International School, Mombasa",
+    "blurb": "Tech sessions on Google ecosystem updates, Android development, and AI tools.",
+    "image": "https://i.ibb.co/358T7FKJ/devfest2026.jpg",
+    "link": ""
+  },
+  {
+    "title": "Google DevFest Mombasa 2024",
+    "date": "2025-11-08",
+    "location": "Light International School, Mombasa",
+    "blurb": "Tech sessions on Google ecosystem updates, Android development, and AI tools.",
+    "image": "https://i.ibb.co/BV4SY2H5/devfest2025.jpg",
+    "link": ""
+  },
+  {
+    "title": "Break the Cycle",
+    "date": "2025-10-18",
+    "location": "Mama Ngina Waterfront, Mombasa",
+    "blurb": "Community event at the waterfront focused on social impact and advocacy.",
+    "image": "https://i.ibb.co/HT6sDY5G/break-the-cycle.jpg",
+    "link": ""
+  },
+  {
+    "title": "Build With Africa's Talking",
+    "date": "2025-10-25",
+    "location": "WesterWelle Startup Haus, Mombasa",
+    "blurb": "Walkthrough on integrating Africa's Talking APIs for communication systems.",
+    "image": "https://i.ibb.co/9HxnDHXt/buildwithat.jpg",
+    "link": "https://africastalking.com"
+  },
+  {
+    "title": "Unstacked Labs Onboarding",
+    "date": "2025-09-14",
+    "location": "WesterWelle Startup Haus, Mombasa",
+    "blurb": "Joined the developer cohort focused on building software utilities backed by AI models.",
+    "image": "https://i.ibb.co/y5TD8KW/unstacked2.jpg",
+    "link": ""
+  },
+  {
+    "title": "Web3 Hackathon Kilifi",
+    "date": "2025-08-16",
+    "location": "Kilifi",
+    "blurb": "Two-day competition. Developed a green-tech solution leveraging tokenization for waste collection; placed 5th.",
+    "image": "https://i.ibb.co/6Jwg9d80/web3.jpg",
+    "link": ""
+  },
+  {
+    "title": "iHub EdTech Kilifi",
+    "date": "2025-08-22",
+    "location": "Kilifi",
+    "blurb": "Informational panels on tech infrastructure and modern updates in the local educational space.",
+    "image": "https://i.ibb.co/Yv60dFk/ihub.jpg",
+    "link": ""
+  },
+  {
+    "title": "Ethereum@10 Kilifi",
+    "date": "2025-07-18",
+    "location": "Kilifi",
+    "blurb": "Introduction to decentralized protocols, Web3 tooling, smart contracts, and wallet security.",
+    "image": "https://i.ibb.co/Vp06HH2y/etherium.jpg",
+    "link": ""
+  },
+  {
+    "title": "Build With AI",
+    "date": "2025-07-08",
+    "location": "Sote Hub",
+    "blurb": "Technical workshop on setting up Google platform products using free cloud sandbox credits.",
+    "image": "https://i.ibb.co/Q7VjB7dv/build-with-ai.jpg",
+    "link": ""
+  }
+]

@@ -239,6 +239,9 @@ This phase was completed before the schema and backend work.
 - Added public `/bucket-list` and `/assets` routes with SQLAlchemy models for the remaining
   existing collections. Frontend runtime adapters and import/seed mappings for these collections
   are still pending.
+- Added a reproducible frontend content exporter and curated seed command for projects, events,
+  hackathons, bucket-list items, skills, and education. Profile links and settings remain in the
+  next import slice to avoid duplicating existing singleton records.
 - Migrated the Bucket List page to fetch `/bucket-list` at runtime, preserving its progress
   calculation and presentation with loading/error states.
 - Reduced Groq tool payloads to compact public display fields and capped results at 20 entries to

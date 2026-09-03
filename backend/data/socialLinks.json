@@ -1,0 +1,37 @@
+[
+  {
+    "name": "GitHub",
+    "url": "https://github.com/mikesplore",
+    "label": "GitHub"
+  },
+  {
+    "name": "Dev.to",
+    "url": "https://dev.to/mikesplore",
+    "label": "dev.to"
+  },
+  {
+    "name": "Google Dev",
+    "url": "https://g.dev/mikesplore",
+    "label": "Google Developers"
+  },
+  {
+    "name": "Lablab",
+    "url": "https://lablab.ai/u/@mikesplore",
+    "label": "Lablab"
+  },
+  {
+    "name": "Kaggle",
+    "url": "https://www.kaggle.com/mikesplore",
+    "label": "Kaggle"
+  },
+  {
+    "name": "X",
+    "url": "https://x.com/mikespllore",
+    "label": "X"
+  },
+  {
+    "name": "Email",
+    "url": "mailto:mikepremium8@gmail.com",
+    "label": "Email"
+  }
+]

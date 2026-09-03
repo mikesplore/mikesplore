@@ -1,0 +1,67 @@
+[
+  {
+    "title": "OpenAI Build Week",
+    "result": "Not Ranked",
+    "description": "Building with Codex and GPT-5.6 for the global OpenAI hackathon sprint.",
+    "year": "2026",
+    "organization": "Online · Devpost",
+    "link": "https://openai.devpost.com/",
+    "image": "https://i.ibb.co/35kmXBzH/openai.png"
+  },
+  {
+    "title": "Build with Gemma - GDG Pwani",
+    "result": "Not Ranked",
+    "description": "Gemma 4 hackathon sprint in Mombasa - hands-on with Google DeepMind open models.",
+    "year": "2026",
+    "organization": "GDG Pwani · Mombasa, Kenya",
+    "link": "https://gdg.community.dev/events/details/google-gdg-pwani-presents-build-with-gemma-hackathon-pwani/",
+    "image": "https://i.ibb.co/6cPW5KFk/gemma.png"
+  },
+  {
+    "title": "Lablab AI Native Builder Hackathon",
+    "result": "Submitted",
+    "description": "Built and submitted a project to the Lablab AI Native Builder hackathon.",
+    "year": "2026",
+    "organization": "Online",
+    "link": "https://lablab.ai/u/@mikesplore",
+    "image": "https://lablab.ai/_next/image?url=https%3A%2F%2Fstorage.googleapis.com%2Flablab-static-eu%2Fevents%2FNATIVELY_BUILDER_Tumbnail--1-_zfz0anjcyxnp71k7x100wzs3.jpg&w=828&q=75"
+  },
+  {
+    "title": "Lablab AI Hackathon Act II",
+    "result": "Submitted",
+    "description": "Built a remote PC control app and submitted it to the hackathon.",
+    "year": "2026",
+    "organization": "Online",
+    "link": "https://lablab.ai/u/@mikesplore",
+    "image": "https://lablab.ai/_next/image?url=https%3A%2F%2Fstorage.googleapis.com%2Flablab-static-eu%2Fimages%2Fevents%2Fpn62mtt8xm33vu67q8z0673s%2Fpn62mtt8xm33vu67q8z0673s_imageLink_or8is3enggyc9v517ljnbxua.jpg&w=3840&q=75"
+  },
+  {
+    "title": "Build With AI Hackathon",
+    "result": "Winner",
+    "project": "Kipepeo Intelligence",
+    "description": "AI system for credit-worthiness scoring from M-Pesa statements and usage patterns.",
+    "year": "2026",
+    "organization": "Sote Hub",
+    "link": "https://github.com/mikesplore/Kipepeo-Intelligence",
+    "image": "https://i.ibb.co/BVW6D6br/buildathon.jpg"
+  },
+  {
+    "title": "Ubunifu Hackathon",
+    "result": "Winner",
+    "project": "QuickScore",
+    "description": "ML-powered loan credibility scoring system.",
+    "organization": "WesterWelle Startup Haus",
+    "year": "2025",
+    "link": "https://github.com/mikesplore/quickscore",
+    "image": "https://i.ibb.co/1tzPVchx/ubunifu.jpg"
+  },
+  {
+    "title": "Zindi Hackathon",
+    "result": "#25",
+    "description": "Competed as part of a group; placed 25th overall.",
+    "year": "2025",
+    "organization": "Technical University of Mombasa",
+    "link": "https://zindi.africa",
+    "image": ""
+  }
+]
