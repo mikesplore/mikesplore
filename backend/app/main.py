@@ -119,7 +119,7 @@ def upload_certificate(title: str = Form(...), file: UploadFile = File(...), db:
         raise HTTPException(status_code=503, detail="R2 storage is not configured")
     object_key = f"certificates/{slugify(title)}-{file.filename}"
     client = boto3.client("s3", endpoint_url=settings.r2_endpoint_url, aws_access_key_id=settings.r2_access_key_id, aws_secret_access_key=settings.r2_secret_access_key, region_name="auto")
-    file_bytes = await file.read()
+    file_bytes = file.file.read()
     client.upload_fileobj(BytesIO(file_bytes), settings.r2_bucket_name, object_key, ExtraArgs={"ContentType": file.content_type or "application/octet-stream"})
     item = Certificate(title=title, image_url=f"{settings.r2_public_base_url.rstrip('/')}/{object_key}", custom_order=0)
     db.add(item); db.commit(); db.refresh(item)
