@@ -321,6 +321,8 @@ This phase was completed before the schema and backend work.
 
 - Added protected generic `POST /assets` R2 upload support for profile images, CVs, project media,
   and event galleries; public `GET /assets` is the frontend lookup path.
+- Added admin `/upload <asset_type> [label]` bot flow for direct R2 asset uploads. Files bypass the
+  LLM and are sent through the protected backend upload endpoint.
 
 ## Open items to resolve during the work, not before
 

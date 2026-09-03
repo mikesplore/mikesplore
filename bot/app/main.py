@@ -10,7 +10,7 @@ from .tools import list_certificates
 from .config import settings
 from .llm import answer
 from .llm import extract_entry
-from .admin import create_entry, upload_certificate
+from .admin import create_entry, upload_asset, upload_certificate
 from .formatting import telegram_html
 
 bot = Bot(settings.telegram_bot_token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
@@ -19,6 +19,7 @@ app = FastAPI(title="mikesplore Telegram bot")
 logger = logging.getLogger(__name__)
 pending: dict[int, dict] = {}
 awaiting_entry: set[int] = set()
+pending_upload: dict[int, tuple[str, str]] = {}
 
 
 def is_admin(message: types.Message) -> bool:
@@ -43,6 +44,19 @@ async def add_command(message: types.Message):
         return
     awaiting_entry.add(message.from_user.id)
     await message.answer("Send the entry instruction as text. Use /cancel to discard it.")
+
+
+@dispatcher.message(Command("upload"))
+async def upload_command(message: types.Message):
+    if not is_admin(message):
+        await message.answer("That command is restricted to the administrator.")
+        return
+    parts = (message.text or "").split(maxsplit=2)
+    if len(parts) < 2:
+        await message.answer("Usage: /upload <asset_type> [label], then send a file.")
+        return
+    pending_upload[message.from_user.id] = (parts[1], parts[2] if len(parts) > 2 else parts[1])
+    await message.answer("Send the file now. Use /cancel to discard it.")
 
 
 @dispatcher.message(lambda message: message.text and "certificate" in message.text.lower())
@@ -104,12 +118,18 @@ async def document(message: types.Message):
         await message.answer("Document ingestion is restricted to the administrator.")
         return
     try:
+        asset_request = pending_upload.pop(message.from_user.id, None)
         telegram_file = await bot.get_file(message.document.file_id)
         buffer = __import__('io').BytesIO()
         await bot.download_file(telegram_file.file_path, buffer)
-        title = message.caption or message.document.file_name or "Certificate"
-        result = await upload_certificate(title, message.document.file_name or "certificate", buffer.getvalue(), message.document.mime_type)
-        await message.answer(f"Certificate uploaded: {result['title']}")
+        filename = message.document.file_name or "upload"
+        if asset_request:
+            asset_type, label = asset_request
+            result = await upload_asset(asset_type, label, filename, buffer.getvalue(), message.document.mime_type)
+            await message.answer(f"Asset uploaded: {result['label']}")
+        else:
+            result = await upload_certificate(message.caption or filename, filename, buffer.getvalue(), message.document.mime_type)
+            await message.answer(f"Certificate uploaded: {result['title']}")
     except Exception:
         logger.exception("Certificate upload failed")
         await message.answer("I couldn't upload that certificate. Please check R2 configuration and try again.")
