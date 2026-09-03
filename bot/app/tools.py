@@ -40,6 +40,13 @@ async def list_certificates() -> list[dict]:
         return [{"title": item["title"], "certificate_id": item["id"], "image_url": item.get("image_url")} for item in response.json()]
 
 
+async def list_skills() -> list[dict]:
+    async with httpx.AsyncClient(base_url=settings.backend_url, timeout=10) as client:
+        response = await client.get("/skills")
+        response.raise_for_status()
+        return [{"category": item["category"], "skills": item["skills"]} for item in response.json()]
+
+
 async def search_portfolio(query: str, page: int = 1) -> dict:
     async with httpx.AsyncClient(base_url=settings.backend_url, timeout=10) as client:
         response = await client.get("/search", params={"q": query, "page": page, "page_size": 5})
@@ -55,6 +62,9 @@ TOOLS = [{
         "description": "List public portfolio entries. Use this before answering facts about Mike's work.",
         "parameters": {"type": "object", "properties": {"content_type": {"type": "string", "enum": ["project", "article", "hackathon", "event"]}, "page": {"type": "integer", "minimum": 1, "default": 1}}, "required": []},
     },
+}, {
+    "type": "function",
+    "function": {"name": "list_skills", "description": "List verified skills from the public portfolio database.", "parameters": {"type": "object", "properties": {}, "required": []}},
 }, {
     "type": "function",
     "function": {
@@ -80,6 +90,8 @@ async def execute_tool(name: str, arguments: dict):
         return await get_profile()
     if name == "list_certificates":
         return await list_certificates()
+    if name == "list_skills":
+        return await list_skills()
     if name == "search_portfolio":
         return await search_portfolio(arguments["query"], arguments.get("page", 1))
     if name != "list_entries":

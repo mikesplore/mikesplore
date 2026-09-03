@@ -217,7 +217,7 @@ async def delete_certificate_command(message: types.Message):
     await message.answer(f"Delete certificate {html.escape(parts[1], quote=False)}? Send /confirm to delete or /cancel to abort.")
 
 
-@dispatcher.message(lambda message: message.text and "certificate" in message.text.lower())
+@dispatcher.message(lambda message: message.text and ("certificate" in message.text.lower() or "certification" in message.text.lower()))
 async def certificates(message: types.Message):
     try:
         await show_typing(message)
