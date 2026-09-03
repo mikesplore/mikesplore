@@ -9,7 +9,8 @@ which cost time to reconcile.
 
 ## Architecture summary
 
-- **Repo**: single monorepo. Subdirectories: `backend/`, `bot/`, `frontend/`.
+- **Repo**: single monorepo. The current React/Vite frontend is at the repository root; the
+  planned `backend/` exists, while `bot/` does not yet exist.
 - **Backend**: FastAPI + PostgreSQL (SQLAlchemy + Alembic for migrations).
 - **Frontend**: existing site, unchanged visually. Swaps build-time GitHub/dev.to sourcing for
   runtime calls to the backend's public REST endpoints.
@@ -35,11 +36,10 @@ which cost time to reconcile.
 
 ## Phase 0 — Investigate the current static site
 
-Do this before writing any schema or backend code.
+This phase was completed before the schema and backend work.
 
-- Read through the existing frontend repo/codebase in full: `portfolio.js`, the `TimelineEntry`
-  TypeScript model, and however build-time content sourcing from the dev.to and GitHub APIs is
-  currently wired up.
+- Read through the existing frontend repo/codebase in full: the React components, JSDoc
+  `TimelineEntry` model, and build-time content sourcing from dev.to and GitHub.
 - Catalog every distinct content type currently rendered: projects, hackathon wins, articles,
   client deployments, tech stack tags, contact links, etc. Note which fields each type has
   (title, description, tech stack, links, dates, featured/priority ordering, etc.) and which
@@ -71,8 +71,8 @@ Do this before writing any schema or backend code.
   and cover/social image. `scripts/fetch-github.js` calls the GitHub repositories endpoint,
   includes only allowlisted project/hobby repositories (and selected forks), maps creation date,
   name, description, URL, primary language, star count, and owner avatar, and supports a manual
-  override for selected repositories. `src/data/entries.js` merges both generated JSON files,
-  deduplicates by normalized link/title, and sorts newest first.
+  override for selected repositories. Before Phase 3, `src/data/entries.js` merged both generated
+  JSON files, deduplicated by normalized link/title, and sorted newest first.
 - There is an existing type mismatch to resolve explicitly in Phase 1: `src/data/types.js`
   documents and filters `repo` and `articles`, but GitHub ingestion emits `project` and `hobby`.
   Consequently the unfiltered timeline displays GitHub entries, while the “GitHub” filter does
@@ -113,8 +113,6 @@ Do this before writing any schema or backend code.
 - No separate "admin" DB table is needed for auth — that's an env var. If a write-audit log is
   wanted later, design it as a strictly additive table, not a blocker for this phase.
 
-## Phase 2 — Backend API (FastAPI)
-
 ### Phase 1 implementation log (2026-09-03)
 
 - Added `backend/` migration foundation with SQLAlchemy/Alembic/PostgreSQL dependencies and an
@@ -129,6 +127,8 @@ Do this before writing any schema or backend code.
 - Used PostgreSQL `gen_random_uuid()` via the `pgcrypto` extension for UUID-backed records. API
   models, seed/import tooling, and endpoints remain deferred to Phase 2 and later.
 
+## Phase 2 — Backend API (FastAPI)
+
 - Project skeleton: FastAPI + SQLAlchemy + Alembic, Pydantic schemas matching the Phase 1 schema.
 - Public endpoints (no auth): `GET` list and detail routes, filtered to `is_visible = true`,
   ordered by `custom_order`.
@@ -137,8 +137,6 @@ Do this before writing any schema or backend code.
 - Write basic tests for the visibility filter (a visible=false entry must never appear on a
   public endpoint) before moving on — this is the one bug that would defeat the entire point of
   curation.
-
-## Phase 3 — Frontend migration
 
 ### Phase 2 implementation log (2026-09-03)
 
@@ -153,12 +151,12 @@ Do this before writing any schema or backend code.
   for profile and other collections can be added after the frontend migration requirements are
   clearer.
 
+## Phase 3 — Frontend migration
+
 - Replace the build-time GitHub/dev.to fetching with runtime fetch calls to the backend's public
   endpoints.
 - Visual output must not change. This is a data-source swap, not a redesign.
 - Remove the now-dead build-time sourcing code rather than leaving it dormant.
-
-## Phase 4 — Telegram bot: public read path
 
 ### Phase 3 implementation log (2026-09-03)
 
@@ -173,6 +171,11 @@ Do this before writing any schema or backend code.
 - Removed the build-time entry fetch scripts from the npm build lifecycle. Curated project pages,
   hackathons, events, profile data, and other collections remain static because they do not yet
   have backend read endpoints.
+- The fetch scripts and generated JSON files remain in the repository as historical/possible
+  import material; they are no longer invoked by builds. This is a documented deviation from the
+  original “remove dead sourcing code” bullet and should be resolved when the import path is settled.
+
+## Phase 4 — Telegram bot: public read path
 
 - Bot skeleton with webhook-based updates (not long-polling).
 - LLM tool-calling setup: define tools that call the backend's public REST endpoints. The model
