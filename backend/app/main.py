@@ -1,7 +1,9 @@
-from fastapi import Depends, FastAPI, HTTPException, Query, status
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Query, UploadFile, status
+import boto3
 from sqlalchemy import cast, or_, select, String
 from sqlalchemy.orm import Session
 from uuid import UUID
+import re
 
 from .auth import require_service_key
 from .db import get_db
@@ -9,6 +11,10 @@ from .models import BucketListItem, Certificate, Education, Entry, Profile, Prof
 from .schemas import EntryCreate, EntryRead, EntryUpdate
 
 app = FastAPI(title="mikesplore portfolio API", version="1.0.0")
+
+
+def slugify(value: str) -> str:
+    return re.sub(r"-+", "-", re.sub(r"[^a-z0-9]+", "-", value.lower())).strip("-")[:100]
 
 
 @app.get("/health")
@@ -27,6 +33,19 @@ def get_profile(db: Session = Depends(get_db)):
 @app.get("/certificates")
 def list_certificates(db: Session = Depends(get_db)):
     return db.scalars(select(Certificate).where(Certificate.is_visible.is_(True)).order_by(Certificate.custom_order)).all()
+
+
+@app.post("/certificates", response_model=dict, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_service_key)])
+def upload_certificate(title: str = Form(...), file: UploadFile = File(...), db: Session = Depends(get_db)):
+    from .config import settings
+    if not all((settings.r2_endpoint_url, settings.r2_access_key_id, settings.r2_secret_access_key, settings.r2_bucket_name, settings.r2_public_base_url)):
+        raise HTTPException(status_code=503, detail="R2 storage is not configured")
+    object_key = f"certificates/{slugify(title)}-{file.filename}"
+    client = boto3.client("s3", endpoint_url=settings.r2_endpoint_url, aws_access_key_id=settings.r2_access_key_id, aws_secret_access_key=settings.r2_secret_access_key, region_name="auto")
+    client.upload_fileobj(file.file, settings.r2_bucket_name, object_key, ExtraArgs={"ContentType": file.content_type or "application/octet-stream"})
+    item = Certificate(title=title, image_url=f"{settings.r2_public_base_url.rstrip('/')}/{object_key}", custom_order=0)
+    db.add(item); db.commit(); db.refresh(item)
+    return {"id": str(item.id), "title": item.title, "image_url": item.image_url}
 
 
 @app.get("/profile/links")

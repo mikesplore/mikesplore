@@ -280,6 +280,9 @@ This phase was completed before the schema and backend work.
 - Storage decision: Cloudflare R2 will store uploaded certificates, CV/profile media, project
   images, and event galleries. Database records will retain object keys and public/signed URLs;
   local frontend asset files are migration source material only.
+- Added a protected `POST /certificates` upload endpoint using the S3-compatible R2 API. It stores
+  the resulting public object URL in the certificates table; missing R2 configuration returns a
+  clear `503` response.
 
 ### Data import update (2026-09-03)
 
