@@ -238,6 +238,8 @@ This phase was completed before the schema and backend work.
   subdirectories use the same configuration.
 - Removed the database URL fallback. Backend settings now require the explicitly located root
   `.env`; if it is missing or cannot be loaded, startup fails with the expected path.
+- Alembic now uses the same explicit root `.env` loading and rejects a missing `DATABASE_URL`
+  instead of silently using the placeholder URL in `alembic.ini`.
 - Added `python-dotenv` to both Python service dependency lists. Vite loads `VITE_*` variables from
   the frontend environment automatically.
 - Consolidated backend and bot Python dependencies into the single root `requirements.txt`; the
