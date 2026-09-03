@@ -329,6 +329,11 @@ This phase was completed before the schema and backend work.
   confirmation, using the existing protected entry mutation endpoints.
 - Added admin `/profile <changes>` workflow with Groq field extraction, preview, confirmation,
   and protected profile update endpoint.
+- Added protected `/admin/content` CRUD dispatch for contact links, skill groups, education,
+  bucket-list items, and site settings. Added the admin bot command
+  `/manage <resource> <list|create|update|delete> [JSON]`; mutations require the existing
+  preview plus `/confirm` safety step, while `list` reads current database records directly
+  through the backend. The bot still never connects to PostgreSQL.
 
 ## Open items to resolve during the work, not before
 

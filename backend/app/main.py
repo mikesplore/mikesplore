@@ -57,6 +57,30 @@ def update_profile(payload: dict, db: Session = Depends(get_db)):
     return {key: getattr(profile, key) for key in allowed}
 
 
+@app.post("/admin/content", response_model=dict, dependencies=[Depends(require_service_key)])
+def manage_content(resource: str, action: str, payload: dict, db: Session = Depends(get_db)):
+    models = {"links": ProfileLink, "skills": SkillGroup, "education": Education, "bucket-list": BucketListItem, "settings": SiteSetting}
+    model = models.get(resource)
+    if not model or action not in {"list", "create", "update", "delete"}:
+        raise HTTPException(status_code=400, detail="Unsupported resource or action")
+    if action == "list":
+        return [{column.name: getattr(item, column.name) for column in model.__table__.columns}
+                for item in db.scalars(select(model)).all()]
+    identity = payload.get("id") or payload.get("key")
+    item = db.get(model, identity) if identity else None
+    if action == "delete":
+        if not item: raise HTTPException(status_code=404, detail="Content not found")
+        db.delete(item)
+    elif action == "update":
+        if not item: raise HTTPException(status_code=404, detail="Content not found")
+        for key, value in payload.items():
+            if key not in {"id", "key"} and hasattr(item, key): setattr(item, key, value)
+    else:
+        db.add(model(**{key: value for key, value in payload.items() if hasattr(model, key)}))
+    db.commit()
+    return {"status": action, "resource": resource}
+
+
 @app.get("/certificates")
 def list_certificates(db: Session = Depends(get_db)):
     return db.scalars(select(Certificate).where(Certificate.is_visible.is_(True)).order_by(Certificate.custom_order)).all()

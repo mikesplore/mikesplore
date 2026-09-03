@@ -10,7 +10,7 @@ from .tools import list_certificates
 from .config import settings
 from .llm import answer
 from .llm import extract_entry, extract_profile_update, extract_update
-from .admin import create_entry, delete_entry, update_entry, update_profile, upload_asset, upload_certificate
+from .admin import create_entry, delete_entry, manage_content, update_entry, update_profile, upload_asset, upload_certificate
 from .formatting import telegram_html
 
 bot = Bot(settings.telegram_bot_token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
@@ -94,6 +94,35 @@ async def profile_command(message: types.Message):
         await message.answer("I couldn't understand those profile changes.")
 
 
+@dispatcher.message(Command("manage"))
+async def manage_command(message: types.Message):
+    if not is_admin(message):
+        await message.answer("That command is restricted to the administrator.")
+        return
+    parts = (message.text or "").split(maxsplit=3)
+    if len(parts) < 3:
+        await message.answer('Usage: /manage <links|skills|education|bucket-list|settings> <list|create|update|delete> [JSON]')
+        return
+    import json
+    resource, action = parts[1], parts[2]
+    if action == "list":
+        try:
+            items = await manage_content(resource, action, {})
+            await message.answer(format_preview({"resource": resource, "items": items})[:3900])
+        except Exception:
+            await message.answer("The backend rejected that list request.")
+        return
+    if len(parts) < 4:
+        await message.answer("Create, update, and delete require a JSON payload.")
+        return
+    try:
+        payload = json.loads(parts[3])
+        pending_mutation[message.from_user.id] = ("manage", f"{resource}:{action}", payload)
+        await message.answer("Management preview (send /confirm to save, /cancel to discard):\n\n" + format_preview({"resource": resource, "action": action, **payload}))
+    except Exception:
+        await message.answer("The resource, action, or JSON payload is invalid.")
+
+
 @dispatcher.message(Command("delete"))
 async def delete_command(message: types.Message):
     if not is_admin(message):
@@ -138,8 +167,11 @@ async def question(message: types.Message):
                 try:
                     if mutation[0] == "delete": await delete_entry(mutation[1])
                     elif mutation[0] == "profile": await update_profile(mutation[2] or {})
+                    elif mutation[0] == "manage":
+                        resource, action = mutation[1].split(":", 1)
+                        await manage_content(resource, action, mutation[2] or {})
                     else: await update_entry(mutation[1], mutation[2] or {})
-                    await message.answer("Profile updated." if mutation[0] == "profile" else "Entry updated." if mutation[0] == "edit" else "Entry deleted.")
+                    await message.answer("Profile updated." if mutation[0] == "profile" else "Content managed." if mutation[0] == "manage" else "Entry updated." if mutation[0] == "edit" else "Entry deleted.")
                 except Exception:
                     await message.answer("The backend rejected that change.")
                 return

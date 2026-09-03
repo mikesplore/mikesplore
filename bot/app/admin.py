@@ -42,3 +42,10 @@ async def update_profile(profile: dict) -> dict:
         response = await client.patch("/profile", json=profile, headers={"X-Service-Api-Key": settings.service_api_key})
         response.raise_for_status()
         return response.json()
+
+
+async def manage_content(resource: str, action: str, payload: dict) -> dict:
+    async with httpx.AsyncClient(base_url=settings.backend_url, timeout=10) as client:
+        response = await client.post("/admin/content", params={"resource": resource, "action": action}, json=payload, headers={"X-Service-Api-Key": settings.service_api_key})
+        response.raise_for_status()
+        return response.json()
