@@ -183,7 +183,7 @@ async def certificates(message: types.Message):
         await message.answer("I couldn't retrieve the certificates right now. Please try again shortly.")
 
 
-@dispatcher.message(lambda message: not message.document)
+@dispatcher.message(lambda message: not message.document and not message.photo)
 async def question(message: types.Message):
     if is_admin(message) and message.text:
         if message.text.strip().lower() in {"/cancel", "cancel"}:
@@ -234,23 +234,25 @@ async def question(message: types.Message):
     await message.answer(telegram_html(response))
 
 
-@dispatcher.message(lambda message: bool(message.document))
+@dispatcher.message(lambda message: bool(message.document or message.photo))
 async def document(message: types.Message):
     if not is_admin(message):
         await message.answer("Document ingestion is restricted to the administrator.")
         return
     try:
         asset_request = pending_upload.pop(message.from_user.id, None)
-        telegram_file = await bot.get_file(message.document.file_id)
+        telegram_file_id = message.document.file_id if message.document else message.photo[-1].file_id
+        telegram_file = await bot.get_file(telegram_file_id)
         buffer = __import__('io').BytesIO()
         await bot.download_file(telegram_file.file_path, buffer)
-        filename = message.document.file_name or "upload"
+        filename = message.document.file_name if message.document else "upload.jpg"
+        mime_type = message.document.mime_type if message.document else "image/jpeg"
         if asset_request:
             asset_type, label = asset_request
-            result = await upload_asset(asset_type, label, filename, buffer.getvalue(), message.document.mime_type)
+            result = await upload_asset(asset_type, label, filename, buffer.getvalue(), mime_type)
             await message.answer(f"Asset uploaded: {html.escape(result['label'], quote=False)}")
         else:
-            result = await upload_certificate(message.caption or filename, filename, buffer.getvalue(), message.document.mime_type)
+            result = await upload_certificate(message.caption or filename, filename, buffer.getvalue(), mime_type)
             await message.answer(f"Certificate uploaded: {html.escape(result['title'], quote=False)}")
     except Exception:
         logger.exception("Certificate upload failed")
