@@ -247,6 +247,12 @@ This phase was completed before the schema and backend work.
 - The importer covers timeline snapshots only. Curated project, event, hackathon, and profile
   collections still need dedicated import mappings.
 
+### Migration configuration fix (2026-09-03)
+
+- Completed the missing Alembic logging sections in `backend/alembic.ini`; `alembic` now loads
+  the migration environment correctly. Applying the migration still requires a reachable
+  PostgreSQL server configured by `DATABASE_URL`.
+
 ## Open items to resolve during the work, not before
 
 - Exact Telegram bot library (`python-telegram-bot` vs `aiogram`) — pick one during Phase 4,
