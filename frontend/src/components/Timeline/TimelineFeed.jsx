@@ -28,12 +28,12 @@ const TimelineFeed = () => {
       acc[type] = entries.filter((entry) => entry.type === type).length;
       return acc;
     }, {});
-  }, []);
+  }, [entries]);
 
   const filteredEntries = useMemo(() => {
     if (!activeType) return entries;
     return entries.filter((entry) => entry.type === activeType);
-  }, [activeType]);
+  }, [activeType, entries]);
 
   const getEntryKey = (entry) => `${entry.date}-${entry.title}`;
 

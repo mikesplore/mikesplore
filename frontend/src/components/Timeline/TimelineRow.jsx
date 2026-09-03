@@ -67,7 +67,6 @@ const TimelineRow = ({ entry, isExpanded, onToggle }) => {
                       <Star className="h-3.5 w-3.5" aria-hidden="true" />
                       {stars} {stars === 1 ? 'star' : 'stars'}
                     </span>
-                  )}
                   {entry.type === 'project' && language && (
                     <span className="inline-flex items-center gap-1">
                       <span className="h-2 w-2 rounded-full bg-accent" aria-hidden="true" />

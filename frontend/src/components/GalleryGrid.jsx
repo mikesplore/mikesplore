@@ -1,4 +1,4 @@
-const GalleryGrid = ({ photos, eventId }) => {
+const GalleryGrid = ({ photos }) => {
   if (!photos || photos.length === 0) return null;
 
   return (
