@@ -224,6 +224,8 @@ This phase was completed before the schema and backend work.
   now starts only after the administrator explicitly sends `/add`.
 - Added public-path API error handling: failures are logged by the bot and produce a retry message
   in Telegram instead of a silent response.
+- Reduced Groq tool payloads to compact public display fields and capped results at 20 entries to
+  stay within model token-per-minute limits.
 
 ## Phase 6 — Deployment
 
