@@ -141,8 +141,16 @@ def upload_asset(asset_type: str = Form(...), label: str = Form(""), file: Uploa
     object_key = f"assets/{slugify(asset_type)}/{slugify(label or file.filename or 'upload')}-{file.filename}"
     client = boto3.client("s3", endpoint_url=settings.r2_endpoint_url, aws_access_key_id=settings.r2_access_key_id, aws_secret_access_key=settings.r2_secret_access_key, region_name="auto")
     client.upload_fileobj(file.file, settings.r2_bucket_name, object_key, ExtraArgs={"ContentType": file.content_type or "application/octet-stream"})
-    item = SiteAsset(asset_type=asset_type, label=label or file.filename, url=f"{settings.r2_public_base_url.rstrip('/')}/{object_key}")
-    db.add(item); db.commit(); db.refresh(item)
+    asset_url = f"{settings.r2_public_base_url.rstrip('/')}/{object_key}"
+    item = None
+    if asset_type == "profile-image":
+        item = db.scalar(select(SiteAsset).where(SiteAsset.asset_type == "profile-image"))
+    if item:
+        item.label, item.url = label or file.filename, asset_url
+    else:
+        item = SiteAsset(asset_type=asset_type, label=label or file.filename, url=asset_url)
+        db.add(item)
+    db.commit(); db.refresh(item)
     return {"id": item.id, "asset_type": item.asset_type, "label": item.label, "url": item.url}
 
 
