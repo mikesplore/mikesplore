@@ -317,6 +317,11 @@ This phase was completed before the schema and backend work.
 
 - Added configurable CORS for the frontend origin via `FRONTEND_ORIGIN`.
 
+### Asset storage update (2026-09-04)
+
+- Added protected generic `POST /assets` R2 upload support for profile images, CVs, project media,
+  and event galleries; public `GET /assets` is the frontend lookup path.
+
 ## Open items to resolve during the work, not before
 
 - Exact Telegram bot library (`python-telegram-bot` vs `aiogram`) — pick one during Phase 4,

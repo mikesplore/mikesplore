@@ -87,6 +87,19 @@ def list_assets(db: Session = Depends(get_db)):
     return [{"id": asset.id, "asset_type": asset.asset_type, "url": asset.url, "label": asset.label} for asset in db.scalars(select(SiteAsset)).all()]
 
 
+@app.post("/assets", response_model=dict, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_service_key)])
+def upload_asset(asset_type: str = Form(...), label: str = Form(""), file: UploadFile = File(...), db: Session = Depends(get_db)):
+    from .config import settings
+    if not all((settings.r2_endpoint_url, settings.r2_access_key_id, settings.r2_secret_access_key, settings.r2_bucket_name, settings.r2_public_base_url)):
+        raise HTTPException(status_code=503, detail="R2 storage is not configured")
+    object_key = f"assets/{slugify(asset_type)}/{slugify(label or file.filename or 'upload')}-{file.filename}"
+    client = boto3.client("s3", endpoint_url=settings.r2_endpoint_url, aws_access_key_id=settings.r2_access_key_id, aws_secret_access_key=settings.r2_secret_access_key, region_name="auto")
+    client.upload_fileobj(file.file, settings.r2_bucket_name, object_key, ExtraArgs={"ContentType": file.content_type or "application/octet-stream"})
+    item = SiteAsset(asset_type=asset_type, label=label or file.filename, url=f"{settings.r2_public_base_url.rstrip('/')}/{object_key}")
+    db.add(item); db.commit(); db.refresh(item)
+    return {"id": item.id, "asset_type": item.asset_type, "label": item.label, "url": item.url}
+
+
 @app.get("/settings/{key}")
 def get_setting(key: str, db: Session = Depends(get_db)):
     setting = db.get(SiteSetting, key)
