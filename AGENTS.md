@@ -236,6 +236,8 @@ This phase was completed before the schema and backend work.
 - Backend and bot explicitly call `python-dotenv`'s `load_dotenv()` before constructing settings.
 - Added `python-dotenv` to both Python service dependency lists. Vite loads `VITE_*` variables from
   the frontend environment automatically.
+- Consolidated backend and bot Python dependencies into the single root `requirements.txt`; the
+  services share one environment and deployment dependency manifest.
 
 ## Open items to resolve during the work, not before
 
