@@ -81,6 +81,21 @@ def manage_content(resource: str, action: str, payload: dict, db: Session = Depe
     return {"status": action, "resource": resource}
 
 
+@app.get("/admin/search", dependencies=[Depends(require_service_key)])
+def admin_search(q: str = Query(min_length=1), db: Session = Depends(get_db)):
+    models = {"entries": Entry, "certificates": Certificate, "assets": SiteAsset, "links": ProfileLink, "skills": SkillGroup, "education": Education, "bucket-list": BucketListItem, "settings": SiteSetting}
+    terms = [term.lower() for term in re.findall(r"[a-z0-9]+", q.lower()) if len(term) > 2]
+    results = []
+    for resource, model in models.items():
+        for item in db.scalars(select(model)).all():
+            values = {column.name: getattr(item, column.name) for column in model.__table__.columns}
+            haystack = " ".join(str(value).lower() for value in values.values())
+            score = sum(term in haystack for term in terms)
+            if score:
+                results.append({"resource": resource, "score": score, "record": values})
+    return sorted(results, key=lambda result: result["score"], reverse=True)[:10]
+
+
 @app.get("/certificates")
 def list_certificates(db: Session = Depends(get_db)):
     return db.scalars(select(Certificate).where(Certificate.is_visible.is_(True)).order_by(Certificate.custom_order)).all()

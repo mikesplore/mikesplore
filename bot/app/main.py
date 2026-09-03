@@ -11,7 +11,7 @@ from .tools import list_certificates
 from .config import settings
 from .llm import answer
 from .llm import extract_admin_operation, extract_entry, extract_profile_update, extract_update
-from .admin import create_entry, delete_asset, delete_certificate, delete_entry, manage_content, update_entry, update_profile, upload_asset, upload_certificate
+from .admin import create_entry, delete_asset, delete_certificate, delete_entry, manage_content, search_admin_content, update_entry, update_profile, upload_asset, upload_certificate
 from .formatting import telegram_html
 
 bot = Bot(settings.telegram_bot_token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
@@ -167,7 +167,11 @@ async def admin_command(message: types.Message):
         return
     try:
         await show_typing(message)
-        operation = await extract_admin_operation(instruction)
+        candidates = await search_admin_content(instruction)
+        operation = await extract_admin_operation(instruction, candidates)
+        if operation.get("action") is None:
+            await message.answer("I found multiple possible records. Please make the instruction more specific:\n\n" + format_preview({"candidates": candidates}))
+            return
         pending_mutation[message.from_user.id] = ("admin", operation["resource"] + ":" + operation["action"], operation)
         await message.answer("Admin preview (send /confirm to save, /cancel to discard):\n\n" + format_preview(operation))
     except Exception:
@@ -333,7 +337,7 @@ async def document(message: types.Message):
 
 
 def format_preview(entry: dict) -> str:
-    fields = ("resource", "action", "id", "title", "content_type", "blurb", "date", "year", "tech_stack", "tags", "links", "payload")
+    fields = ("resource", "action", "id", "title", "content_type", "blurb", "date", "year", "tech_stack", "tags", "links", "payload", "candidates")
     return "\n".join(f"{field}: {html.escape(str(entry.get(field) or '—'), quote=False)}" for field in fields)
 
 
