@@ -7,6 +7,8 @@ class Settings(BaseSettings):
     groq_api_key: str
     backend_url: str = "http://localhost:8000"
     groq_model: str = "llama-3.1-8b-instant"
+    admin_telegram_id: int
+    service_api_key: str
     model_config = SettingsConfigDict(env_file=".env", extra="ignore")
 
 

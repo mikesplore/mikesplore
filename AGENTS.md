@@ -208,6 +208,17 @@ This phase was completed before the schema and backend work.
 
 ## Phase 6 — Deployment
 
+### Phase 5 implementation log (2026-09-03)
+
+- Added administrator authorization using `ADMIN_TELEGRAM_ID`; non-admin users cannot enter the
+  write flow.
+- Added Groq JSON extraction for free-text entry instructions, an in-memory pending preview, and
+  explicit `/confirm` or `/cancel` handling.
+- Confirmed writes call only the backend's protected `POST /entries` endpoint with the separate
+  service API key. Failed writes retain the pending preview for retry.
+- Document messages are rejected with guidance to send text. Full document extraction remains
+  deferred because no document parsing policy/dependency has been selected yet.
+
 - Postgres: managed or self-hosted with a persistent volume and backups, matching what's used
   for other client deployments. Confirm the target platform's handling of persistent storage
   before deploying — do not assume any given host preserves a local volume across redeploys.
