@@ -42,3 +42,12 @@ async def extract_update(instruction: str) -> dict:
 async def extract_profile_update(instruction: str) -> dict:
     completion = await client.chat.completions.create(model=settings.groq_model, messages=[{"role": "system", "content": "Extract only profile fields explicitly requested by the admin. Return JSON using name, tagline, location, focus, experience, availability_status, availability_detail, and about."}, {"role": "user", "content": instruction}], response_format={"type": "json_object"}, temperature=0)
     return json.loads(completion.choices[0].message.content or "{}")
+
+
+async def extract_admin_operation(instruction: str) -> dict:
+    system = "Extract one admin portfolio CRUD operation. Return only JSON with resource (entries, certificates, assets, links, skills, education, bucket-list, settings, profile), action (create, update, delete), id (string or null), and payload (object). Never invent IDs or values. Use profile for profile field updates."
+    completion = await client.chat.completions.create(model=settings.groq_model, messages=[{"role": "system", "content": system}, {"role": "user", "content": instruction}], response_format={"type": "json_object"}, temperature=0)
+    result = json.loads(completion.choices[0].message.content or "{}")
+    if result.get("resource") not in {"entries", "certificates", "assets", "links", "skills", "education", "bucket-list", "settings", "profile"} or result.get("action") not in {"create", "update", "delete"}:
+        raise ValueError("Unsupported admin operation")
+    return result

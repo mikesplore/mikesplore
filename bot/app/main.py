@@ -10,7 +10,7 @@ from .tools import list_certificates
 
 from .config import settings
 from .llm import answer
-from .llm import extract_entry, extract_profile_update, extract_update
+from .llm import extract_admin_operation, extract_entry, extract_profile_update, extract_update
 from .admin import create_entry, delete_asset, delete_certificate, delete_entry, manage_content, update_entry, update_profile, upload_asset, upload_certificate
 from .formatting import telegram_html
 
@@ -43,6 +43,7 @@ async def register_commands():
         types.BotCommand(command="delete-certificate", description="Delete a certificate"),
         types.BotCommand(command="profile", description="Update profile"),
         types.BotCommand(command="manage", description="Manage portfolio collections"),
+        types.BotCommand(command="admin", description="Manage data using an instruction"),
         types.BotCommand(command="upload", description="Upload an asset or certificate"),
         types.BotCommand(command="confirm", description="Confirm a pending change"),
         types.BotCommand(command="cancel", description="Cancel a pending change"),
@@ -165,6 +166,24 @@ async def manage_command(message: types.Message):
         await message.answer("The resource, action, or JSON payload is invalid.")
 
 
+@dispatcher.message(Command("admin"))
+async def admin_command(message: types.Message):
+    if not is_admin(message):
+        await message.answer("That command is restricted to the administrator.")
+        return
+    instruction = (message.text or "").partition(" ")[2].strip()
+    if not instruction:
+        await message.answer("Usage: /admin &lt;instruction&gt;")
+        return
+    try:
+        await show_typing(message)
+        operation = await extract_admin_operation(instruction)
+        pending_mutation[message.from_user.id] = ("admin", operation["resource"] + ":" + operation["action"], operation)
+        await message.answer("Admin preview (send /confirm to save, /cancel to discard):\n\n" + format_preview(operation))
+    except Exception:
+        await message.answer("I couldn't translate that into a safe database operation. Include the exact record ID for updates or deletes.")
+
+
 @dispatcher.message(Command("delete"))
 async def delete_command(message: types.Message):
     if not is_admin(message):
@@ -252,6 +271,16 @@ async def question(message: types.Message):
                     elif mutation[0] == "manage":
                         resource, action = mutation[1].split(":", 1)
                         await manage_content(resource, action, mutation[2] or {})
+                    elif mutation[0] == "admin":
+                        operation = mutation[2] or {}
+                        resource, action = operation["resource"], operation["action"]
+                        if resource == "profile":
+                            await update_profile(operation.get("payload", {}))
+                        else:
+                            payload = dict(operation.get("payload", {}))
+                            if operation.get("id"):
+                                payload["id"] = operation["id"]
+                            await manage_content(resource, action, payload)
                     else: await update_entry(mutation[1], mutation[2] or {})
                     await message.answer("Profile updated." if mutation[0] == "profile" else "Content managed." if mutation[0] == "manage" else "Entry updated." if mutation[0] == "edit" else "Entry deleted.")
                 except Exception:
@@ -314,7 +343,7 @@ async def document(message: types.Message):
 
 
 def format_preview(entry: dict) -> str:
-    fields = ("title", "content_type", "blurb", "date", "year", "tech_stack", "tags", "links")
+    fields = ("resource", "action", "id", "title", "content_type", "blurb", "date", "year", "tech_stack", "tags", "links", "payload")
     return "\n".join(f"{field}: {html.escape(str(entry.get(field) or '—'), quote=False)}" for field in fields)
 
 

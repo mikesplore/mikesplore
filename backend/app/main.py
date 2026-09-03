@@ -57,9 +57,9 @@ def update_profile(payload: dict, db: Session = Depends(get_db)):
     return {key: getattr(profile, key) for key in allowed}
 
 
-@app.post("/admin/content", response_model=dict, dependencies=[Depends(require_service_key)])
+@app.post("/admin/content", dependencies=[Depends(require_service_key)])
 def manage_content(resource: str, action: str, payload: dict, db: Session = Depends(get_db)):
-    models = {"links": ProfileLink, "skills": SkillGroup, "education": Education, "bucket-list": BucketListItem, "settings": SiteSetting}
+    models = {"entries": Entry, "certificates": Certificate, "assets": SiteAsset, "links": ProfileLink, "skills": SkillGroup, "education": Education, "bucket-list": BucketListItem, "settings": SiteSetting}
     model = models.get(resource)
     if not model or action not in {"list", "create", "update", "delete"}:
         raise HTTPException(status_code=400, detail="Unsupported resource or action")
