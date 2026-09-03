@@ -9,8 +9,8 @@ from .tools import list_certificates
 
 from .config import settings
 from .llm import answer
-from .llm import extract_entry, extract_update
-from .admin import create_entry, delete_entry, update_entry, upload_asset, upload_certificate
+from .llm import extract_entry, extract_profile_update, extract_update
+from .admin import create_entry, delete_entry, update_entry, update_profile, upload_asset, upload_certificate
 from .formatting import telegram_html
 
 bot = Bot(settings.telegram_bot_token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
@@ -77,6 +77,23 @@ async def edit_command(message: types.Message):
         await message.answer("I couldn't understand those changes.")
 
 
+@dispatcher.message(Command("profile"))
+async def profile_command(message: types.Message):
+    if not is_admin(message):
+        await message.answer("That command is restricted to the administrator.")
+        return
+    instruction = (message.text or "").partition(" ")[2]
+    if not instruction:
+        await message.answer("Usage: /profile <changes>")
+        return
+    try:
+        changes = await extract_profile_update(instruction)
+        pending_mutation[message.from_user.id] = ("profile", "profile", changes)
+        await message.answer("Profile preview (send /confirm to save, /cancel to discard):\n\n" + format_preview(changes))
+    except Exception:
+        await message.answer("I couldn't understand those profile changes.")
+
+
 @dispatcher.message(Command("delete"))
 async def delete_command(message: types.Message):
     if not is_admin(message):
@@ -120,8 +137,9 @@ async def question(message: types.Message):
             if mutation:
                 try:
                     if mutation[0] == "delete": await delete_entry(mutation[1])
+                    elif mutation[0] == "profile": await update_profile(mutation[2] or {})
                     else: await update_entry(mutation[1], mutation[2] or {})
-                    await message.answer("Entry updated." if mutation[0] == "edit" else "Entry deleted.")
+                    await message.answer("Profile updated." if mutation[0] == "profile" else "Entry updated." if mutation[0] == "edit" else "Entry deleted.")
                 except Exception:
                     await message.answer("The backend rejected that change.")
                 return

@@ -44,6 +44,19 @@ def get_profile(db: Session = Depends(get_db)):
     return {key: getattr(profile, key) for key in ("name", "tagline", "location", "focus", "experience", "availability_status", "availability_detail", "about")}
 
 
+@app.patch("/profile", response_model=dict, dependencies=[Depends(require_service_key)])
+def update_profile(payload: dict, db: Session = Depends(get_db)):
+    profile = db.get(Profile, 1)
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    allowed = {"name", "tagline", "location", "focus", "experience", "availability_status", "availability_detail", "about"}
+    for key, value in payload.items():
+        if key in allowed:
+            setattr(profile, key, value)
+    db.commit(); db.refresh(profile)
+    return {key: getattr(profile, key) for key in allowed}
+
+
 @app.get("/certificates")
 def list_certificates(db: Session = Depends(get_db)):
     return db.scalars(select(Certificate).where(Certificate.is_visible.is_(True)).order_by(Certificate.custom_order)).all()

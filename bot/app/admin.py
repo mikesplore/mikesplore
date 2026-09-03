@@ -35,3 +35,10 @@ async def delete_entry(entry_id: str) -> None:
     async with httpx.AsyncClient(base_url=settings.backend_url, timeout=10) as client:
         response = await client.delete(f"/entries/{entry_id}", headers={"X-Service-Api-Key": settings.service_api_key})
         response.raise_for_status()
+
+
+async def update_profile(profile: dict) -> dict:
+    async with httpx.AsyncClient(base_url=settings.backend_url, timeout=10) as client:
+        response = await client.patch("/profile", json=profile, headers={"X-Service-Api-Key": settings.service_api_key})
+        response.raise_for_status()
+        return response.json()

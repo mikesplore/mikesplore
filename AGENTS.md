@@ -327,6 +327,8 @@ This phase was completed before the schema and backend work.
   LLM and are sent through the protected backend upload endpoint.
 - Added admin `/edit <entry-id> <changes>` and `/delete <entry-id>` workflows with preview and
   confirmation, using the existing protected entry mutation endpoints.
+- Added admin `/profile <changes>` workflow with Groq field extraction, preview, confirmation,
+  and protected profile update endpoint.
 
 ## Open items to resolve during the work, not before
 
