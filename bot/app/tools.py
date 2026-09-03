@@ -52,7 +52,7 @@ async def search_portfolio(query: str, page: int = 1) -> dict:
         response = await client.get("/search", params={"q": query, "page": page, "page_size": 5})
         response.raise_for_status()
         result = response.json()
-        return {"profile": result.get("profile"), "total": result.get("total", 0), "page": result.get("page", page), "page_size": result.get("page_size", 5), "entries": [{"type": item.get("content_type"), "title": item.get("title"), "blurb": item.get("blurb"), "date": item.get("date"), "tags": item.get("tags", []), "url": item.get("links", {}).get("url")} for item in result.get("entries", [])]}
+        return {"profile": result.get("profile"), "total": result.get("total", 0), "page": result.get("page", page), "page_size": result.get("page_size", 5), "entries": [{"type": item.get("content_type"), "title": item.get("title"), "blurb": item.get("blurb"), "date": item.get("date"), "tags": item.get("tags", []), "url": item.get("links", {}).get("url")} for item in result.get("entries", [])], "certificates": [{"type": "certificate", "title": item.get("title")} for item in result.get("certificates", [])]}
 
 
 TOOLS = [{

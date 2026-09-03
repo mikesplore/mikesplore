@@ -203,7 +203,9 @@ def search_portfolio(q: str = Query(min_length=1), page: int = Query(default=1, 
     entries = db.scalars(query.offset((page - 1) * page_size).limit(page_size)).all()
     profile = db.get(Profile, 1) if any(word in q.lower() for word in ("who", "michael", "person", "about", "background")) else None
     profile_data = None if not profile else {key: getattr(profile, key) for key in ("name", "tagline", "location", "focus", "experience", "availability_status", "availability_detail", "about")}
-    return {"profile": profile_data, "entries": entries, "total": total, "page": page, "page_size": page_size}
+    certificate_query = select(Certificate).where(Certificate.is_visible.is_(True), Certificate.title.ilike(term))
+    certificates = db.scalars(certificate_query).all()
+    return {"profile": profile_data, "entries": entries, "certificates": certificates, "total": total + len(certificates), "page": page, "page_size": page_size}
 
 
 @app.get("/entries", response_model=list[EntryRead])
