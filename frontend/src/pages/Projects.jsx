@@ -1,11 +1,24 @@
 import { Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import { ExternalLink, Github } from 'lucide-react';
-import { projectsCatalog } from '../data/projectsCatalog';
+import { fetchProjects } from '../lib/portfolioApi';
 
 const Projects = () => {
+  const [projects, setProjects] = useState([]);
+  const [status, setStatus] = useState('loading');
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchProjects(controller.signal).then((items) => {
+      setProjects(items.map((item) => ({ id: item.slug, title: item.title, summary: item.blurb, ...(item.details || {}), stack: item.tech_stack, tags: item.tags, links: item.links, ...(item.media || {}) })));
+      setStatus('ready');
+    }).catch((error) => { if (error.name !== 'AbortError') setStatus('error'); });
+    return () => controller.abort();
+  }, []);
+  if (status === 'loading') return <p className="py-8 text-center text-base text-subtle">Loading projects…</p>;
+  if (status === 'error') return <p className="py-8 text-center text-base text-subtle">Projects are temporarily unavailable.</p>;
   return (
     <ul className="divide-y divide-divider rounded-xl bg-elevated overflow-hidden">
-      {projectsCatalog.map((project) => (
+      {projects.map((project) => (
         <li key={project.id}>
           <Link
             to={`/projects/${project.id}`}

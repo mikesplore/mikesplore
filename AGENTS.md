@@ -274,6 +274,9 @@ This phase was completed before the schema and backend work.
   the frontend environment automatically.
 - Consolidated backend and bot Python dependencies into the single root `requirements.txt`; the
   services share one environment and deployment dependency manifest.
+- Storage decision: Cloudflare R2 will store uploaded certificates, CV/profile media, project
+  images, and event galleries. Database records will retain object keys and public/signed URLs;
+  local frontend asset files are migration source material only.
 
 ### Data import update (2026-09-03)
 

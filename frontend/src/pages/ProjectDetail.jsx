@@ -1,11 +1,24 @@
 import { useParams, Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import { ExternalLink, Github, ArrowLeft } from 'lucide-react';
-import { projectsCatalog } from '../data/projectsCatalog';
+import { fetchProjects } from '../lib/portfolioApi';
 import SectionCard from '../components/SectionCard';
 
 const ProjectDetail = () => {
   const { projectId } = useParams();
-  const project = projectsCatalog.find((p) => p.id === projectId);
+  const [project, setProject] = useState(null);
+  const [status, setStatus] = useState('loading');
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchProjects(controller.signal).then((items) => {
+      const item = items.find((entry) => entry.slug === projectId);
+      setProject(item && { id: item.slug, title: item.title, summary: item.blurb, ...(item.details || {}), stack: item.tech_stack, tags: item.tags, links: item.links, ...(item.media || {}) });
+      setStatus('ready');
+    }).catch((error) => { if (error.name !== 'AbortError') setStatus('error'); });
+    return () => controller.abort();
+  }, [projectId]);
+  if (status === 'loading') return <p className="py-8 text-center text-base text-subtle">Loading project…</p>;
+  if (status === 'error') return <SectionCard title="Project unavailable"><p className="text-muted">Please try again later.</p></SectionCard>;
 
   if (!project) {
     return (

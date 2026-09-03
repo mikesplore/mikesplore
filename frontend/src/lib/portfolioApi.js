@@ -36,3 +36,7 @@ export function fetchProfileLinks(signal) {
 export function fetchProfile(signal) {
   return fetchJson('/profile', signal);
 }
+
+export function fetchProjects(signal) {
+  return fetchJson('/entries?content_type=project&page_size=50', signal);
+}
