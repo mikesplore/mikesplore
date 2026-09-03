@@ -62,7 +62,7 @@ async def upload_command(message: types.Message):
         return
     parts = (message.text or "").split(maxsplit=2)
     if len(parts) < 2:
-        await message.answer("Usage: /upload <asset_type> [label], then send a file.")
+        await message.answer("Usage: /upload &lt;asset_type&gt; [label], then send a file.")
         return
     pending_upload[message.from_user.id] = (parts[1], parts[2] if len(parts) > 2 else parts[1])
     await message.answer("Send the file now. Use /cancel to discard it.")
@@ -75,7 +75,7 @@ async def edit_command(message: types.Message):
         return
     parts = (message.text or "").split(maxsplit=2)
     if len(parts) < 3:
-        await message.answer("Usage: /edit <entry-id> <changes>")
+        await message.answer("Usage: /edit &lt;entry-id&gt; &lt;changes&gt;")
         return
     try:
         changes = await extract_update(parts[2])
@@ -92,7 +92,7 @@ async def profile_command(message: types.Message):
         return
     instruction = (message.text or "").partition(" ")[2]
     if not instruction:
-        await message.answer("Usage: /profile <changes>")
+        await message.answer("Usage: /profile &lt;changes&gt;")
         return
     try:
         changes = await extract_profile_update(instruction)
@@ -109,7 +109,7 @@ async def manage_command(message: types.Message):
         return
     parts = (message.text or "").split(maxsplit=3)
     if len(parts) < 3:
-        await message.answer('Usage: /manage <links|skills|education|bucket-list|settings> <list|create|update|delete> [JSON]')
+        await message.answer('Usage: /manage &lt;links|skills|education|bucket-list|settings&gt; &lt;list|create|update|delete&gt; [JSON]')
         return
     import json
     resource, action = parts[1], parts[2]
@@ -138,7 +138,7 @@ async def delete_command(message: types.Message):
         return
     parts = (message.text or "").split(maxsplit=1)
     if len(parts) < 2:
-        await message.answer("Usage: /delete <entry-id>")
+        await message.answer("Usage: /delete &lt;entry-id&gt;")
         return
     pending_mutation[message.from_user.id] = ("delete", parts[1], None)
     await message.answer(f"Delete entry {parts[1]}? Send /confirm to delete or /cancel to abort.")
