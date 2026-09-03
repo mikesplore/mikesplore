@@ -5,12 +5,23 @@ import { fetchProfile } from '../lib/portfolioApi';
 
 const Home = () => {
   const [profile, setProfile] = useState(null);
-  useEffect(() => { const controller = new AbortController(); fetchProfile(controller.signal).then(setProfile).catch(() => {}); return () => controller.abort(); }, []);
+  const [error, setError] = useState('');
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchProfile(controller.signal)
+      .then(setProfile)
+      .catch((requestError) => {
+        if (requestError.name !== 'AbortError') setError('The About content is temporarily unavailable.');
+      });
+    return () => controller.abort();
+  }, []);
+  if (error) return <p className="py-8 text-center text-base text-subtle">{error}</p>;
   if (!profile) return <p className="py-8 text-center text-base text-subtle">Loading profile…</p>;
-  const sections = (profile.about || '').split(/\n\n(?=[^\n]+\n\n)/).filter(Boolean).map((section) => {
-    const [title, ...paragraphs] = section.split('\n\n');
-    return { title, paragraphs };
-  });
+  const blocks = (profile.about || '').split(/\n\s*\n/).map((block) => block.trim()).filter(Boolean);
+  const sections = [];
+  for (let index = 0; index < blocks.length; index += 2) {
+    sections.push({ title: blocks[index], paragraphs: blocks[index + 1] ? [blocks[index + 1]] : [] });
+  }
   return (
     <div className="space-y-8">
       <AvailabilityBanner />
