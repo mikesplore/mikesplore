@@ -37,6 +37,8 @@ async def register_commands():
         types.BotCommand(command="profile", description="Update profile"),
         types.BotCommand(command="manage", description="Manage portfolio collections"),
         types.BotCommand(command="upload", description="Upload an asset or certificate"),
+        types.BotCommand(command="confirm", description="Confirm a pending change"),
+        types.BotCommand(command="cancel", description="Cancel a pending change"),
     ]
     await bot.set_my_commands(public_commands)
     await bot.set_my_commands(
