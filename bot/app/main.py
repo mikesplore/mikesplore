@@ -23,6 +23,10 @@ pending_upload: dict[int, tuple[str, str]] = {}
 pending_mutation: dict[int, tuple[str, str, dict | None]] = {}
 
 
+async def show_typing(message: types.Message) -> None:
+    await bot.send_chat_action(chat_id=message.chat.id, action="typing")
+
+
 @app.on_event("startup")
 async def register_commands():
     """Publish Telegram's command menu when the webhook process starts."""
@@ -103,6 +107,7 @@ async def edit_command(message: types.Message):
         await message.answer("Usage: /edit &lt;entry-id&gt; &lt;changes&gt;")
         return
     try:
+        await show_typing(message)
         changes = await extract_update(parts[2])
         pending_mutation[message.from_user.id] = ("edit", parts[1], changes)
         await message.answer("Edit preview (send /confirm to save, /cancel to discard):\n\n" + format_preview(changes))
@@ -120,6 +125,7 @@ async def profile_command(message: types.Message):
         await message.answer("Usage: /profile &lt;changes&gt;")
         return
     try:
+        await show_typing(message)
         changes = await extract_profile_update(instruction)
         pending_mutation[message.from_user.id] = ("profile", "profile", changes)
         await message.answer("Profile preview (send /confirm to save, /cancel to discard):\n\n" + format_preview(changes))
@@ -172,6 +178,7 @@ async def delete_command(message: types.Message):
 @dispatcher.message(lambda message: message.text and "certificate" in message.text.lower())
 async def certificates(message: types.Message):
     try:
+        await show_typing(message)
         items = await list_certificates()
         await message.answer(f"I found {len(items)} certificates. Sending them directly:")
         for item in items:
@@ -219,6 +226,7 @@ async def question(message: types.Message):
             return
         if message.from_user.id in awaiting_entry:
             try:
+                await show_typing(message)
                 entry = await extract_entry(message.text)
                 pending[message.from_user.id] = entry
                 awaiting_entry.discard(message.from_user.id)
@@ -227,6 +235,7 @@ async def question(message: types.Message):
                 await message.answer("I couldn't extract a valid entry. Please provide a clearer instruction.")
             return
     try:
+        await show_typing(message)
         response = await answer(message.text or "")
     except Exception:
         logger.exception("Public portfolio lookup failed")
@@ -240,6 +249,7 @@ async def document(message: types.Message):
         await message.answer("Document ingestion is restricted to the administrator.")
         return
     try:
+        await show_typing(message)
         asset_request = pending_upload.pop(message.from_user.id, None)
         telegram_file_id = message.document.file_id if message.document else message.photo[-1].file_id
         telegram_file = await bot.get_file(telegram_file_id)
