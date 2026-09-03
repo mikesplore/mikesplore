@@ -9,8 +9,7 @@ which cost time to reconcile.
 
 ## Architecture summary
 
-- **Repo**: single monorepo. The current React/Vite frontend is at the repository root; the
-  planned `backend/` exists, while `bot/` does not yet exist.
+- **Repo**: single monorepo with `frontend/`, `backend/`, and `bot/` parent directories.
 - **Backend**: FastAPI + PostgreSQL (SQLAlchemy + Alembic for migrations).
 - **Frontend**: existing site, unchanged visually. Swaps build-time GitHub/dev.to sourcing for
   runtime calls to the backend's public REST endpoints.
@@ -53,9 +52,8 @@ This phase was completed before the schema and backend work.
 
 ### Current State (Phase 0 findings — 2026-09-03)
 
-- Repository layout differs from the architecture summary: the existing Vite/React frontend is
-  at the repository root (`src/`, `scripts/`, `public/`); `backend/`, `bot/`, and `frontend/`
-  do not exist yet.
+- The Vite/React frontend now lives under `frontend/` (`frontend/src/`, `frontend/scripts/`, and
+  `frontend/public/`); `backend/` and `bot/` contain the service implementations.
 - The site has route-based navigation for About, Projects, Timeline, Hackathons, Certificates,
   Events, Bucket list, Contact, and CV. Navigation is a horizontally scrollable multi-tab bar
   with item counts for several curated collections. Project cards link to detail pages. Timeline
@@ -174,6 +172,12 @@ This phase was completed before the schema and backend work.
 - The fetch scripts and generated JSON files remain in the repository as historical/possible
   import material; they are no longer invoked by builds. This is a documented deviation from the
   original “remove dead sourcing code” bullet and should be resolved when the import path is settled.
+
+### Repository structure update (2026-09-03)
+
+- Moved all frontend application files, assets, scripts, and npm configuration into `frontend/`
+  so the monorepo now matches the intended top-level structure. `AGENTS.md`, shared repository
+  metadata, `backend/`, and `bot/` remain at the repository root.
 
 ## Phase 4 — Telegram bot: public read path
 
