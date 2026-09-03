@@ -343,7 +343,7 @@ async def document(message: types.Message):
                             photo=types.BufferedInputFile(buffer.getvalue(), filename=filename)
                         )
                     )
-                    await message.answer("The bot's Telegram profile image was updated too.")
+                    await message.answer("My profile image was updated too.")
                 except Exception:
                     logger.exception("Telegram bot profile photo update failed")
                     await message.answer("The portfolio image was updated, but Telegram's bot profile image could not be changed.")
