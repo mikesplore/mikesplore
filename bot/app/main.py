@@ -324,6 +324,7 @@ async def document(message: types.Message):
         await message.answer("Document ingestion is restricted to the administrator.")
         return
     try:
+        await message.answer("File received. Uploading it now…")
         await show_typing(message)
         asset_request = pending_upload.pop(message.from_user.id, None)
         telegram_file_id = message.document.file_id if message.document else message.photo[-1].file_id
