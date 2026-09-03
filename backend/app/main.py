@@ -172,8 +172,8 @@ async def upload_asset(asset_type: str = Form(...), label: str = Form(""), file:
     asset_url = f"{settings.r2_public_base_url.rstrip('/')}/{object_key}"
     item = None
     previous_url = None
-    if asset_type == "profile-image":
-        item = db.scalar(select(SiteAsset).where(SiteAsset.asset_type == "profile-image"))
+    if asset_type in {"profile-image", "cv"}:
+        item = db.scalar(select(SiteAsset).where(SiteAsset.asset_type == asset_type))
     if item:
         previous_url = item.url
         item.label, item.url = label or file.filename, asset_url
