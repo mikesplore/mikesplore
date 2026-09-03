@@ -325,6 +325,8 @@ This phase was completed before the schema and backend work.
   and event galleries; public `GET /assets` is the frontend lookup path.
 - Added admin `/upload <asset_type> [label]` bot flow for direct R2 asset uploads. Files bypass the
   LLM and are sent through the protected backend upload endpoint.
+- Added admin `/edit <entry-id> <changes>` and `/delete <entry-id>` workflows with preview and
+  confirmation, using the existing protected entry mutation endpoints.
 
 ## Open items to resolve during the work, not before
 

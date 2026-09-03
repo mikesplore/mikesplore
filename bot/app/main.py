@@ -9,8 +9,8 @@ from .tools import list_certificates
 
 from .config import settings
 from .llm import answer
-from .llm import extract_entry
-from .admin import create_entry, upload_asset, upload_certificate
+from .llm import extract_entry, extract_update
+from .admin import create_entry, delete_entry, update_entry, upload_asset, upload_certificate
 from .formatting import telegram_html
 
 bot = Bot(settings.telegram_bot_token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 pending: dict[int, dict] = {}
 awaiting_entry: set[int] = set()
 pending_upload: dict[int, tuple[str, str]] = {}
+pending_mutation: dict[int, tuple[str, str, dict | None]] = {}
 
 
 def is_admin(message: types.Message) -> bool:
@@ -59,6 +60,36 @@ async def upload_command(message: types.Message):
     await message.answer("Send the file now. Use /cancel to discard it.")
 
 
+@dispatcher.message(Command("edit"))
+async def edit_command(message: types.Message):
+    if not is_admin(message):
+        await message.answer("That command is restricted to the administrator.")
+        return
+    parts = (message.text or "").split(maxsplit=2)
+    if len(parts) < 3:
+        await message.answer("Usage: /edit <entry-id> <changes>")
+        return
+    try:
+        changes = await extract_update(parts[2])
+        pending_mutation[message.from_user.id] = ("edit", parts[1], changes)
+        await message.answer("Edit preview (send /confirm to save, /cancel to discard):\n\n" + format_preview(changes))
+    except Exception:
+        await message.answer("I couldn't understand those changes.")
+
+
+@dispatcher.message(Command("delete"))
+async def delete_command(message: types.Message):
+    if not is_admin(message):
+        await message.answer("That command is restricted to the administrator.")
+        return
+    parts = (message.text or "").split(maxsplit=1)
+    if len(parts) < 2:
+        await message.answer("Usage: /delete <entry-id>")
+        return
+    pending_mutation[message.from_user.id] = ("delete", parts[1], None)
+    await message.answer(f"Delete entry {parts[1]}? Send /confirm to delete or /cancel to abort.")
+
+
 @dispatcher.message(lambda message: message.text and "certificate" in message.text.lower())
 async def certificates(message: types.Message):
     try:
@@ -81,9 +112,19 @@ async def question(message: types.Message):
         if message.text.strip().lower() in {"/cancel", "cancel"}:
             pending.pop(message.from_user.id, None)
             awaiting_entry.discard(message.from_user.id)
+            pending_mutation.pop(message.from_user.id, None)
             await message.answer("Cancelled.")
             return
         if message.text.strip().lower() in {"/confirm", "confirm"}:
+            mutation = pending_mutation.pop(message.from_user.id, None)
+            if mutation:
+                try:
+                    if mutation[0] == "delete": await delete_entry(mutation[1])
+                    else: await update_entry(mutation[1], mutation[2] or {})
+                    await message.answer("Entry updated." if mutation[0] == "edit" else "Entry deleted.")
+                except Exception:
+                    await message.answer("The backend rejected that change.")
+                return
             entry = pending.pop(message.from_user.id, None)
             if not entry:
                 await message.answer("There is no pending preview.")

@@ -22,3 +22,16 @@ async def upload_asset(asset_type: str, label: str, filename: str, content: byte
         response = await client.post("/assets", data={"asset_type": asset_type, "label": label}, files={"file": (filename, content, content_type or "application/octet-stream")}, headers={"X-Service-Api-Key": settings.service_api_key})
         response.raise_for_status()
         return response.json()
+
+
+async def update_entry(entry_id: str, entry: dict) -> dict:
+    async with httpx.AsyncClient(base_url=settings.backend_url, timeout=10) as client:
+        response = await client.patch(f"/entries/{entry_id}", json=entry, headers={"X-Service-Api-Key": settings.service_api_key})
+        response.raise_for_status()
+        return response.json()
+
+
+async def delete_entry(entry_id: str) -> None:
+    async with httpx.AsyncClient(base_url=settings.backend_url, timeout=10) as client:
+        response = await client.delete(f"/entries/{entry_id}", headers={"X-Service-Api-Key": settings.service_api_key})
+        response.raise_for_status()
