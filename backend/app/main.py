@@ -205,7 +205,16 @@ def search_portfolio(q: str = Query(min_length=1), page: int = Query(default=1, 
     profile_data = None if not profile else {key: getattr(profile, key) for key in ("name", "tagline", "location", "focus", "experience", "availability_status", "availability_detail", "about")}
     certificate_query = select(Certificate).where(Certificate.is_visible.is_(True), Certificate.title.ilike(term))
     certificates = db.scalars(certificate_query).all()
-    return {"profile": profile_data, "entries": entries, "certificates": certificates, "total": total + len(certificates), "page": page, "page_size": page_size}
+    skill_groups = db.scalars(select(SkillGroup).where(SkillGroup.is_visible.is_(True))).all()
+    skills = [{"category": item.category, "skills": [skill for skill in item.skills if any(word in str(skill).lower() for word in terms) or any(word in item.category.lower() for word in terms)]} for item in skill_groups]
+    skills = [item for item in skills if item["skills"]]
+    links = db.scalars(select(ProfileLink).where(ProfileLink.is_visible.is_(True))).all()
+    matching_links = [item for item in links if any(word in f"{item.name} {item.label or ''} {item.handle or ''}".lower() for word in terms)]
+    education = db.scalars(select(Education)).all()
+    matching_education = [item for item in education if any(word in f"{item.degree} {item.school} {item.location or ''}".lower() for word in terms)]
+    bucket_items = db.scalars(select(BucketListItem)).all()
+    matching_bucket = [item for item in bucket_items if any(word in f"{item.title} {item.remark or ''}".lower() for word in terms)]
+    return {"profile": profile_data, "entries": entries, "certificates": certificates, "skills": skills, "links": matching_links, "education": matching_education, "bucket_list": matching_bucket, "total": total + len(certificates) + len(skills) + len(matching_links) + len(matching_education) + len(matching_bucket), "page": page, "page_size": page_size}
 
 
 @app.get("/entries", response_model=list[EntryRead])
