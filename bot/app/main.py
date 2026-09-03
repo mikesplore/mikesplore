@@ -36,13 +36,6 @@ async def register_commands():
         types.BotCommand(command="help", description="Show help"),
     ]
     admin_commands = public_commands + [
-        types.BotCommand(command="add", description="Create an entry"),
-        types.BotCommand(command="edit", description="Edit an entry"),
-        types.BotCommand(command="delete", description="Delete an entry"),
-        types.BotCommand(command="delete-asset", description="Delete an uploaded asset"),
-        types.BotCommand(command="delete-certificate", description="Delete a certificate"),
-        types.BotCommand(command="profile", description="Update profile"),
-        types.BotCommand(command="manage", description="Manage portfolio collections"),
         types.BotCommand(command="admin", description="Manage data using an instruction"),
         types.BotCommand(command="upload", description="Upload an asset or certificate"),
         types.BotCommand(command="confirm", description="Confirm a pending change"),
@@ -68,12 +61,9 @@ async def start(message: types.Message):
 async def help_command(message: types.Message):
     admin_hint = (
         "\n\nAdmin commands:\n"
-        "/add — create an entry\n"
-        "/edit &lt;entry-id&gt; &lt;changes&gt;\n"
-        "/delete &lt;entry-id&gt;\n"
-        "/profile &lt;changes&gt;\n"
-        "/manage &lt;links|skills|education|bucket-list|settings&gt; &lt;list|create|update|delete&gt; [JSON]\n"
-        "/upload &lt;asset_type&gt; [label]"
+        "/admin &lt;instruction&gt; — manage any database content\n"
+        "/upload &lt;asset_type&gt; [label] — upload a file\n"
+        "/confirm or /cancel — complete or discard a pending change"
         if is_admin(message) else ""
     )
     await message.answer("Use /start, /help, or ask a question about the public portfolio." + admin_hint)
