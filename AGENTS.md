@@ -226,6 +226,8 @@ This phase was completed before the schema and backend work.
   in Telegram instead of a silent response.
 - Reduced Groq tool payloads to compact public display fields and capped results at 20 entries to
   stay within model token-per-minute limits.
+- Added backend and tool pagination with a default page size of 5. The LLM is instructed to offer
+  the next page when a full page is returned and request it when the user asks for more.
 
 ## Phase 6 — Deployment
 

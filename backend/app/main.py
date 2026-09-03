@@ -1,4 +1,4 @@
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import Depends, FastAPI, HTTPException, Query, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from uuid import UUID
@@ -17,11 +17,16 @@ def health() -> dict[str, str]:
 
 
 @app.get("/entries", response_model=list[EntryRead])
-def list_entries(content_type: str | None = None, db: Session = Depends(get_db)):
+def list_entries(
+    content_type: str | None = None,
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=5, ge=1, le=50),
+    db: Session = Depends(get_db),
+):
     query = select(Entry).where(Entry.is_visible.is_(True)).order_by(Entry.custom_order, Entry.date.desc().nullslast())
     if content_type:
         query = query.where(Entry.content_type == content_type)
-    return db.scalars(query).all()
+    return db.scalars(query.offset((page - 1) * page_size).limit(page_size)).all()
 
 
 @app.get("/entries/{entry_id}", response_model=EntryRead)
