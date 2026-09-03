@@ -335,6 +335,12 @@ This phase was completed before the schema and backend work.
   preview plus `/confirm` safety step, while `list` reads current database records directly
   through the backend. The bot still never connects to PostgreSQL.
 
+### Migration cleanup update (2026-09-04)
+
+- Removed legacy frontend-only content modules and build-time fetch/export scripts after runtime
+  API migration verification. Retained local certificate/CV/profile media and `backend/data`
+  snapshots as import/seeding source material; they are no longer used by the frontend runtime.
+
 ## Open items to resolve during the work, not before
 
 - Exact Telegram bot library (`python-telegram-bot` vs `aiogram`) — pick one during Phase 4,
