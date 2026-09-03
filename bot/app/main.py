@@ -337,6 +337,16 @@ async def document(message: types.Message):
 
 
 def format_preview(entry: dict) -> str:
+    if "resource" in entry and "action" in entry and "payload" in entry:
+        return "\n".join([
+            f"Resource: {html.escape(str(entry.get('resource')), quote=False)}",
+            f"Action: {html.escape(str(entry.get('action')), quote=False)}",
+            f"Record ID: {html.escape(str(entry.get('id') or 'new record'), quote=False)}",
+            "Changes:",
+            html.escape(str(entry.get("payload") or "—"), quote=False),
+        ])
+    if "candidates" in entry:
+        return "\n".join(f"{candidate.get('resource')}: {candidate.get('record')}" for candidate in entry["candidates"])
     fields = ("resource", "action", "id", "title", "content_type", "blurb", "date", "year", "tech_stack", "tags", "links", "payload", "candidates")
     return "\n".join(f"{field}: {html.escape(str(entry.get(field) or '—'), quote=False)}" for field in fields)
 

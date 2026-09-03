@@ -167,14 +167,23 @@ def upload_asset(asset_type: str = Form(...), label: str = Form(""), file: Uploa
     client.upload_fileobj(file.file, settings.r2_bucket_name, object_key, ExtraArgs={"ContentType": file.content_type or "application/octet-stream"})
     asset_url = f"{settings.r2_public_base_url.rstrip('/')}/{object_key}"
     item = None
+    previous_url = None
     if asset_type == "profile-image":
         item = db.scalar(select(SiteAsset).where(SiteAsset.asset_type == "profile-image"))
     if item:
+        previous_url = item.url
         item.label, item.url = label or file.filename, asset_url
     else:
         item = SiteAsset(asset_type=asset_type, label=label or file.filename, url=asset_url)
         db.add(item)
     db.commit(); db.refresh(item)
+    if previous_url and previous_url.startswith(settings.r2_public_base_url.rstrip("/") + "/"):
+        previous_key = previous_url.removeprefix(settings.r2_public_base_url.rstrip("/") + "/")
+        if previous_key != object_key:
+            try:
+                client.delete_object(Bucket=settings.r2_bucket_name, Key=previous_key)
+            except Exception:
+                pass
     return {"id": item.id, "asset_type": item.asset_type, "label": item.label, "url": item.url}
 
 
