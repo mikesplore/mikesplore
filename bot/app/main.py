@@ -31,6 +31,14 @@ async def show_typing(message: types.Message) -> None:
 @app.on_event("startup")
 async def register_commands():
     """Publish Telegram's command menu when the webhook process starts."""
+    await bot.set_my_short_description(
+        "Ask about Michael's portfolio, projects, skills, and certifications."
+    )
+    await bot.set_my_description(
+        "Mikesplore is Michael Odhiambo's portfolio assistant. Ask about his projects, "
+        "skills, writing, hackathons, certifications, education, or experience. "
+        "Answers are grounded in his current portfolio data."
+    )
     public_commands = [
         types.BotCommand(command="start", description="Start the portfolio assistant"),
         types.BotCommand(command="help", description="Show help"),
