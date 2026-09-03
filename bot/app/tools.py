@@ -37,7 +37,7 @@ async def list_certificates() -> list[dict]:
     async with httpx.AsyncClient(base_url=settings.backend_url, timeout=10) as client:
         response = await client.get("/certificates")
         response.raise_for_status()
-        return [{"title": item["title"], "certificate_id": item["id"]} for item in response.json()]
+        return [{"title": item["title"], "certificate_id": item["id"], "image_url": item.get("image_url")} for item in response.json()]
 
 
 async def search_portfolio(query: str, page: int = 1) -> dict:
