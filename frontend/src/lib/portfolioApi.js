@@ -48,3 +48,7 @@ export function fetchEntriesByType(type, signal) {
 export function fetchCertificates(signal) {
   return fetchJson('/certificates', signal);
 }
+
+export function fetchEducation(signal) {
+  return fetchJson('/education', signal);
+}

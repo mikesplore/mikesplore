@@ -1,9 +1,19 @@
 import { ExternalLink, GraduationCap } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import cvPdf from '../data/cv/Michael Odhiambo CV.pdf';
-import { education } from '../data/profile';
 import SectionCard from '../components/SectionCard';
+import { fetchEducation } from '../lib/portfolioApi';
 
 const Cv = () => {
+  const [education, setEducation] = useState([]);
+  const [status, setStatus] = useState('loading');
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchEducation(controller.signal).then((items) => { setEducation(items); setStatus('ready'); }).catch((error) => { if (error.name !== 'AbortError') setStatus('error'); });
+    return () => controller.abort();
+  }, []);
+  if (status === 'loading') return <p className="py-8 text-center text-base text-subtle">Loading CV details…</p>;
+  if (status === 'error') return <p className="py-8 text-center text-base text-subtle">CV details are temporarily unavailable.</p>;
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">

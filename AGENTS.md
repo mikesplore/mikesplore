@@ -183,6 +183,8 @@ This phase was completed before the schema and backend work.
   including event location, links, images, and gallery metadata.
 - Migrated Header and Availability Banner to load profile and professional links from the backend;
   the profile image remains a local asset until its R2 asset record is populated.
+- Migrated CV education rendering to `GET /education`; the CV PDF itself remains local pending
+  R2 asset upload and frontend URL migration.
 
 ## Phase 4 — Telegram bot: public read path
 
