@@ -9,8 +9,9 @@ from .config import settings
 from .llm import answer
 from .llm import extract_entry
 from .admin import create_entry
+from .formatting import telegram_html
 
-bot = Bot(settings.telegram_bot_token, default=DefaultBotProperties(parse_mode=ParseMode.MARKDOWN))
+bot = Bot(settings.telegram_bot_token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 dispatcher = Dispatcher()
 app = FastAPI(title="mikesplore Telegram bot")
 logger = logging.getLogger(__name__)
@@ -76,7 +77,7 @@ async def question(message: types.Message):
     except Exception:
         logger.exception("Public portfolio lookup failed")
         response = "I couldn't reach the portfolio right now. Please try again shortly."
-    await message.answer(response)
+    await message.answer(telegram_html(response))
 
 
 @dispatcher.message(lambda message: bool(message.document))

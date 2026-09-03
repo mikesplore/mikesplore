@@ -226,8 +226,8 @@ This phase was completed before the schema and backend work.
   in Telegram instead of a silent response.
 - Added public `GET /profile` and a `get_profile` LLM tool so identity and background questions use
   verified profile data. Added a profile seed command.
-- Enabled Telegram Markdown parsing for bot responses so headings, emphasis, and numbered results
-  render correctly.
+- Enabled Telegram HTML parsing with a formatter for the LLM's common Markdown output, so headings,
+  emphasis, links, and code render reliably without MarkdownV2 escaping errors.
 - Reduced Groq tool payloads to compact public display fields and capped results at 20 entries to
   stay within model token-per-minute limits.
 - Added backend and tool pagination with a default page size of 5. The LLM is instructed to offer
