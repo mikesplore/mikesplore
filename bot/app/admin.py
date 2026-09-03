@@ -49,3 +49,15 @@ async def manage_content(resource: str, action: str, payload: dict) -> dict:
         response = await client.post("/admin/content", params={"resource": resource, "action": action}, json=payload, headers={"X-Service-Api-Key": settings.service_api_key})
         response.raise_for_status()
         return response.json()
+
+
+async def delete_asset(asset_id: str) -> None:
+    async with httpx.AsyncClient(base_url=settings.backend_url, timeout=10) as client:
+        response = await client.delete(f"/assets/{asset_id}", headers={"X-Service-Api-Key": settings.service_api_key})
+        response.raise_for_status()
+
+
+async def delete_certificate(certificate_id: str) -> None:
+    async with httpx.AsyncClient(base_url=settings.backend_url, timeout=10) as client:
+        response = await client.delete(f"/certificates/{certificate_id}", headers={"X-Service-Api-Key": settings.service_api_key})
+        response.raise_for_status()

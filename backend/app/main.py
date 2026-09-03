@@ -86,6 +86,15 @@ def list_certificates(db: Session = Depends(get_db)):
     return db.scalars(select(Certificate).where(Certificate.is_visible.is_(True)).order_by(Certificate.custom_order)).all()
 
 
+@app.delete("/certificates/{certificate_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_service_key)])
+def delete_certificate(certificate_id: UUID, db: Session = Depends(get_db)):
+    certificate = db.get(Certificate, certificate_id)
+    if not certificate:
+        raise HTTPException(status_code=404, detail="Certificate not found")
+    db.delete(certificate)
+    db.commit()
+
+
 @app.post("/certificates", response_model=dict, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_service_key)])
 def upload_certificate(title: str = Form(...), file: UploadFile = File(...), db: Session = Depends(get_db)):
     from .config import settings

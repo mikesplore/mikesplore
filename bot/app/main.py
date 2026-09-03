@@ -11,7 +11,7 @@ from .tools import list_certificates
 from .config import settings
 from .llm import answer
 from .llm import extract_entry, extract_profile_update, extract_update
-from .admin import create_entry, delete_entry, manage_content, update_entry, update_profile, upload_asset, upload_certificate
+from .admin import create_entry, delete_asset, delete_certificate, delete_entry, manage_content, update_entry, update_profile, upload_asset, upload_certificate
 from .formatting import telegram_html
 
 bot = Bot(settings.telegram_bot_token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
@@ -39,6 +39,8 @@ async def register_commands():
         types.BotCommand(command="add", description="Create an entry"),
         types.BotCommand(command="edit", description="Edit an entry"),
         types.BotCommand(command="delete", description="Delete an entry"),
+        types.BotCommand(command="delete-asset", description="Delete an uploaded asset"),
+        types.BotCommand(command="delete-certificate", description="Delete a certificate"),
         types.BotCommand(command="profile", description="Update profile"),
         types.BotCommand(command="manage", description="Manage portfolio collections"),
         types.BotCommand(command="upload", description="Upload an asset or certificate"),
@@ -176,6 +178,32 @@ async def delete_command(message: types.Message):
     await message.answer(f"Delete entry {html.escape(parts[1], quote=False)}? Send /confirm to delete or /cancel to abort.")
 
 
+@dispatcher.message(Command("delete-asset"))
+async def delete_asset_command(message: types.Message):
+    if not is_admin(message):
+        await message.answer("That command is restricted to the administrator.")
+        return
+    parts = (message.text or "").split(maxsplit=1)
+    if len(parts) < 2:
+        await message.answer("Usage: /delete-asset &lt;asset-id&gt;")
+        return
+    pending_mutation[message.from_user.id] = ("asset-delete", parts[1], None)
+    await message.answer(f"Delete asset {html.escape(parts[1], quote=False)}? Send /confirm to delete or /cancel to abort.")
+
+
+@dispatcher.message(Command("delete-certificate"))
+async def delete_certificate_command(message: types.Message):
+    if not is_admin(message):
+        await message.answer("That command is restricted to the administrator.")
+        return
+    parts = (message.text or "").split(maxsplit=1)
+    if len(parts) < 2:
+        await message.answer("Usage: /delete-certificate &lt;certificate-id&gt;")
+        return
+    pending_mutation[message.from_user.id] = ("certificate-delete", parts[1], None)
+    await message.answer(f"Delete certificate {html.escape(parts[1], quote=False)}? Send /confirm to delete or /cancel to abort.")
+
+
 @dispatcher.message(lambda message: message.text and "certificate" in message.text.lower())
 async def certificates(message: types.Message):
     try:
@@ -218,6 +246,8 @@ async def question(message: types.Message):
             if mutation:
                 try:
                     if mutation[0] == "delete": await delete_entry(mutation[1])
+                    elif mutation[0] == "asset-delete": await delete_asset(mutation[1])
+                    elif mutation[0] == "certificate-delete": await delete_certificate(mutation[1])
                     elif mutation[0] == "profile": await update_profile(mutation[2] or {})
                     elif mutation[0] == "manage":
                         resource, action = mutation[1].split(":", 1)
