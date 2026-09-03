@@ -184,17 +184,6 @@ This phase was completed before the schema and backend work.
   content questions through the LLM tool-calling path rather than building a parallel hardcoded
   command menu for each content type.
 
-## Phase 5 — Telegram bot: admin write path
-
-- Middleware: reject any write-path command where `message.from.id != ADMIN_TELEGRAM_ID`.
-- Accept a document or free-text instruction from the admin, use the LLM to extract structured
-  fields matching the Phase 1 schema.
-- Show a preview of the extracted data and require explicit confirmation before the bot calls
-  the backend's protected write endpoint. This confirm step is the actual safety net against bad
-  extractions — treat it as required, not optional polish.
-- No GitHub webhook auto-sync in this phase. Ingestion is document/instruction-driven only, by
-  design — the point is curation, not mirroring every repo.
-
 ### Phase 4 implementation log (2026-09-03)
 
 - Added a webhook-based `aiogram` bot under `bot/app`; `aiogram` was selected for its native
@@ -206,7 +195,16 @@ This phase was completed before the schema and backend work.
   use. Configured `llama-3.1-8b-instant` as the small/fast default, with `GROQ_MODEL` overridable
   through environment configuration. Recheck the active model lineup before deployment.
 
-## Phase 6 — Deployment
+## Phase 5 — Telegram bot: admin write path
+
+- Middleware: reject any write-path command where `message.from.id != ADMIN_TELEGRAM_ID`.
+- Accept a document or free-text instruction from the admin, use the LLM to extract structured
+  fields matching the Phase 1 schema.
+- Show a preview of the extracted data and require explicit confirmation before the bot calls
+  the backend's protected write endpoint. This confirm step is the actual safety net against bad
+  extractions — treat it as required, not optional polish.
+- No GitHub webhook auto-sync in this phase. Ingestion is document/instruction-driven only, by
+  design — the point is curation, not mirroring every repo.
 
 ### Phase 5 implementation log (2026-09-03)
 
@@ -218,6 +216,8 @@ This phase was completed before the schema and backend work.
   service API key. Failed writes retain the pending preview for retry.
 - Document messages are rejected with guidance to send text. Full document extraction remains
   deferred because no document parsing policy/dependency has been selected yet.
+
+## Phase 6 — Deployment
 
 - Postgres: managed or self-hosted with a persistent volume and backups, matching what's used
   for other client deployments. Confirm the target platform's handling of persistent storage
