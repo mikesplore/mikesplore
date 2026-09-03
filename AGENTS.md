@@ -234,6 +234,8 @@ This phase was completed before the schema and backend work.
 
 - Added root `.env.example` plus `frontend/.env.example`; real `.env` files remain uncommitted.
 - Backend and bot explicitly call `python-dotenv`'s `load_dotenv()` before constructing settings.
+- Dotenv loading resolves the repository-root `.env` by path, so commands run from service
+  subdirectories use the same configuration.
 - Added `python-dotenv` to both Python service dependency lists. Vite loads `VITE_*` variables from
   the frontend environment automatically.
 - Consolidated backend and bot Python dependencies into the single root `requirements.txt`; the
