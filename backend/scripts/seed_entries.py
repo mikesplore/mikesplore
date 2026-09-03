@@ -15,7 +15,7 @@ DATA_DIR = ROOT / "frontend" / "src" / "data"
 def slugify(title: str, link: str = "") -> str:
     value = re.sub(r"[^a-z0-9]+", "-", title.lower()).strip("-")
     suffix = re.sub(r"[^a-z0-9]+", "-", link.lower()).strip("-")[-24:]
-    return f"{value}-{suffix}".strip("-")[:160]
+    return re.sub(r"-+", "-", f"{value}-{suffix}").strip("-")[:160]
 
 def load_snapshot(filename: str, source_name: str) -> list[dict]:
     records = json.loads((DATA_DIR / filename).read_text())

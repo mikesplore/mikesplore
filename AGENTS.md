@@ -259,6 +259,11 @@ This phase was completed before the schema and backend work.
   the migration environment correctly. Applying the migration still requires a reachable
   PostgreSQL server configured by `DATABASE_URL`.
 
+### Data validation fix (2026-09-03)
+
+- Fixed seed slug generation to collapse duplicate hyphens and added migration `0002` to repair
+  slugs already imported. This prevents valid database rows from failing API response validation.
+
 ## Open items to resolve during the work, not before
 
 - Exact Telegram bot library (`python-telegram-bot` vs `aiogram`) — pick one during Phase 4,
