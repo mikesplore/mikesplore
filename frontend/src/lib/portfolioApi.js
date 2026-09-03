@@ -44,3 +44,7 @@ export function fetchProjects(signal) {
 export function fetchEntriesByType(type, signal) {
   return fetchJson(`/entries?content_type=${encodeURIComponent(type)}&page_size=50`, signal);
 }
+
+export function fetchCertificates(signal) {
+  return fetchJson('/certificates', signal);
+}

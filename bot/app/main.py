@@ -10,7 +10,7 @@ from .tools import list_certificates
 from .config import settings
 from .llm import answer
 from .llm import extract_entry
-from .admin import create_entry
+from .admin import create_entry, upload_certificate
 from .formatting import telegram_html
 
 bot = Bot(settings.telegram_bot_token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
@@ -61,7 +61,7 @@ async def certificates(message: types.Message):
         await message.answer("I couldn't retrieve the certificates right now. Please try again shortly.")
 
 
-@dispatcher.message()
+@dispatcher.message(lambda message: not message.document)
 async def question(message: types.Message):
     if is_admin(message) and message.text:
         if message.text.strip().lower() in {"/cancel", "cancel"}:
@@ -103,7 +103,16 @@ async def document(message: types.Message):
     if not is_admin(message):
         await message.answer("Document ingestion is restricted to the administrator.")
         return
-    await message.answer("Documents are not yet supported. Send the entry instruction as text.")
+    try:
+        telegram_file = await bot.get_file(message.document.file_id)
+        buffer = __import__('io').BytesIO()
+        await bot.download_file(telegram_file.file_path, buffer)
+        title = message.caption or message.document.file_name or "Certificate"
+        result = await upload_certificate(title, message.document.file_name or "certificate", buffer.getvalue(), message.document.mime_type)
+        await message.answer(f"Certificate uploaded: {result['title']}")
+    except Exception:
+        logger.exception("Certificate upload failed")
+        await message.answer("I couldn't upload that certificate. Please check R2 configuration and try again.")
 
 
 def format_preview(entry: dict) -> str:
