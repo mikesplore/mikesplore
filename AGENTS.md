@@ -186,6 +186,17 @@ This phase was completed before the schema and backend work.
 
 ## Phase 5 — Telegram bot: admin write path
 
+### Phase 4 implementation log (2026-09-03)
+
+- Added a webhook-based `aiogram` bot under `bot/app`; `aiogram` was selected for its native
+  async Dispatcher and webhook update handling.
+- Added `/start` and `/help`, plus a public question handler that uses Groq tool calling.
+- The only tool calls the backend's public `GET /entries` endpoint. The bot has no database access
+  and does not use the protected write API.
+- Verified against current Groq documentation: Groq states that all hosted models support tool
+  use. Configured `llama-3.1-8b-instant` as the small/fast default, with `GROQ_MODEL` overridable
+  through environment configuration. Recheck the active model lineup before deployment.
+
 - Middleware: reject any write-path command where `message.from.id != ADMIN_TELEGRAM_ID`.
 - Accept a document or free-text instruction from the admin, use the LLM to extract structured
   fields matching the Phase 1 schema.
