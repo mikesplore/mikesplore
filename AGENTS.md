@@ -236,6 +236,9 @@ This phase was completed before the schema and backend work.
   routes for profile links, education, skills, and settings. These endpoints precede frontend
   runtime migration; projects, events, hackathons, bucket-list, and upload-backed assets remain
   next.
+- Added public `/bucket-list` and `/assets` routes with SQLAlchemy models for the remaining
+  existing collections. Frontend runtime adapters and import/seed mappings for these collections
+  are still pending.
 - Reduced Groq tool payloads to compact public display fields and capped results at 20 entries to
   stay within model token-per-minute limits.
 - Added backend and tool pagination with a default page size of 5. The LLM is instructed to offer

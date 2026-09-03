@@ -93,3 +93,20 @@ class Education(Base):
     location: Mapped[str | None] = mapped_column(String(255))
     period: Mapped[str | None] = mapped_column(String(128))
     custom_order: Mapped[int] = mapped_column(Integer, default=0)
+
+
+class BucketListItem(Base):
+    __tablename__ = "bucket_list_items"
+    id: Mapped[str] = mapped_column(String(160), primary_key=True)
+    title: Mapped[str] = mapped_column(String(255))
+    done: Mapped[bool] = mapped_column(Boolean, default=False)
+    remark: Mapped[str | None] = mapped_column(Text)
+    custom_order: Mapped[int] = mapped_column(Integer, default=0)
+
+
+class SiteAsset(Base):
+    __tablename__ = "site_assets"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    asset_type: Mapped[str] = mapped_column(String(32))
+    url: Mapped[str] = mapped_column(Text)
+    label: Mapped[str | None] = mapped_column(String(255))

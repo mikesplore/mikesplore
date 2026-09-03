@@ -5,7 +5,7 @@ from uuid import UUID
 
 from .auth import require_service_key
 from .db import get_db
-from .models import Certificate, Education, Entry, Profile, ProfileLink, SkillGroup, SiteSetting
+from .models import BucketListItem, Certificate, Education, Entry, Profile, ProfileLink, SiteAsset, SkillGroup, SiteSetting
 from .schemas import EntryCreate, EntryRead, EntryUpdate
 
 app = FastAPI(title="mikesplore portfolio API", version="1.0.0")
@@ -42,6 +42,16 @@ def list_education(db: Session = Depends(get_db)):
 @app.get("/skills")
 def list_skills(db: Session = Depends(get_db)):
     return db.scalars(select(SkillGroup).where(SkillGroup.is_visible.is_(True)).order_by(SkillGroup.custom_order)).all()
+
+
+@app.get("/bucket-list")
+def list_bucket_list(db: Session = Depends(get_db)):
+    return db.scalars(select(BucketListItem).order_by(BucketListItem.custom_order)).all()
+
+
+@app.get("/assets")
+def list_assets(db: Session = Depends(get_db)):
+    return [{"id": asset.id, "asset_type": asset.asset_type, "url": asset.url, "label": asset.label} for asset in db.scalars(select(SiteAsset)).all()]
 
 
 @app.get("/settings/{key}")
