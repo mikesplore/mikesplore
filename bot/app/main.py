@@ -1,6 +1,7 @@
 from aiogram import Bot, Dispatcher, types
 from aiogram.filters import Command
 from fastapi import FastAPI, Header, HTTPException, Request
+import logging
 
 from .config import settings
 from .llm import answer
@@ -10,6 +11,7 @@ from .admin import create_entry
 bot = Bot(settings.telegram_bot_token)
 dispatcher = Dispatcher()
 app = FastAPI(title="mikesplore Telegram bot")
+logger = logging.getLogger(__name__)
 pending: dict[int, dict] = {}
 awaiting_entry: set[int] = set()
 
@@ -67,7 +69,12 @@ async def question(message: types.Message):
             except Exception:
                 await message.answer("I couldn't extract a valid entry. Please provide a clearer instruction.")
             return
-    await message.answer(await answer(message.text or ""))
+    try:
+        response = await answer(message.text or "")
+    except Exception:
+        logger.exception("Public portfolio lookup failed")
+        response = "I couldn't reach the portfolio right now. Please try again shortly."
+    await message.answer(response)
 
 
 @dispatcher.message(lambda message: bool(message.document))

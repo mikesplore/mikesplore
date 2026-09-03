@@ -222,6 +222,8 @@ This phase was completed before the schema and backend work.
   deferred because no document parsing policy/dependency has been selected yet.
 - Corrected admin message routing so public questions remain on the read path; entry extraction
   now starts only after the administrator explicitly sends `/add`.
+- Added public-path API error handling: failures are logged by the bot and produce a retry message
+  in Telegram instead of a silent response.
 
 ## Phase 6 — Deployment
 
