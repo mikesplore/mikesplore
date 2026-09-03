@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date as DateValue
+from datetime import datetime
 from typing import Any, Literal
 from uuid import UUID
 
@@ -14,7 +15,7 @@ class EntryBase(BaseModel):
     content_type: ContentType
     title: str = Field(min_length=1, max_length=255)
     blurb: str
-    date: date | None = None
+    date: DateValue | None = None
     year: int | None = Field(default=None, ge=1900, le=2200)
     is_visible: bool = True
     is_featured: bool = False
