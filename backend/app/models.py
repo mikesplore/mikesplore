@@ -54,3 +54,42 @@ class Certificate(Base):
     image_url: Mapped[str] = mapped_column(Text)
     custom_order: Mapped[int] = mapped_column(Integer, default=0)
     is_visible: Mapped[bool] = mapped_column(Boolean, default=True)
+
+
+class SkillGroup(Base):
+    __tablename__ = "skill_groups"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    category: Mapped[str] = mapped_column(String(128))
+    skills: Mapped[list] = mapped_column(JSONB)
+    custom_order: Mapped[int] = mapped_column(Integer, default=0)
+    is_visible: Mapped[bool] = mapped_column(Boolean, default=True)
+
+
+class SiteSetting(Base):
+    __tablename__ = "site_settings"
+
+    key: Mapped[str] = mapped_column(String(128), primary_key=True)
+    value: Mapped[dict] = mapped_column(JSONB)
+
+
+class ProfileLink(Base):
+    __tablename__ = "profile_links"
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name: Mapped[str] = mapped_column(String(64))
+    url: Mapped[str] = mapped_column(Text)
+    label: Mapped[str | None] = mapped_column(String(255))
+    handle: Mapped[str | None] = mapped_column(String(255))
+    category: Mapped[str] = mapped_column(String(32))
+    custom_order: Mapped[int] = mapped_column(Integer, default=0)
+    is_visible: Mapped[bool] = mapped_column(Boolean, default=True)
+
+
+class Education(Base):
+    __tablename__ = "education"
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    degree: Mapped[str] = mapped_column(String(255))
+    school: Mapped[str] = mapped_column(String(255))
+    location: Mapped[str | None] = mapped_column(String(255))
+    period: Mapped[str | None] = mapped_column(String(128))
+    custom_order: Mapped[int] = mapped_column(Integer, default=0)

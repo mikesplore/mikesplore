@@ -232,6 +232,10 @@ This phase was completed before the schema and backend work.
   `search_portfolio` LLM tool for broad or ambiguous user questions.
 - Added public certificate listing and direct Telegram certificate delivery. Certificate files are
   fetched by the bot and sent directly; they are not uploaded to or interpreted by the LLM.
+- Began full collection migration with migration `0003`, skill/settings storage, and public API
+  routes for profile links, education, skills, and settings. These endpoints precede frontend
+  runtime migration; projects, events, hackathons, bucket-list, and upload-backed assets remain
+  next.
 - Reduced Groq tool payloads to compact public display fields and capped results at 20 entries to
   stay within model token-per-minute limits.
 - Added backend and tool pagination with a default page size of 5. The LLM is instructed to offer

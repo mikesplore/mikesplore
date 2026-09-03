@@ -5,7 +5,7 @@ from uuid import UUID
 
 from .auth import require_service_key
 from .db import get_db
-from .models import Certificate, Entry, Profile
+from .models import Certificate, Education, Entry, Profile, ProfileLink, SkillGroup, SiteSetting
 from .schemas import EntryCreate, EntryRead, EntryUpdate
 
 app = FastAPI(title="mikesplore portfolio API", version="1.0.0")
@@ -27,6 +27,29 @@ def get_profile(db: Session = Depends(get_db)):
 @app.get("/certificates")
 def list_certificates(db: Session = Depends(get_db)):
     return db.scalars(select(Certificate).where(Certificate.is_visible.is_(True)).order_by(Certificate.custom_order)).all()
+
+
+@app.get("/profile/links")
+def list_profile_links(db: Session = Depends(get_db)):
+    return db.scalars(select(ProfileLink).where(ProfileLink.is_visible.is_(True)).order_by(ProfileLink.custom_order)).all()
+
+
+@app.get("/education")
+def list_education(db: Session = Depends(get_db)):
+    return db.scalars(select(Education).order_by(Education.custom_order)).all()
+
+
+@app.get("/skills")
+def list_skills(db: Session = Depends(get_db)):
+    return db.scalars(select(SkillGroup).where(SkillGroup.is_visible.is_(True)).order_by(SkillGroup.custom_order)).all()
+
+
+@app.get("/settings/{key}")
+def get_setting(key: str, db: Session = Depends(get_db)):
+    setting = db.get(SiteSetting, key)
+    if not setting:
+        raise HTTPException(status_code=404, detail="Setting not found")
+    return setting.value
 
 
 @app.get("/search")
