@@ -1,4 +1,6 @@
 from aiogram import Bot, Dispatcher, types
+from aiogram.client.default import DefaultBotProperties
+from aiogram.enums import ParseMode
 from aiogram.filters import Command
 from fastapi import FastAPI, Header, HTTPException, Request
 import logging
@@ -8,7 +10,7 @@ from .llm import answer
 from .llm import extract_entry
 from .admin import create_entry
 
-bot = Bot(settings.telegram_bot_token)
+bot = Bot(settings.telegram_bot_token, default=DefaultBotProperties(parse_mode=ParseMode.MARKDOWN))
 dispatcher = Dispatcher()
 app = FastAPI(title="mikesplore Telegram bot")
 logger = logging.getLogger(__name__)

@@ -5,7 +5,7 @@ from uuid import UUID
 
 from .auth import require_service_key
 from .db import get_db
-from .models import Entry
+from .models import Entry, Profile
 from .schemas import EntryCreate, EntryRead, EntryUpdate
 
 app = FastAPI(title="mikesplore portfolio API", version="1.0.0")
@@ -14,6 +14,14 @@ app = FastAPI(title="mikesplore portfolio API", version="1.0.0")
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.get("/profile")
+def get_profile(db: Session = Depends(get_db)):
+    profile = db.get(Profile, 1)
+    if not profile:
+        raise HTTPException(status_code=404, detail="Profile not found")
+    return {key: getattr(profile, key) for key in ("name", "tagline", "location", "focus", "experience", "availability_status", "availability_detail", "about")}
 
 
 @app.get("/entries", response_model=list[EntryRead])

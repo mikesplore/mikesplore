@@ -224,6 +224,10 @@ This phase was completed before the schema and backend work.
   now starts only after the administrator explicitly sends `/add`.
 - Added public-path API error handling: failures are logged by the bot and produce a retry message
   in Telegram instead of a silent response.
+- Added public `GET /profile` and a `get_profile` LLM tool so identity and background questions use
+  verified profile data. Added a profile seed command.
+- Enabled Telegram Markdown parsing for bot responses so headings, emphasis, and numbered results
+  render correctly.
 - Reduced Groq tool payloads to compact public display fields and capped results at 20 entries to
   stay within model token-per-minute limits.
 - Added backend and tool pagination with a default page size of 5. The LLM is instructed to offer
@@ -260,6 +264,8 @@ This phase was completed before the schema and backend work.
   unified `project` type, while preserving provider/type metadata in `source`.
 - The importer covers timeline snapshots only. Curated project, event, hackathon, and profile
   collections still need dedicated import mappings.
+- Added `backend/scripts/seed_profile.py` for the public profile record used by the bot's identity
+  lookup tool. Run it after migrations with `python -m backend.scripts.seed_profile`.
 
 ### Migration configuration fix (2026-09-03)
 

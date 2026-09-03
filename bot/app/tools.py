@@ -25,6 +25,13 @@ async def list_entries(content_type: str | None = None, page: int = 1, page_size
         ]
 
 
+async def get_profile() -> dict:
+    async with httpx.AsyncClient(base_url=settings.backend_url, timeout=10) as client:
+        response = await client.get("/profile")
+        response.raise_for_status()
+        return response.json()
+
+
 TOOLS = [{
     "type": "function",
     "function": {
@@ -32,10 +39,19 @@ TOOLS = [{
         "description": "List public portfolio entries. Use this before answering facts about Mike's work.",
         "parameters": {"type": "object", "properties": {"content_type": {"type": "string", "enum": ["project", "article", "hackathon", "event"]}, "page": {"type": "integer", "minimum": 1, "default": 1}}, "required": []},
     },
+}, {
+    "type": "function",
+    "function": {
+        "name": "get_profile",
+        "description": "Get verified public profile information about Michael Odhiambo.",
+        "parameters": {"type": "object", "properties": {}, "required": []},
+    },
 }]
 
 
 async def execute_tool(name: str, arguments: dict):
     if name != "list_entries":
+        if name == "get_profile":
+            return await get_profile()
         raise ValueError(f"Unknown tool: {name}")
     return await list_entries(arguments.get("content_type"), arguments.get("page", 1))
