@@ -141,6 +141,19 @@ Do this before writing any schema or backend code.
 
 ## Phase 3 — Frontend migration
 
+### Phase 2 implementation log (2026-09-03)
+
+- Added FastAPI application under `backend/app` with SQLAlchemy session dependency, Pydantic
+  request/response schemas, and `/health`.
+- Added public `GET /entries` and `GET /entries/{id}` routes. Both enforce `is_visible = true`;
+  list results support an optional content-type filter and are ordered by `custom_order`, then
+  date descending.
+- Added service-key-protected create, patch, and delete routes using `X-Service-Api-Key`.
+  Writes are rejected when the service key is unset or incorrect.
+- Added a visibility regression test. The API layer is intentionally limited to entries; routes
+  for profile and other collections can be added after the frontend migration requirements are
+  clearer.
+
 - Replace the build-time GitHub/dev.to fetching with runtime fetch calls to the backend's public
   endpoints.
 - Visual output must not change. This is a data-source swap, not a redesign.
