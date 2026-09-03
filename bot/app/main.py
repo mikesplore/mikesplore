@@ -336,6 +336,17 @@ async def document(message: types.Message):
             asset_type, label = asset_request
             result = await upload_asset(asset_type, label, filename, buffer.getvalue(), mime_type)
             await message.answer(f"Asset uploaded: {html.escape(result['label'], quote=False)}")
+            if asset_type == "profile-image":
+                try:
+                    await bot.set_my_profile_photo(
+                        photo=types.InputProfilePhotoStatic(
+                            photo=types.BufferedInputFile(buffer.getvalue(), filename=filename)
+                        )
+                    )
+                    await message.answer("The bot's Telegram profile image was updated too.")
+                except Exception:
+                    logger.exception("Telegram bot profile photo update failed")
+                    await message.answer("The portfolio image was updated, but Telegram's bot profile image could not be changed.")
         else:
             result = await upload_certificate(message.caption or filename, filename, buffer.getvalue(), mime_type)
             await message.answer(f"Certificate uploaded: {html.escape(result['title'], quote=False)}")
