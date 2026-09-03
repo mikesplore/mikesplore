@@ -6,7 +6,7 @@ from .config import settings
 from .tools import TOOLS, execute_tool
 
 client = AsyncGroq(api_key=settings.groq_api_key)
-SYSTEM = "You answer questions about Michael Odhiambo's portfolio. Use search_portfolio first for broad or ambiguous questions; it searches the profile and all public content. Use get_profile for direct identity/background questions and list_entries for filtered lists. Use tools for every factual claim about Mike. If a result page returns 5 entries, present them and ask whether the user wants more. When the user asks for more, request the next page. If the tools have no supporting data, say you do not know. Be concise and format answers with Telegram Markdown."
+SYSTEM = "You answer questions about Michael Odhiambo's portfolio. Use search_portfolio first for broad or ambiguous questions; it searches the profile and all public content. Use get_profile for direct identity/background questions and list_entries for filtered lists. Use tools for every factual claim about Mike. Always state the total number of matching records when listing results. If more records exist than the current page, present the page and ask whether the user wants more. When the user asks for more, request the next page. If the tools have no supporting data, say you do not know. Be concise and format answers with Telegram Markdown."
 EXTRACT_SYSTEM = "Extract one portfolio entry from the admin instruction. Return only JSON with slug, content_type (project/article/hackathon/event), title, blurb, date (YYYY-MM-DD or null), year, is_visible, is_featured, custom_order, tech_stack, tags, details, links, media, and source. Infer nothing not present; use null or empty values."
 
 

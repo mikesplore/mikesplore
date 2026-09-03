@@ -3,7 +3,7 @@ import httpx
 from .config import settings
 
 
-async def list_entries(content_type: str | None = None, page: int = 1, page_size: int = 5) -> list[dict]:
+async def list_entries(content_type: str | None = None, page: int = 1, page_size: int = 5) -> dict:
     params = {"page": page, "page_size": min(page_size, 5)}
     if content_type:
         params["content_type"] = content_type
@@ -11,8 +11,9 @@ async def list_entries(content_type: str | None = None, page: int = 1, page_size
         response = await client.get("/entries", params=params)
         response.raise_for_status()
         entries = response.json()
+        total = int(response.headers.get("x-total-count", len(entries)))
         # Keep tool context small; the model only needs public display fields to answer questions.
-        return [
+        return {"total": total, "page": page, "page_size": len(entries), "entries": [
             {
                 "type": entry.get("content_type"),
                 "title": entry.get("title"),
@@ -22,7 +23,7 @@ async def list_entries(content_type: str | None = None, page: int = 1, page_size
                 "url": entry.get("links", {}).get("url"),
             }
             for entry in entries
-        ]
+        ]}
 
 
 async def get_profile() -> dict:
@@ -44,7 +45,7 @@ async def search_portfolio(query: str, page: int = 1) -> dict:
         response = await client.get("/search", params={"q": query, "page": page, "page_size": 5})
         response.raise_for_status()
         result = response.json()
-        return {"profile": result.get("profile"), "entries": [{"type": item.get("content_type"), "title": item.get("title"), "blurb": item.get("blurb"), "date": item.get("date"), "tags": item.get("tags", []), "url": item.get("links", {}).get("url")} for item in result.get("entries", [])]}
+        return {"profile": result.get("profile"), "total": result.get("total", 0), "page": result.get("page", page), "page_size": result.get("page_size", 5), "entries": [{"type": item.get("content_type"), "title": item.get("title"), "blurb": item.get("blurb"), "date": item.get("date"), "tags": item.get("tags", []), "url": item.get("links", {}).get("url")} for item in result.get("entries", [])]}
 
 
 TOOLS = [{

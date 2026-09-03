@@ -1,7 +1,7 @@
-from fastapi import Depends, FastAPI, File, Form, HTTPException, Query, UploadFile, status
+from fastapi import Depends, FastAPI, File, Form, HTTPException, Query, Response, UploadFile, status
 import boto3
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import cast, or_, select, String
+from sqlalchemy import cast, func, or_, select, String
 from sqlalchemy.orm import Session
 from uuid import UUID
 import re
@@ -166,10 +166,11 @@ def get_setting(key: str, db: Session = Depends(get_db)):
 def search_portfolio(q: str = Query(min_length=1), page: int = Query(default=1, ge=1), page_size: int = Query(default=5, ge=1, le=50), db: Session = Depends(get_db)):
     term = f"%{q}%"
     query = select(Entry).where(Entry.is_visible.is_(True), or_(Entry.title.ilike(term), Entry.blurb.ilike(term), cast(Entry.tags, String).ilike(term), cast(Entry.links, String).ilike(term))).order_by(Entry.custom_order, Entry.date.desc().nullslast())
+    total = db.scalar(select(func.count()).select_from(query.subquery())) or 0
     entries = db.scalars(query.offset((page - 1) * page_size).limit(page_size)).all()
     profile = db.get(Profile, 1) if any(word in q.lower() for word in ("who", "michael", "person", "about", "background")) else None
     profile_data = None if not profile else {key: getattr(profile, key) for key in ("name", "tagline", "location", "focus", "experience", "availability_status", "availability_detail", "about")}
-    return {"profile": profile_data, "entries": entries}
+    return {"profile": profile_data, "entries": entries, "total": total, "page": page, "page_size": page_size}
 
 
 @app.get("/entries", response_model=list[EntryRead])
@@ -178,10 +179,13 @@ def list_entries(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=5, ge=1, le=50),
     db: Session = Depends(get_db),
+    response: Response,
 ):
     query = select(Entry).where(Entry.is_visible.is_(True)).order_by(Entry.custom_order, Entry.date.desc().nullslast())
     if content_type:
         query = query.where(Entry.content_type == content_type)
+    total = db.scalar(select(func.count()).select_from(query.subquery())) or 0
+    response.headers["X-Total-Count"] = str(total)
     return db.scalars(query.offset((page - 1) * page_size).limit(page_size)).all()
 
 
