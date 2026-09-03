@@ -23,6 +23,28 @@ pending_upload: dict[int, tuple[str, str]] = {}
 pending_mutation: dict[int, tuple[str, str, dict | None]] = {}
 
 
+@app.on_event("startup")
+async def register_commands():
+    """Publish Telegram's command menu when the webhook process starts."""
+    public_commands = [
+        types.BotCommand(command="start", description="Start the portfolio assistant"),
+        types.BotCommand(command="help", description="Show help"),
+    ]
+    admin_commands = public_commands + [
+        types.BotCommand(command="add", description="Create an entry"),
+        types.BotCommand(command="edit", description="Edit an entry"),
+        types.BotCommand(command="delete", description="Delete an entry"),
+        types.BotCommand(command="profile", description="Update profile"),
+        types.BotCommand(command="manage", description="Manage portfolio collections"),
+        types.BotCommand(command="upload", description="Upload an asset or certificate"),
+    ]
+    await bot.set_my_commands(public_commands)
+    await bot.set_my_commands(
+        admin_commands,
+        scope=types.BotCommandScopeChat(chat_id=settings.admin_telegram_id),
+    )
+
+
 def is_admin(message: types.Message) -> bool:
     return bool(message.from_user and message.from_user.id == settings.admin_telegram_id)
 
