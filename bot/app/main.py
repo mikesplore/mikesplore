@@ -33,7 +33,16 @@ async def start(message: types.Message):
 
 @dispatcher.message(Command("help"))
 async def help_command(message: types.Message):
-    admin_hint = " Admins can use /add to create an entry." if is_admin(message) else ""
+    admin_hint = (
+        "\n\nAdmin commands:\n"
+        "/add — create an entry\n"
+        "/edit <entry-id> <changes>\n"
+        "/delete <entry-id>\n"
+        "/profile <changes>\n"
+        "/manage <links|skills|education|bucket-list|settings> <list|create|update|delete> [JSON]\n"
+        "/upload <asset_type> [label]"
+        if is_admin(message) else ""
+    )
     await message.answer("Use /start, /help, or ask a question about the public portfolio." + admin_hint)
 
 
