@@ -180,8 +180,14 @@ async def certificates(message: types.Message):
     try:
         await show_typing(message)
         items = await list_certificates()
-        await message.answer(f"I found {len(items)} certificates. Sending them directly:")
-        for item in items:
+        query = (message.text or "").lower()
+        specific = [item for item in items if item["title"].lower() in query or any(word in query for word in item["title"].lower().split() if len(word) > 2)]
+        selected = specific if specific else items
+        if specific:
+            await message.answer(f"I found {len(specific)} matching certificate(s). Sending them directly:")
+        else:
+            await message.answer(f"I found {len(items)} certificates. Sending them directly:")
+        for item in selected:
             image_url = item.get("image_url")
             if image_url:
                 await message.answer_document(types.URLInputFile(image_url), caption=html.escape(item["title"], quote=False))
