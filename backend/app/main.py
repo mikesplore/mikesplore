@@ -1,5 +1,6 @@
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Query, Response, UploadFile, status
 import boto3
+from pypdf import PdfReader
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import cast, func, or_, select, String
 from sqlalchemy.orm import Session
@@ -177,6 +178,15 @@ def upload_asset(asset_type: str = Form(...), label: str = Form(""), file: Uploa
         item = SiteAsset(asset_type=asset_type, label=label or file.filename, url=asset_url)
         db.add(item)
     db.commit(); db.refresh(item)
+    if asset_type == "cv":
+        file.file.seek(0)
+        text = "\n".join(page.extract_text() or "" for page in PdfReader(file.file).pages).strip()
+        cv_setting = db.get(SiteSetting, "cv_text")
+        if cv_setting:
+            cv_setting.value = {"text": text, "asset_url": asset_url}
+        else:
+            db.add(SiteSetting(key="cv_text", value={"text": text, "asset_url": asset_url}))
+        db.commit()
     if previous_url and previous_url.startswith(settings.r2_public_base_url.rstrip("/") + "/"):
         previous_key = previous_url.removeprefix(settings.r2_public_base_url.rstrip("/") + "/")
         if previous_key != object_key:
@@ -185,6 +195,20 @@ def upload_asset(asset_type: str = Form(...), label: str = Form(""), file: Uploa
             except Exception:
                 pass
     return {"id": item.id, "asset_type": item.asset_type, "label": item.label, "url": item.url}
+
+
+@app.get("/cv/search")
+def search_cv(q: str = Query(min_length=1), db: Session = Depends(get_db)):
+    setting = db.get(SiteSetting, "cv_text")
+    if not setting:
+        return {"matches": [], "total": 0}
+    text = setting.value.get("text", "")
+    terms = [word.lower() for word in re.findall(r"[a-z0-9]+", q.lower()) if len(word) > 2]
+    if not terms or not all(term in text.lower() for term in terms):
+        return {"matches": [], "total": 0}
+    lower = text.lower()
+    position = min(lower.find(term) for term in terms if term in lower)
+    return {"matches": [text[max(0, position - 250):position + 750]], "total": 1}
 
 
 @app.get("/settings/{key}")
