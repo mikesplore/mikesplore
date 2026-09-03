@@ -1,5 +1,4 @@
 # AGENTS.md — Portfolio Backend + Telegram Bot Conversion
-
 This file tracks the phased conversion of mikesplore.me from a static, build-time-sourced
 portfolio into a database-driven system served by a FastAPI backend, consumed by both the
 existing frontend and a Telegram bot. Update this file as you go: log what you actually did,
@@ -160,6 +159,20 @@ Do this before writing any schema or backend code.
 - Remove the now-dead build-time sourcing code rather than leaving it dormant.
 
 ## Phase 4 — Telegram bot: public read path
+
+### Phase 3 implementation log (2026-09-03)
+
+- Migrated the timeline from bundled `entries.devto.json`/`entries.github.json` data to runtime
+  `GET /entries` calls through `src/lib/portfolioApi.js`, using `VITE_API_BASE_URL` with a local
+  development default.
+- Added loading and temporary-unavailable states while preserving the existing expandable row
+  presentation. The adapter maps backend links/media/details JSONB into the timeline's display
+  shape.
+- Updated timeline taxonomy to match the backend (`project`, `article`, `hackathon`, `event`),
+  fixing the Phase 0 GitHub filter mismatch.
+- Removed the build-time entry fetch scripts from the npm build lifecycle. Curated project pages,
+  hackathons, events, profile data, and other collections remain static because they do not yet
+  have backend read endpoints.
 
 - Bot skeleton with webhook-based updates (not long-polling).
 - LLM tool-calling setup: define tools that call the backend's public REST endpoints. The model

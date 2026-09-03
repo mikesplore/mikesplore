@@ -5,8 +5,6 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "fetch:entries": "node scripts/fetch-devto.js && node scripts/fetch-github.js",
-    "prebuild": "npm run fetch:entries",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",

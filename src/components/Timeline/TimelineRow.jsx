@@ -60,21 +60,21 @@ const TimelineRow = ({ entry, isExpanded, onToggle }) => {
               <p className="text-base leading-relaxed text-muted">{entry.blurb}</p>
 
               {/* Metadata */}
-              {((entry.type === 'repo' && (stars > 0 || language)) ||
-                (entry.type === 'articles' && readTime > 0)) && (
+              {((entry.type === 'project' && (stars > 0 || language)) ||
+                (entry.type === 'article' && readTime > 0)) && (
                 <div className="mt-3 flex flex-wrap gap-3 text-sm text-subtle">
                     <span className="inline-flex items-center gap-1">
                       <Star className="h-3.5 w-3.5" aria-hidden="true" />
                       {stars} {stars === 1 ? 'star' : 'stars'}
                     </span>
                   )}
-                  {entry.type === 'repo' && language && (
+                  {entry.type === 'project' && language && (
                     <span className="inline-flex items-center gap-1">
                       <span className="h-2 w-2 rounded-full bg-accent" aria-hidden="true" />
                       {language}
                     </span>
                   )}
-                  {entry.type === 'articles' && readTime > 0 && (
+                  {entry.type === 'article' && readTime > 0 && (
                     <span className="inline-flex items-center gap-1">
                       <Clock className="h-3.5 w-3.5" aria-hidden="true" />
                       {readTime} min read

@@ -1,5 +1,5 @@
 /**
- * @typedef {"repo" | "articles"} EntryType
+ * @typedef {"project" | "article" | "hackathon" | "event"} EntryType
  */
 
 /**
@@ -12,9 +12,11 @@
  * @property {string[]} [tags]
  */
 
-export const ENTRY_TYPES = ['repo', 'articles'];
+export const ENTRY_TYPES = ['project', 'article', 'hackathon', 'event'];
 
 export const TYPE_LABELS = {
-  repo: 'GitHub',
-  articles: 'Articles',
+  project: 'Projects',
+  article: 'Articles',
+  hackathon: 'Hackathons',
+  event: 'Events',
 };
