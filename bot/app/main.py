@@ -36,11 +36,11 @@ async def help_command(message: types.Message):
     admin_hint = (
         "\n\nAdmin commands:\n"
         "/add — create an entry\n"
-        "/edit <entry-id> <changes>\n"
-        "/delete <entry-id>\n"
-        "/profile <changes>\n"
-        "/manage <links|skills|education|bucket-list|settings> <list|create|update|delete> [JSON]\n"
-        "/upload <asset_type> [label]"
+        "/edit &lt;entry-id&gt; &lt;changes&gt;\n"
+        "/delete &lt;entry-id&gt;\n"
+        "/profile &lt;changes&gt;\n"
+        "/manage &lt;links|skills|education|bucket-list|settings&gt; &lt;list|create|update|delete&gt; [JSON]\n"
+        "/upload &lt;asset_type&gt; [label]"
         if is_admin(message) else ""
     )
     await message.answer("Use /start, /help, or ask a question about the public portfolio." + admin_hint)
