@@ -1,9 +1,18 @@
 import profileImage from '../data/profile.jpg';
-import { socialLinks, status } from '../data/profile';
+import { useEffect, useState } from 'react';
+import { fetchProfile, fetchProfileLinks } from '../lib/portfolioApi';
 import SocialIcon from './SocialIcon';
 import ThemeToggle from './ThemeToggle';
 
 const Header = () => {
+  const [profile, setProfile] = useState(null);
+  const [socialLinks, setSocialLinks] = useState([]);
+  useEffect(() => {
+    const controller = new AbortController();
+    Promise.all([fetchProfile(controller.signal), fetchProfileLinks(controller.signal)]).then(([data, links]) => { setProfile(data); setSocialLinks(links.filter((link) => link.category === 'professional')); });
+    return () => controller.abort();
+  }, []);
+  if (!profile) return null;
   const pillSocials = socialLinks.filter((link) => link.name !== 'Email');
 
   return (
@@ -11,22 +20,22 @@ const Header = () => {
       <div className="flex items-start justify-between gap-3 sm:gap-6">
         <div className="min-w-0 flex-1">
           <h1 className="text-[clamp(1.25rem,4.5vw+0.25rem,3rem)] font-semibold tracking-tight text-ink whitespace-nowrap">
-            Michael Odhiambo
+            {profile.name}
           </h1>
-          <p className="mt-2 text-sm text-muted sm:text-base">{status.tagline}</p>
+          <p className="mt-2 text-sm text-muted sm:text-base">{profile.tagline}</p>
 
           <ul className="mt-3 space-y-1.5 sm:mt-4 sm:space-y-2">
             <li className="flex items-center gap-2 text-sm text-muted sm:text-base">
               <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent" aria-hidden="true" />
-              {status.experience}
+              {profile.experience}
             </li>
             <li className="flex items-center gap-2 text-sm text-muted sm:text-base">
               <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent" aria-hidden="true" />
-              {status.location}
+              {profile.location}
             </li>
             <li className="flex items-center gap-2 text-sm text-muted sm:text-base">
               <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent" aria-hidden="true" />
-              {status.focus}
+              {profile.focus}
             </li>
           </ul>
         </div>

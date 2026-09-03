@@ -181,6 +181,8 @@ This phase was completed before the schema and backend work.
 
 - Migrated Hackathons and Events pages to fetch their entries from the backend at runtime,
   including event location, links, images, and gallery metadata.
+- Migrated Header and Availability Banner to load profile and professional links from the backend;
+  the profile image remains a local asset until its R2 asset record is populated.
 
 ## Phase 4 — Telegram bot: public read path
 
