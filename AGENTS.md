@@ -179,6 +179,9 @@ This phase was completed before the schema and backend work.
   so the monorepo now matches the intended top-level structure. `AGENTS.md`, shared repository
   metadata, `backend/`, and `bot/` remain at the repository root.
 
+- Migrated Hackathons and Events pages to fetch their entries from the backend at runtime,
+  including event location, links, images, and gallery metadata.
+
 ## Phase 4 — Telegram bot: public read path
 
 - Bot skeleton with webhook-based updates (not long-polling).

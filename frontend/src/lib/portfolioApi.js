@@ -40,3 +40,7 @@ export function fetchProfile(signal) {
 export function fetchProjects(signal) {
   return fetchJson('/entries?content_type=project&page_size=50', signal);
 }
+
+export function fetchEntriesByType(type, signal) {
+  return fetchJson(`/entries?content_type=${encodeURIComponent(type)}&page_size=50`, signal);
+}

@@ -1,8 +1,20 @@
 import { ExternalLink, MapPin } from 'lucide-react';
-import { events } from '../data/events';
+import { useEffect, useState } from 'react';
 import GalleryGrid from '../components/GalleryGrid';
+import { fetchEntriesByType } from '../lib/portfolioApi';
 
 const Events = () => {
+  const [events, setEvents] = useState([]);
+  const [status, setStatus] = useState('loading');
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchEntriesByType('event', controller.signal).then((items) => {
+      setEvents(items.map((item) => ({ title: item.title, date: item.date, blurb: item.blurb, location: item.details?.location, link: item.links?.url, image: item.media?.image, photos: item.media?.photos }))); setStatus('ready');
+    }).catch((error) => { if (error.name !== 'AbortError') setStatus('error'); });
+    return () => controller.abort();
+  }, []);
+  if (status === 'loading') return <p className="py-8 text-center text-base text-subtle">Loading events…</p>;
+  if (status === 'error') return <p className="py-8 text-center text-base text-subtle">Events are temporarily unavailable.</p>;
   return (
     <ul className="divide-y divide-divider rounded-xl bg-elevated overflow-hidden">
       {events.map((event) => (

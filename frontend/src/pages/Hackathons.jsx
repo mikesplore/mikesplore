@@ -1,5 +1,6 @@
 import { ExternalLink } from 'lucide-react';
-import { hackathons } from '../data/profile';
+import { useEffect, useState } from 'react';
+import { fetchEntriesByType } from '../lib/portfolioApi';
 
 const resultStyles = {
   Participating: 'bg-teal-soft text-teal',
@@ -16,6 +17,17 @@ const getLinkLabel = (item) => {
 };
 
 const Hackathons = () => {
+  const [hackathons, setHackathons] = useState([]);
+  const [status, setStatus] = useState('loading');
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchEntriesByType('hackathon', controller.signal).then((items) => {
+      setHackathons(items.map((item) => ({ title: item.title, description: item.blurb, year: item.year, ...(item.details || {}), link: item.links?.url, image: item.media?.image }))); setStatus('ready');
+    }).catch((error) => { if (error.name !== 'AbortError') setStatus('error'); });
+    return () => controller.abort();
+  }, []);
+  if (status === 'loading') return <p className="py-8 text-center text-base text-subtle">Loading hackathons…</p>;
+  if (status === 'error') return <p className="py-8 text-center text-base text-subtle">Hackathons are temporarily unavailable.</p>;
   return (
     <ul className="divide-y divide-divider rounded-xl bg-elevated overflow-hidden">
       {hackathons.map((item) => (
