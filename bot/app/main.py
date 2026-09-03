@@ -3,6 +3,7 @@ from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.filters import Command
 from fastapi import FastAPI, Header, HTTPException, Request
+import html
 import logging
 from .tools import list_certificates
 
@@ -141,7 +142,7 @@ async def delete_command(message: types.Message):
         await message.answer("Usage: /delete &lt;entry-id&gt;")
         return
     pending_mutation[message.from_user.id] = ("delete", parts[1], None)
-    await message.answer(f"Delete entry {parts[1]}? Send /confirm to delete or /cancel to abort.")
+    await message.answer(f"Delete entry {html.escape(parts[1], quote=False)}? Send /confirm to delete or /cancel to abort.")
 
 
 @dispatcher.message(lambda message: message.text and "certificate" in message.text.lower())
@@ -152,7 +153,7 @@ async def certificates(message: types.Message):
         for item in items:
             image_url = item.get("image_url")
             if image_url:
-                await message.answer_document(types.URLInputFile(image_url), caption=item["title"])
+                await message.answer_document(types.URLInputFile(image_url), caption=html.escape(item["title"], quote=False))
     except Exception:
         logger.exception("Certificate lookup failed")
         await message.answer("I couldn't retrieve the certificates right now. Please try again shortly.")
@@ -187,7 +188,7 @@ async def question(message: types.Message):
                 return
             try:
                 created = await create_entry(entry)
-                await message.answer(f"Saved entry: {created['title']}")
+                await message.answer(f"Saved entry: {html.escape(created['title'], quote=False)}")
             except Exception:
                 pending[message.from_user.id] = entry
                 await message.answer("The backend rejected the entry. The preview is still pending.")
@@ -223,10 +224,10 @@ async def document(message: types.Message):
         if asset_request:
             asset_type, label = asset_request
             result = await upload_asset(asset_type, label, filename, buffer.getvalue(), message.document.mime_type)
-            await message.answer(f"Asset uploaded: {result['label']}")
+            await message.answer(f"Asset uploaded: {html.escape(result['label'], quote=False)}")
         else:
             result = await upload_certificate(message.caption or filename, filename, buffer.getvalue(), message.document.mime_type)
-            await message.answer(f"Certificate uploaded: {result['title']}")
+            await message.answer(f"Certificate uploaded: {html.escape(result['title'], quote=False)}")
     except Exception:
         logger.exception("Certificate upload failed")
         await message.answer("I couldn't upload that certificate. Please check R2 configuration and try again.")
@@ -234,7 +235,7 @@ async def document(message: types.Message):
 
 def format_preview(entry: dict) -> str:
     fields = ("title", "content_type", "blurb", "date", "year", "tech_stack", "tags", "links")
-    return "\n".join(f"{field}: {entry.get(field) or '—'}" for field in fields)
+    return "\n".join(f"{field}: {html.escape(str(entry.get(field) or '—'), quote=False)}" for field in fields)
 
 
 @app.get("/health")
