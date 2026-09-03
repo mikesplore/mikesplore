@@ -1,15 +1,15 @@
 import { ExternalLink, GraduationCap } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import cvPdf from '../data/cv/Michael Odhiambo CV.pdf';
 import SectionCard from '../components/SectionCard';
-import { fetchEducation } from '../lib/portfolioApi';
+import { fetchAssets, fetchEducation } from '../lib/portfolioApi';
 
 const Cv = () => {
   const [education, setEducation] = useState([]);
   const [status, setStatus] = useState('loading');
+  const [cvUrl, setCvUrl] = useState('');
   useEffect(() => {
     const controller = new AbortController();
-    fetchEducation(controller.signal).then((items) => { setEducation(items); setStatus('ready'); }).catch((error) => { if (error.name !== 'AbortError') setStatus('error'); });
+    Promise.all([fetchEducation(controller.signal), fetchAssets(controller.signal)]).then(([items, assets]) => { setEducation(items); setCvUrl(assets.find((asset) => asset.asset_type === 'cv')?.url || ''); setStatus('ready'); }).catch((error) => { if (error.name !== 'AbortError') setStatus('error'); });
     return () => controller.abort();
   }, []);
   if (status === 'loading') return <p className="py-8 text-center text-base text-subtle">Loading CV details…</p>;
@@ -19,7 +19,7 @@ const Cv = () => {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-base text-muted">Here's my CV</p>
         <a
-          href={cvPdf}
+          href={cvUrl || '#'}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-1.5 text-sm font-medium text-accent hover:text-accent/80"
@@ -31,7 +31,7 @@ const Cv = () => {
 
       <div className="overflow-hidden rounded-xl border border-divider bg-elevated">
         <iframe
-          src={cvPdf}
+          src={cvUrl}
           title="Michael Odhiambo CV"
           className="h-[min(80vh,900px)] w-full"
         />

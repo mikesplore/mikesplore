@@ -185,6 +185,8 @@ This phase was completed before the schema and backend work.
   the profile image remains a local asset until its R2 asset record is populated.
 - Migrated CV education rendering to `GET /education`; the CV PDF itself remains local pending
   R2 asset upload and frontend URL migration.
+- Removed the final Header profile-image and CV-PDF frontend imports; both now resolve through
+  `/assets` and require corresponding R2 asset records.
 - Migrated Home/About narrative rendering to the profile API; the existing copy is now seeded in
   `profile.about` and rendered as database-provided sections.
 - Added `/counts` and migrated navigation badges to runtime counts instead of static collection

@@ -1,15 +1,15 @@
-import profileImage from '../data/profile.jpg';
 import { useEffect, useState } from 'react';
-import { fetchProfile, fetchProfileLinks } from '../lib/portfolioApi';
+import { fetchAssets, fetchProfile, fetchProfileLinks } from '../lib/portfolioApi';
 import SocialIcon from './SocialIcon';
 import ThemeToggle from './ThemeToggle';
 
 const Header = () => {
   const [profile, setProfile] = useState(null);
   const [socialLinks, setSocialLinks] = useState([]);
+  const [profileImage, setProfileImage] = useState('');
   useEffect(() => {
     const controller = new AbortController();
-    Promise.all([fetchProfile(controller.signal), fetchProfileLinks(controller.signal)]).then(([data, links]) => { setProfile(data); setSocialLinks(links.filter((link) => link.category === 'professional')); });
+    Promise.all([fetchProfile(controller.signal), fetchProfileLinks(controller.signal), fetchAssets(controller.signal)]).then(([data, links, assets]) => { setProfile(data); setSocialLinks(links.filter((link) => link.category === 'professional')); setProfileImage(assets.find((asset) => asset.asset_type === 'profile-image')?.url || ''); });
     return () => controller.abort();
   }, []);
   if (!profile) return null;
@@ -43,7 +43,7 @@ const Header = () => {
         <div className="flex shrink-0 flex-col items-end gap-3">
           <ThemeToggle />
           <div className="h-24 w-24 sm:h-32 sm:w-32 overflow-hidden rounded-2xl border border-divider bg-elevated">
-            <img src={profileImage} alt="Michael Odhiambo" className="h-full w-full object-cover" />
+            {profileImage && <img src={profileImage} alt={profile.name} className="h-full w-full object-cover" />}
           </div>
         </div>
       </div>
