@@ -34,7 +34,14 @@ def main():
             existing.title, existing.done, existing.remark, existing.custom_order = item["title"], item["done"], item.get("remark"), order
         for order, item in enumerate(json.loads((DATA / "skillsGrouped.json").read_text())): db.add(SkillGroup(category=item["category"], skills=item["skills"], custom_order=order))
         for order, item in enumerate(json.loads((DATA / "education.json").read_text())): db.add(Education(**item, custom_order=order))
-        db.commit(); print("Imported curated projects, events, hackathons, bucket list, skills, and education")
+        for category, filename in (("professional", "socialLinks"), ("social", "contactSocials")):
+            for order, item in enumerate(json.loads((DATA / f"{filename}.json").read_text())):
+                existing = db.scalar(select(ProfileLink).where(ProfileLink.name == item["name"], ProfileLink.category == category))
+                payload = {"name": item["name"], "url": item["url"], "label": item.get("label"), "handle": item.get("handle"), "category": category, "custom_order": order, "is_visible": True}
+                if existing:
+                    for field, value in payload.items(): setattr(existing, field, value)
+                else: db.add(ProfileLink(**payload))
+        db.commit(); print("Imported curated projects, events, hackathons, bucket list, skills, education, and contact links")
     finally: db.close()
 
 if __name__ == "__main__": main()
