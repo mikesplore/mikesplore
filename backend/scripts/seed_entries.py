@@ -18,7 +18,11 @@ def slugify(title: str, link: str = "") -> str:
     return re.sub(r"-+", "-", f"{value}-{suffix}").strip("-")[:160]
 
 def load_snapshot(filename: str, source_name: str) -> list[dict]:
-    records = json.loads((DATA_DIR / filename).read_text())
+    path = DATA_DIR / filename
+    if not path.is_file():
+        print(f"Skipping missing timeline snapshot: {path}")
+        return []
+    records = json.loads(path.read_text())
     for record in records:
         record["_source_name"] = source_name
     return records
@@ -42,6 +46,9 @@ def to_entry(record: dict) -> dict:
 
 def main() -> None:
     records = load_snapshot("entries.devto.json", "dev.to") + load_snapshot("entries.github.json", "github")
+    if not records:
+        print("No timeline snapshots found; nothing to import")
+        return
     db = SessionLocal()
     try:
         for payload in map(to_entry, records):

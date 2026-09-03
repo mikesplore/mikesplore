@@ -353,6 +353,12 @@ This phase was completed before the schema and backend work.
   select the uninstalled psycopg2 driver by default. Normalize those URLs to the installed
   `postgresql+psycopg` driver for both application startup and Alembic migrations.
 
+### Timeline seed deployment fix (2026-09-04)
+
+- Made `seed_entries` tolerate missing legacy frontend snapshots. Those snapshots were removed
+  after the runtime API migration, while curated timeline collections are imported by
+  `seed_curated`; deployment seeding now completes successfully and reports skipped snapshots.
+
 ## Open items to resolve during the work, not before
 
 - Exact Telegram bot library (`python-telegram-bot` vs `aiogram`) — pick one during Phase 4,
