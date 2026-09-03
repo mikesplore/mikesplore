@@ -1,30 +1,29 @@
 import { useRef } from 'react';
+import { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { events } from '../data/events';
-import { hackathons } from '../data/profile';
-import { bucketListItems } from '../data/bucketList';
-import { projectsCatalog } from '../data/projectsCatalog';
-import { certificates } from '../data/certificates';
+import { fetchCounts } from '../lib/portfolioApi';
 
-const navItems = [
+const navItems = (counts) => [
   { to: '/', label: 'About', end: true },
   {
     to: '/projects',
     label: 'Projects',
     end: false,
-    count: projectsCatalog.length,
+    count: counts.projects,
   },
   { to: '/timeline', label: 'Timeline', end: false },
-  { to: '/hackathons', label: 'Hackathons', end: false, count: hackathons.length },
-  { to: '/certificates', label: 'Certificates', end: false, count: certificates.length },
-  { to: '/events', label: 'Events', end: false, count: events.length },
-  { to: '/bucket-list', label: 'Bucket list', end: false, count: bucketListItems.length },
+  { to: '/hackathons', label: 'Hackathons', end: false, count: counts.hackathons },
+  { to: '/certificates', label: 'Certificates', end: false, count: counts.certificates },
+  { to: '/events', label: 'Events', end: false, count: counts.events },
+  { to: '/bucket-list', label: 'Bucket list', end: false, count: counts.bucket_list },
   { to: '/contact', label: 'Contact', end: false },
   { to: '/cv', label: 'CV', end: false },
 ];
 
 const Nav = () => {
   const scrollContainerRef = useRef(null);
+  const [counts, setCounts] = useState({});
+  useEffect(() => { const controller = new AbortController(); fetchCounts(controller.signal).then(setCounts).catch(() => {}); return () => controller.abort(); }, []);
 
   const handleWheelScroll = (event) => {
     const container = scrollContainerRef.current;
@@ -47,7 +46,7 @@ const Nav = () => {
         className="scroll-pills -mx-5 overflow-x-auto px-5 sm:-mx-6 sm:px-6"
       >
         <ul className="flex w-max items-end gap-1">
-          {navItems.map((item) => (
+          {navItems(counts).map((item) => (
             <li key={item.to} className="shrink-0">
               <NavLink
                 to={item.to}

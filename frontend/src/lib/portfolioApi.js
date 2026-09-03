@@ -52,3 +52,7 @@ export function fetchCertificates(signal) {
 export function fetchEducation(signal) {
   return fetchJson('/education', signal);
 }
+
+export function fetchCounts(signal) {
+  return fetchJson('/counts', signal);
+}

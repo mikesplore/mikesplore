@@ -187,6 +187,8 @@ This phase was completed before the schema and backend work.
   R2 asset upload and frontend URL migration.
 - Migrated Home/About narrative rendering to the profile API; the existing copy is now seeded in
   `profile.about` and rendered as database-provided sections.
+- Added `/counts` and migrated navigation badges to runtime counts instead of static collection
+  imports.
 
 ## Phase 4 — Telegram bot: public read path
 

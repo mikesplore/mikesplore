@@ -25,6 +25,17 @@ def health() -> dict[str, str]:
     return {"status": "ok"}
 
 
+@app.get("/counts")
+def content_counts(db: Session = Depends(get_db)):
+    return {
+        "projects": len(db.scalars(select(Entry).where(Entry.content_type == "project", Entry.is_visible.is_(True))).all()),
+        "hackathons": len(db.scalars(select(Entry).where(Entry.content_type == "hackathon", Entry.is_visible.is_(True))).all()),
+        "events": len(db.scalars(select(Entry).where(Entry.content_type == "event", Entry.is_visible.is_(True))).all()),
+        "certificates": len(db.scalars(select(Certificate).where(Certificate.is_visible.is_(True))).all()),
+        "bucket_list": len(db.scalars(select(BucketListItem)).all()),
+    }
+
+
 @app.get("/profile")
 def get_profile(db: Session = Depends(get_db)):
     profile = db.get(Profile, 1)
