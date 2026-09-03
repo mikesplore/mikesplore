@@ -167,7 +167,8 @@ async def upload_asset(asset_type: str = Form(...), label: str = Form(""), file:
         raise HTTPException(status_code=503, detail="R2 storage is not configured")
     object_key = f"assets/{slugify(asset_type)}/{slugify(label or file.filename or 'upload')}-{file.filename}"
     client = boto3.client("s3", endpoint_url=settings.r2_endpoint_url, aws_access_key_id=settings.r2_access_key_id, aws_secret_access_key=settings.r2_secret_access_key, region_name="auto")
-    client.upload_fileobj(file.file, settings.r2_bucket_name, object_key, ExtraArgs={"ContentType": file.content_type or "application/octet-stream"})
+    file_bytes = await file.read()
+    client.upload_fileobj(BytesIO(file_bytes), settings.r2_bucket_name, object_key, ExtraArgs={"ContentType": file.content_type or "application/octet-stream"})
     asset_url = f"{settings.r2_public_base_url.rstrip('/')}/{object_key}"
     item = None
     previous_url = None
