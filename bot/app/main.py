@@ -4,6 +4,7 @@ from aiogram.enums import ParseMode
 from aiogram.filters import Command
 from fastapi import FastAPI, Header, HTTPException, Request
 import html
+import httpx
 import logging
 from .tools import list_certificates
 
@@ -190,7 +191,14 @@ async def certificates(message: types.Message):
         for item in selected:
             image_url = item.get("image_url")
             if image_url:
-                await message.answer_document(types.URLInputFile(image_url), caption=html.escape(item["title"], quote=False))
+                async with httpx.AsyncClient(timeout=20) as client:
+                    file_response = await client.get(image_url)
+                    file_response.raise_for_status()
+                filename = image_url.rstrip("/").rsplit("/", 1)[-1] or "certificate"
+                await message.answer_document(
+                    types.BufferedInputFile(file_response.content, filename=filename),
+                    caption=html.escape(item["title"], quote=False),
+                )
     except Exception:
         logger.exception("Certificate lookup failed")
         await message.answer("I couldn't retrieve the certificates right now. Please try again shortly.")
