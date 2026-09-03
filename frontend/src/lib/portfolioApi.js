@@ -28,3 +28,11 @@ async function fetchJson(path, signal) {
 export function fetchBucketList(signal) {
   return fetchJson('/bucket-list', signal);
 }
+
+export function fetchProfileLinks(signal) {
+  return fetchJson('/profile/links', signal);
+}
+
+export function fetchProfile(signal) {
+  return fetchJson('/profile', signal);
+}

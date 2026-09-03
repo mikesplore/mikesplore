@@ -1,7 +1,8 @@
 import { Briefcase, ExternalLink, Mail, MessageCircle, Users } from 'lucide-react';
-import { socialLinks, availability, contactSocials, username } from '../data/profile';
+import { useEffect, useState } from 'react';
 import SectionCard from '../components/SectionCard';
 import SocialIcon from '../components/SocialIcon';
+import { fetchProfile, fetchProfileLinks } from '../lib/portfolioApi';
 
 const LinkCard = ({ name, href, subtitle }) => (
   <a
@@ -22,10 +23,31 @@ const LinkCard = ({ name, href, subtitle }) => (
 );
 
 const Contact = () => {
-  const emailLink = socialLinks.find((link) => link.name === 'Email')?.url || 'mailto:mikepremium8@gmail.com';
-  const professionalLinks = socialLinks.filter((link) => link.name !== 'Email');
-  const messagingLinks = contactSocials.filter((social) => ['WhatsApp', 'Telegram'].includes(social.name));
-  const socialLinksList = contactSocials.filter((social) => !['WhatsApp', 'Telegram'].includes(social.name));
+  const [links, setLinks] = useState([]);
+  const [profile, setProfile] = useState(null);
+  const [status, setStatus] = useState('loading');
+
+  useEffect(() => {
+    const controller = new AbortController();
+    Promise.all([fetchProfileLinks(controller.signal), fetchProfile(controller.signal)])
+      .then(([items, profileData]) => {
+        setLinks(items);
+        setProfile(profileData);
+        setStatus('ready');
+      })
+      .catch((error) => {
+        if (error.name !== 'AbortError') setStatus('error');
+      });
+    return () => controller.abort();
+  }, []);
+
+  if (status === 'loading') return <p className="py-8 text-center text-base text-subtle">Loading contact details…</p>;
+  if (status === 'error') return <p className="py-8 text-center text-base text-subtle">Contact details are temporarily unavailable.</p>;
+
+  const emailLink = links.find((link) => link.name === 'Email')?.url || 'mailto:mikepremium8@gmail.com';
+  const professionalLinks = links.filter((link) => link.category === 'professional' && link.name !== 'Email');
+  const messagingLinks = links.filter((link) => link.category === 'social' && ['WhatsApp', 'Telegram'].includes(link.name));
+  const socialLinksList = links.filter((link) => link.category === 'social' && !['WhatsApp', 'Telegram'].includes(link.name));
 
   return (
     <div className="space-y-6">
@@ -35,8 +57,8 @@ const Contact = () => {
             <Briefcase className="h-5 w-5" aria-hidden="true" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-base font-semibold text-ink">{availability.status}</p>
-            <p className="mt-1 text-base leading-relaxed text-muted">{availability.detail}</p>
+            <p className="text-base font-semibold text-ink">{profile.availability_status}</p>
+            <p className="mt-1 text-base leading-relaxed text-muted">{profile.availability_detail}</p>
             <a
               href={emailLink}
               className="mt-4 inline-flex items-center gap-2 rounded-xl bg-accent px-5 py-2.5 text-base font-medium text-on-accent transition-opacity hover:opacity-90"
@@ -84,7 +106,7 @@ const Contact = () => {
 
       <SectionCard
         title="Social"
-        description={`@${username} on most platforms.`}
+        description="Connect with Michael across the web."
         icon={Users}
       >
         <div className="grid gap-3 sm:grid-cols-2">
