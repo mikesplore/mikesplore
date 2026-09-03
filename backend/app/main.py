@@ -175,11 +175,11 @@ def search_portfolio(q: str = Query(min_length=1), page: int = Query(default=1, 
 
 @app.get("/entries", response_model=list[EntryRead])
 def list_entries(
+    response: Response,
     content_type: str | None = None,
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=5, ge=1, le=50),
     db: Session = Depends(get_db),
-    response: Response,
 ):
     query = select(Entry).where(Entry.is_visible.is_(True)).order_by(Entry.custom_order, Entry.date.desc().nullslast())
     if content_type:
