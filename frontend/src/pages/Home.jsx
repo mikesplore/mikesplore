@@ -1,12 +1,29 @@
 import { Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import AvailabilityBanner from '../components/AvailabilityBanner';
+import { fetchProfile } from '../lib/portfolioApi';
 
 const Home = () => {
+  const [profile, setProfile] = useState(null);
+  useEffect(() => { const controller = new AbortController(); fetchProfile(controller.signal).then(setProfile).catch(() => {}); return () => controller.abort(); }, []);
+  if (!profile) return <p className="py-8 text-center text-base text-subtle">Loading profile…</p>;
+  const sections = (profile.about || '').split(/\n\n(?=[^\n]+\n\n)/).filter(Boolean).map((section) => {
+    const [title, ...paragraphs] = section.split('\n\n');
+    return { title, paragraphs };
+  });
   return (
     <div className="space-y-8">
       <AvailabilityBanner />
 
       <div className="space-y-8 text-base leading-relaxed text-muted">
+        {sections.map((section) => (
+          <section key={section.title} className="space-y-3">
+            <h2 className="text-xl font-semibold text-ink">{section.title}</h2>
+            {section.paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
+          </section>
+        ))}
+        <section className="space-y-3"><p>For a complete look at the systems I've built, start with <Link to="/projects" className="font-medium text-accent hover:text-accent/80">projects</Link> and then browse the <Link to="/timeline" className="font-medium text-accent hover:text-accent/80">timeline</Link>.</p></section>
+        {/*
         <section className="space-y-3">
           <h2 className="text-xl font-semibold text-ink">The Backstory</h2>
           <p>
@@ -73,6 +90,7 @@ const Home = () => {
             I’m looking for a team where I can apply my systems architecture skills to scale distributed infrastructure and ship reliable AI-powered products.
           </p>
         </section>
+        */}
       </div>
     </div>
   );
