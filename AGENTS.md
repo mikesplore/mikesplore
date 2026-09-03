@@ -341,6 +341,12 @@ This phase was completed before the schema and backend work.
   API migration verification. Retained local certificate/CV/profile media and `backend/data`
   snapshots as import/seeding source material; they are no longer used by the frontend runtime.
 
+### Render deployment fix (2026-09-04)
+
+- Made the root `.env` optional for backend, bot, and Alembic configuration. Render supplies
+  required settings through environment variables and does not create a repository `.env`; local
+  `.env` files remain supported, without overriding already-injected environment values.
+
 ## Open items to resolve during the work, not before
 
 - Exact Telegram bot library (`python-telegram-bot` vs `aiogram`) — pick one during Phase 4,

@@ -10,12 +10,12 @@ if config.config_file_name:
     fileConfig(config.config_file_name)
 
 ENV_FILE = Path(__file__).resolve().parents[2] / ".env"
-if not ENV_FILE.is_file():
-    raise RuntimeError(f".env not found at expected path: {ENV_FILE}")
-if not load_dotenv(ENV_FILE, override=True):
-    raise RuntimeError(f"Unable to load .env at expected path: {ENV_FILE}")
+# A local .env is convenient for development, but deployment environments
+# supply DATABASE_URL directly. Do not overwrite deployment environment vars.
+if ENV_FILE.is_file():
+    load_dotenv(ENV_FILE, override=False)
 if not os.getenv("DATABASE_URL"):
-    raise RuntimeError(f"DATABASE_URL is missing from .env at: {ENV_FILE}")
+    raise RuntimeError("DATABASE_URL environment variable is required")
 
 target_metadata = None
 

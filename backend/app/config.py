@@ -3,10 +3,11 @@ from dotenv import load_dotenv
 from pathlib import Path
 
 ENV_FILE = Path(__file__).resolve().parents[2] / ".env"
-if not ENV_FILE.is_file():
-    raise RuntimeError(f".env not found at expected path: {ENV_FILE}")
-if not load_dotenv(ENV_FILE, override=True):
-    raise RuntimeError(f"Unable to load .env at expected path: {ENV_FILE}")
+# Local development may use the repository .env. Hosted platforms inject these
+# values directly into the process environment and normally have no .env file.
+# Never overwrite an already-injected value with a local dotenv value.
+if ENV_FILE.is_file():
+    load_dotenv(ENV_FILE, override=False)
 
 
 class Settings(BaseSettings):
