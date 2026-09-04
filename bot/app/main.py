@@ -96,7 +96,7 @@ async def upload_command(message: types.Message):
         await message.answer("Usage: /upload &lt;asset_type&gt; [label], then send a file.")
         return
     pending_upload[message.from_user.id] = (parts[1], parts[2] if len(parts) > 2 else parts[1])
-    await message.answer("Send the file now. Use /cancel to discard it.")
+    await message.answer("Send the file now (maximum size: 10 MB). Use /cancel to discard it.")
 
 
 @dispatcher.message(Command("edit"))
@@ -253,6 +253,26 @@ async def certificates(message: types.Message):
         await message.answer("I couldn't retrieve the certificates right now. Please try again shortly.")
 
 
+@dispatcher.message(lambda message: message.text and any(term in message.text.lower() for term in ("cv", "resume")) and any(word in message.text.lower() for word in ("send", "download", "attach", "share")))
+async def send_cv(message: types.Message):
+    try:
+        await show_typing(message)
+        async with httpx.AsyncClient(base_url=settings.backend_url, timeout=20) as client:
+            response = await client.get("/assets")
+            response.raise_for_status()
+            cv = next((asset for asset in response.json() if asset.get("asset_type") == "cv"), None)
+            if not cv:
+                await message.answer("The CV is not available right now.")
+                return
+            file_response = await client.get(cv["url"])
+            file_response.raise_for_status()
+        filename = cv.get("label") or "Michael-Odhiambo-CV.pdf"
+        await message.answer_document(types.BufferedInputFile(file_response.content, filename=filename), caption="Michael Odhiambo's CV")
+    except Exception:
+        logger.exception("CV delivery failed")
+        await message.answer("I couldn't retrieve the CV right now. Please try again shortly.")
+
+
 @dispatcher.message(lambda message: not message.document and not message.photo)
 async def question(message: types.Message):
     if is_admin(message) and message.text:
@@ -290,7 +310,7 @@ async def question(message: types.Message):
                 return
             entry = pending.pop(message.from_user.id, None)
             if not entry:
-                await message.answer("There is no pending preview.")
+                await message.answer("There is no pending preview. File uploads are saved immediately; /confirm is only for pending edits or content changes.")
                 return
             try:
                 created = await create_entry(entry)
@@ -327,9 +347,12 @@ async def document(message: types.Message):
     try:
         await message.answer("File received. Uploading it now…")
         await show_typing(message)
-        asset_request = pending_upload.pop(message.from_user.id, None)
+        asset_request = pending_upload.get(message.from_user.id)
         telegram_file_id = message.document.file_id if message.document else message.photo[-1].file_id
         telegram_file = await bot.get_file(telegram_file_id)
+        if telegram_file.file_size and telegram_file.file_size > 10 * 1024 * 1024:
+            await message.answer("That file is too large. Please send a file no bigger than 10 MB.")
+            return
         buffer = __import__('io').BytesIO()
         await bot.download_file(telegram_file.file_path, buffer)
         filename = message.document.file_name if message.document else "upload.jpg"
@@ -337,6 +360,7 @@ async def document(message: types.Message):
         if asset_request:
             asset_type, label = asset_request
             result = await upload_asset(asset_type, label, filename, buffer.getvalue(), mime_type)
+            pending_upload.pop(message.from_user.id, None)
             await message.answer(f"Asset uploaded: {html.escape(result['label'], quote=False)}")
             if asset_type == "profile-image":
                 try:
@@ -352,6 +376,12 @@ async def document(message: types.Message):
         else:
             result = await upload_certificate(message.caption or filename, filename, buffer.getvalue(), mime_type)
             await message.answer(f"Certificate uploaded: {html.escape(result['title'], quote=False)}")
+    except httpx.HTTPStatusError as error:
+        if error.response.status_code == 413:
+            await message.answer("That file is too large. Please send a file no bigger than 10 MB.")
+        else:
+            logger.exception("%s upload failed", asset_type)
+            await message.answer(f"I couldn't upload that {asset_type}. Please check R2 configuration and try again.")
     except Exception:
         logger.exception("%s upload failed", asset_type)
         await message.answer(f"I couldn't upload that {asset_type}. Please check R2 configuration and try again.")

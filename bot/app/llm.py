@@ -6,14 +6,14 @@ from .config import settings
 from .tools import TOOLS, execute_tool
 
 client = AsyncGroq(api_key=settings.groq_api_key)
-SYSTEM = "You answer questions about Michael Odhiambo's portfolio. Use search_portfolio first for broad or ambiguous questions; it searches the profile and all public content. Use get_profile for direct identity/background questions, search_cv for CV-specific experience or qualification questions, list_skills for skills, list_certificates for certifications, and list_entries for filtered lists. Use tools for every factual claim about Mike. Clearly distinguish verified facts from your assessment. Always state the total number of matching records when listing results. If more records exist than the current page, present the page and ask whether the user wants more. When the user asks for more, request the next page. If the tools have no supporting data, say you do not know. Be concise and format answers with Telegram Markdown."
+SYSTEM = "You are a portfolio assistant for Michael Odhiambo. Answer only questions about Michael and information in the portfolio tools. For unrelated questions (including other people, politics, general knowledge, or current events), politely say you only answer questions about Michael's portfolio; do not answer from general knowledge. Use search_portfolio first for broad or ambiguous questions; it searches the profile and all public content. Use get_profile for direct identity/background questions, search_cv for CV-specific experience or qualification questions, list_skills for skills, list_certificates for certifications, and list_entries for filtered lists. Use tools for every factual claim about Mike. Never invent, infer, or embellish facts, employers, roles, dates, metrics, technologies, or qualifications. If the tools do not support a claim, say you do not know. Lead with the direct answer, avoid repetition, and keep normal replies to 2–4 short paragraphs (under about 700 characters when possible). Use bullets only for multiple distinct items; provide more detail only when asked. Always state the total number of matching records when listing results. If more records exist than the current page, present the page and ask whether the user wants more. When the user asks for more, request the next page. Format answers with Telegram Markdown."
 EXTRACT_SYSTEM = "Extract one portfolio entry from the admin instruction. Return only JSON with slug, content_type (project/article/hackathon/event), title, blurb, date (YYYY-MM-DD or null), year, is_visible, is_featured, custom_order, tech_stack, tags, details, links, media, and source. Infer nothing not present; use null or empty values."
 
 
 async def answer(question: str) -> str:
     messages = [{"role": "system", "content": SYSTEM}, {"role": "user", "content": question}]
     for _ in range(3):
-        completion = await client.chat.completions.create(model=settings.groq_model, messages=messages, tools=TOOLS, tool_choice="auto")
+        completion = await client.chat.completions.create(model=settings.groq_model, messages=messages, tools=TOOLS, tool_choice="auto", max_tokens=500)
         message = completion.choices[0].message
         if not message.tool_calls:
             return message.content or "I couldn't find an answer in the portfolio."

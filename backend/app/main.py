@@ -17,6 +17,8 @@ app = FastAPI(title="mikesplore portfolio API", version="1.0.0")
 from .config import settings
 frontend_origins = [origin.strip().rstrip("/") for origin in settings.frontend_origin.split(",") if origin.strip()]
 app.add_middleware(CORSMiddleware, allow_origins=frontend_origins, allow_credentials=False, allow_methods=["GET", "POST", "PATCH", "DELETE"], allow_headers=["*"])
+MAX_UPLOAD_BYTES = 10 * 1024 * 1024
+PUBLIC_SETTING_KEYS = {"public_notice"}
 
 
 def slugify(value: str) -> str:
@@ -120,7 +122,9 @@ def upload_certificate(title: str = Form(...), file: UploadFile = File(...), db:
         raise HTTPException(status_code=503, detail="R2 storage is not configured")
     object_key = f"certificates/{slugify(title)}-{file.filename}"
     client = boto3.client("s3", endpoint_url=settings.r2_endpoint_url, aws_access_key_id=settings.r2_access_key_id, aws_secret_access_key=settings.r2_secret_access_key, region_name="auto")
-    file_bytes = file.file.read()
+    file_bytes = file.file.read(MAX_UPLOAD_BYTES + 1)
+    if len(file_bytes) > MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=413, detail="Certificate file exceeds the 10 MB limit")
     client.upload_fileobj(BytesIO(file_bytes), settings.r2_bucket_name, object_key, ExtraArgs={"ContentType": file.content_type or "application/octet-stream"})
     item = Certificate(title=title, image_url=f"{settings.r2_public_base_url.rstrip('/')}/{object_key}", custom_order=0)
     db.add(item); db.commit(); db.refresh(item)
@@ -168,7 +172,15 @@ async def upload_asset(asset_type: str = Form(...), label: str = Form(""), file:
         raise HTTPException(status_code=503, detail="R2 storage is not configured")
     object_key = f"assets/{slugify(asset_type)}/{slugify(label or file.filename or 'upload')}-{file.filename}"
     client = boto3.client("s3", endpoint_url=settings.r2_endpoint_url, aws_access_key_id=settings.r2_access_key_id, aws_secret_access_key=settings.r2_secret_access_key, region_name="auto")
-    file_bytes = await file.read()
+    file_bytes = await file.read(MAX_UPLOAD_BYTES + 1)
+    if len(file_bytes) > MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=413, detail="Upload exceeds the 10 MB limit")
+    cv_text = None
+    if asset_type == "cv":
+        try:
+            cv_text = "\n".join(page.extract_text() or "" for page in PdfReader(BytesIO(file_bytes)).pages).strip()
+        except Exception:
+            raise HTTPException(status_code=400, detail="The CV must be a readable PDF file")
     client.upload_fileobj(BytesIO(file_bytes), settings.r2_bucket_name, object_key, ExtraArgs={"ContentType": file.content_type or "application/octet-stream"})
     asset_url = f"{settings.r2_public_base_url.rstrip('/')}/{object_key}"
     item = None
@@ -183,12 +195,11 @@ async def upload_asset(asset_type: str = Form(...), label: str = Form(""), file:
         db.add(item)
     db.commit(); db.refresh(item)
     if asset_type == "cv":
-        text = "\n".join(page.extract_text() or "" for page in PdfReader(BytesIO(file_bytes)).pages).strip()
         cv_setting = db.get(SiteSetting, "cv_text")
         if cv_setting:
-            cv_setting.value = {"text": text, "asset_url": asset_url}
+            cv_setting.value = {"text": cv_text, "asset_url": asset_url}
         else:
-            db.add(SiteSetting(key="cv_text", value={"text": text, "asset_url": asset_url}))
+            db.add(SiteSetting(key="cv_text", value={"text": cv_text, "asset_url": asset_url}))
         db.commit()
     if previous_url and previous_url.startswith(settings.r2_public_base_url.rstrip("/") + "/"):
         previous_key = previous_url.removeprefix(settings.r2_public_base_url.rstrip("/") + "/")
@@ -216,6 +227,8 @@ def search_cv(q: str = Query(min_length=1), db: Session = Depends(get_db)):
 
 @app.get("/settings/{key}")
 def get_setting(key: str, db: Session = Depends(get_db)):
+    if key not in PUBLIC_SETTING_KEYS:
+        raise HTTPException(status_code=404, detail="Setting not found")
     setting = db.get(SiteSetting, key)
     if not setting:
         raise HTTPException(status_code=404, detail="Setting not found")

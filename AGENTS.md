@@ -377,6 +377,27 @@ This phase was completed before the schema and backend work.
 - Backend CORS now accepts comma-separated origins and trims trailing slashes, allowing production
   deployments to support both apex and `www` frontend domains without wildcard access.
 
+### Security hardening update (2026-09-04)
+
+- Limited certificate and generic asset uploads to 10 MB, rejecting oversized files before R2
+  upload. Restricted the public settings endpoint to an explicit safe-key allowlist so internal
+  settings such as extracted CV text cannot be exposed accidentally.
+
+- Telegram upload instructions now display the 10 MB limit and return a clear size-specific
+  message when the backend rejects an oversized file.
+
+### Telegram response style update (2026-09-04)
+
+- Tightened public LLM response guidance for conversational Telegram replies, including direct
+  answers, less repetition, short paragraphs, and a 500-token completion cap. Clarified that file
+  uploads are immediate and `/confirm` applies only to pending content changes.
+
+### Bot grounding and CV delivery update (2026-09-04)
+
+- Added direct CV delivery from the public CV asset when users ask to send/download/share it.
+- Tightened the public assistant prompt to refuse unrelated questions and prohibit unsupported
+  employers, roles, metrics, technologies, and qualifications.
+
 ## Open items to resolve during the work, not before
 
 - Exact Telegram bot library (`python-telegram-bot` vs `aiogram`) — pick one during Phase 4,
