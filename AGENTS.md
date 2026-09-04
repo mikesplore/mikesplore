@@ -419,6 +419,12 @@ This phase was completed before the schema and backend work.
   predefined actions; the bot still fetches files from verified backend assets and admin commands
   remain explicit and authorization-protected.
 
+- Added protected entry updates by slug. Admin `/edit` now accepts either an entry UUID or slug,
+  while retaining the preview and confirmation workflow.
+
+- Added protected entry deletion by slug. Admin `/delete` now accepts either an entry UUID or slug,
+  while retaining the preview and confirmation workflow.
+
 - Admin content creation now returns a clear HTTP 409 conflict when an entry slug already exists,
   instead of allowing a raw database unique-constraint traceback to surface.
 

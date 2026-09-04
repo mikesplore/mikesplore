@@ -26,14 +26,25 @@ async def upload_asset(asset_type: str, label: str, filename: str, content: byte
 
 async def update_entry(entry_id: str, entry: dict) -> dict:
     async with httpx.AsyncClient(base_url=settings.backend_url, timeout=10) as client:
-        response = await client.patch(f"/entries/{entry_id}", json=entry, headers={"X-Service-Api-Key": settings.service_api_key})
+        path = f"/entries/slug/{entry_id}" if not _is_uuid(entry_id) else f"/entries/{entry_id}"
+        response = await client.patch(path, json=entry, headers={"X-Service-Api-Key": settings.service_api_key})
         response.raise_for_status()
         return response.json()
 
 
+def _is_uuid(value: str) -> bool:
+    import uuid
+    try:
+        uuid.UUID(value)
+        return True
+    except ValueError:
+        return False
+
+
 async def delete_entry(entry_id: str) -> None:
     async with httpx.AsyncClient(base_url=settings.backend_url, timeout=10) as client:
-        response = await client.delete(f"/entries/{entry_id}", headers={"X-Service-Api-Key": settings.service_api_key})
+        path = f"/entries/slug/{entry_id}" if not _is_uuid(entry_id) else f"/entries/{entry_id}"
+        response = await client.delete(path, headers={"X-Service-Api-Key": settings.service_api_key})
         response.raise_for_status()
 
 

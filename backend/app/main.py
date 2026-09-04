@@ -290,6 +290,24 @@ def get_entry_by_slug(slug: str, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Entry not found")
     return entry
 
+@app.patch("/entries/slug/{slug}", response_model=EntryRead, dependencies=[Depends(require_service_key)])
+def update_entry_by_slug(slug: str, payload: EntryUpdate, db: Session = Depends(get_db)):
+    entry = db.scalar(select(Entry).where(Entry.slug == slug))
+    if not entry:
+        raise HTTPException(status_code=404, detail="Entry not found")
+    for field, value in payload.model_dump(exclude_unset=True).items():
+        setattr(entry, field, value)
+    db.commit(); db.refresh(entry)
+    return entry
+
+@app.delete("/entries/slug/{slug}", status_code=status.HTTP_204_NO_CONTENT, dependencies=[Depends(require_service_key)])
+def delete_entry_by_slug(slug: str, db: Session = Depends(get_db)):
+    entry = db.scalar(select(Entry).where(Entry.slug == slug))
+    if not entry:
+        raise HTTPException(status_code=404, detail="Entry not found")
+    db.delete(entry)
+    db.commit()
+
 
 @app.post("/entries", response_model=EntryRead, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_service_key)])
 def create_entry(payload: EntryCreate, db: Session = Depends(get_db)):

@@ -107,7 +107,7 @@ async def edit_command(message: types.Message):
         return
     parts = (message.text or "").split(maxsplit=2)
     if len(parts) < 3:
-        await message.answer("Usage: /edit &lt;entry-id&gt; &lt;changes&gt;")
+        await message.answer("Usage: /edit &lt;entry-id-or-slug&gt; &lt;changes&gt;")
         return
     try:
         await show_typing(message)
@@ -194,7 +194,7 @@ async def delete_command(message: types.Message):
         return
     parts = (message.text or "").split(maxsplit=1)
     if len(parts) < 2:
-        await message.answer("Usage: /delete &lt;entry-id&gt;")
+        await message.answer("Usage: /delete &lt;entry-id-or-slug&gt;")
         return
     pending_mutation[message.from_user.id] = ("delete", parts[1], None)
     await message.answer(f"Delete entry {html.escape(parts[1], quote=False)}? Send /confirm to delete or /cancel to abort.")
