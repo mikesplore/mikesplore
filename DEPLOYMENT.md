@@ -1,8 +1,9 @@
 # Deployment checklist
 
-The database schema is managed by Alembic. A deployment connected to the already-populated
-production database does not need to run seed scripts. Run migrations only when a new migration
-file is introduced, and only after verifying `DATABASE_URL` points to the intended database.
+The database schema is managed by Alembic. Production content is managed directly in the database
+through the backend/admin interface; deployment does not run seed scripts. Run migrations only
+when a new migration file is introduced, and only after verifying `DATABASE_URL` points to the
+intended database.
 
 ## Services
 

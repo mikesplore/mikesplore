@@ -365,6 +365,13 @@ This phase was completed before the schema and backend work.
   one paid Render instance. The combined service starts from the repository root with
   `uvicorn backend.app.main:app`; the bot's `BACKEND_URL` points to the same backend URL.
 
+### Production data ownership update (2026-09-04)
+
+- Removed repository-local content snapshots, media, and seed scripts from the current tree after
+  production data was populated in PostgreSQL/R2. The repository retains schema migrations and
+  application code, while Render deployments now run Alembic migrations only. Historical Git
+  commits remain unchanged.
+
 ## Open items to resolve during the work, not before
 
 - Exact Telegram bot library (`python-telegram-bot` vs `aiogram`) — pick one during Phase 4,
