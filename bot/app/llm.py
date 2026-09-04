@@ -59,7 +59,9 @@ CV_TAILOR_SYSTEM = (
     "\"selected_projects\": [\"stable-project-id\"], \"selected_skills\": {\"category\": [\"skill\"]}}. "
     "Project IDs must come from search results. Selected projects and skills are inclusion lists. Never "
     "invent projects, skills, dates, metrics, qualifications, or contact details. Do not return full "
-    "project objects, CV data, layout fields, or any extra keys."
+    "project objects, CV data, layout fields, or any extra keys. If the job is outside the verified "
+    "portfolio evidence, return exactly {\"status\": \"rejected\", \"reason\": \"...\"} instead "
+    "of a patch. Never force a match for unrelated roles such as sales or HR."
 )
 
 CV_TOOLS = [{
@@ -149,8 +151,12 @@ async def tailor_cv(job_description: str, existing_patch: dict | None = None, re
         message = completion.choices[0].message
         if not message.tool_calls:
             result = json.loads(message.content or "{}")
+            if result.get("status") == "rejected" and set(result) == {"status", "reason"}:
+                return result
             if set(result) != {"summary", "selected_projects", "selected_skills"}:
                 raise ValueError("CV patch contains unexpected fields")
+            if not result["selected_projects"] or not any(result["selected_skills"].values()):
+                return {"status": "rejected", "reason": "There is not enough verified portfolio evidence for this job."}
             return result
         messages.append(message)
         for call in message.tool_calls:

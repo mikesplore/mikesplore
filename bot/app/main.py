@@ -212,6 +212,9 @@ async def prepare_cv_patch(message: types.Message, job_description: str, revisio
         await status.edit_text("Searching relevant projects and skills…")
         current = pending_cv.get(message.from_user.id)
         patch = await tailor_cv(job_description, current[0] if current else None, revision)
+        if patch.get("status") == "rejected":
+            await status.edit_text("I won't create a tailored CV for this job.\n\n" + html.escape(patch.get("reason", "There is not enough verified portfolio evidence for this role.")))
+            return
         base = await get_cv_base()
         pending_cv[message.from_user.id] = (patch, job_description, "Tailored CV", base["revision"])
         await status.edit_text("Preparing proposed CV changes…")

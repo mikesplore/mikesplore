@@ -513,6 +513,12 @@ This phase was completed before the schema and backend work.
 - `/cv base` remains only for uploading/replacing the source JSON. Tailoring never writes to it.
 - Updated `/help` and the administrator Telegram command menu to expose `/apply` as the tailoring
   command and `/cv` as the base-JSON upload command.
+
+### CV relevance guard (2026-09-05)
+
+- Added an explicit out-of-domain rejection path for tailoring requests. The LLM must reject roles
+  without verified project/skill evidence instead of forcing a match, and the bot/backend reject empty
+  project or skill selections as a second enforcement layer.
 - Added the backend-only `DEVTO_USERNAME`, `GITHUB_USERNAME`, and optional `GITHUB_TOKEN` entries to
   the root `.env.example` so source synchronization setup is discoverable for clones.
 

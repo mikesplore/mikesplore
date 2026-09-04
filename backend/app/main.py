@@ -334,6 +334,8 @@ def _validate_cv_patch(patch: dict) -> dict:
         raise HTTPException(status_code=422, detail="selected_projects must be a list of stable IDs")
     if not isinstance(patch["selected_skills"], dict) or any(not isinstance(value, list) or not all(isinstance(item, str) for item in value) for value in patch["selected_skills"].values()):
         raise HTTPException(status_code=422, detail="selected_skills must map categories to skill names")
+    if not patch["selected_projects"] or not any(patch["selected_skills"].values()):
+        raise HTTPException(status_code=422, detail="The job must match at least one verified project and skill")
     return patch
 
 
