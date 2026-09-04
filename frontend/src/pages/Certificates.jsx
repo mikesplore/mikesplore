@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { fetchCertificates } from '../lib/portfolioApi';
+import EmptyState from '../components/EmptyState';
 
 const Certificates = () => {
   const [certificates, setCertificates] = useState([]);
@@ -11,6 +12,7 @@ const Certificates = () => {
   }, []);
   if (status === 'loading') return <p className="py-8 text-center text-base text-subtle">Loading certificates…</p>;
   if (status === 'error') return <p className="py-8 text-center text-base text-subtle">Certificates are temporarily unavailable.</p>;
+  if (certificates.length === 0) return <EmptyState title="No certificates to show yet">Certificates will appear here once they are uploaded.</EmptyState>;
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
       {certificates.map((cert) => (

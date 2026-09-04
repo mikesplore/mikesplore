@@ -2,6 +2,7 @@ import { ExternalLink, MapPin } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import GalleryGrid from '../components/GalleryGrid';
 import { fetchEntriesByType } from '../lib/portfolioApi';
+import EmptyState from '../components/EmptyState';
 
 const Events = () => {
   const [events, setEvents] = useState([]);
@@ -15,6 +16,7 @@ const Events = () => {
   }, []);
   if (status === 'loading') return <p className="py-8 text-center text-base text-subtle">Loading events…</p>;
   if (status === 'error') return <p className="py-8 text-center text-base text-subtle">Events are temporarily unavailable.</p>;
+  if (events.length === 0) return <EmptyState title="No events to show yet">Events and community activities will appear here once they are added.</EmptyState>;
   return (
     <ul className="divide-y divide-divider rounded-xl bg-elevated overflow-hidden">
       {events.map((event) => (

@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { ExternalLink, Github } from 'lucide-react';
 import { fetchProjects } from '../lib/portfolioApi';
+import EmptyState from '../components/EmptyState';
 
 const Projects = () => {
   const [projects, setProjects] = useState([]);
@@ -16,6 +17,7 @@ const Projects = () => {
   }, []);
   if (status === 'loading') return <p className="py-8 text-center text-base text-subtle">Loading projects…</p>;
   if (status === 'error') return <p className="py-8 text-center text-base text-subtle">Projects are temporarily unavailable.</p>;
+  if (projects.length === 0) return <EmptyState title="No projects to show yet">Projects will appear here once they are added to the portfolio.</EmptyState>;
   return (
     <ul className="divide-y divide-divider rounded-xl bg-elevated overflow-hidden">
       {projects.map((project) => (

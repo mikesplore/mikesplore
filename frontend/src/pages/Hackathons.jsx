@@ -1,6 +1,7 @@
 import { ExternalLink } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { fetchEntriesByType } from '../lib/portfolioApi';
+import EmptyState from '../components/EmptyState';
 
 const resultStyles = {
   Participating: 'bg-teal-soft text-teal',
@@ -28,6 +29,7 @@ const Hackathons = () => {
   }, []);
   if (status === 'loading') return <p className="py-8 text-center text-base text-subtle">Loading hackathons…</p>;
   if (status === 'error') return <p className="py-8 text-center text-base text-subtle">Hackathons are temporarily unavailable.</p>;
+  if (hackathons.length === 0) return <EmptyState title="No hackathons to show yet">Hackathon results and projects will appear here once they are added.</EmptyState>;
   return (
     <ul className="divide-y divide-divider rounded-xl bg-elevated overflow-hidden">
       {hackathons.map((item) => (

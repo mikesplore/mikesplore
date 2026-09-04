@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { fetchBucketList } from '../lib/portfolioApi';
+import EmptyState from '../components/EmptyState';
 
 const bucketListMeta = {
   title: 'Bucket List',
@@ -23,6 +24,7 @@ const BucketList = () => {
 
   if (status === 'loading') return <p className="py-8 text-center text-base text-subtle">Loading bucket list…</p>;
   if (status === 'error') return <p className="py-8 text-center text-base text-subtle">Bucket list is temporarily unavailable.</p>;
+  if (bucketListItems.length === 0) return <EmptyState title="Your bucket list is empty">New goals will appear here once they are added.</EmptyState>;
 
   const done = bucketListItems.filter((item) => item.done);
   const remaining = bucketListItems.filter((item) => !item.done);
