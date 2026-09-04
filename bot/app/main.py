@@ -22,6 +22,7 @@ pending: dict[int, dict] = {}
 awaiting_entry: set[int] = set()
 pending_upload: dict[int, tuple[str, str]] = {}
 pending_mutation: dict[int, tuple[str, str, dict | None]] = {}
+list_context: dict[int, tuple[str, int]] = {}
 
 
 async def show_typing(message: types.Message) -> None:
@@ -365,7 +366,19 @@ async def question(message: types.Message):
             return
     try:
         await show_typing(message)
-        response = await answer(message.text or "")
+        question_text = message.text or ""
+        user_id = message.from_user.id
+        normalized = question_text.lower().strip()
+        is_next = normalized in {"yes", "y", "next", "next page", "show more", "more"} or "next page" in normalized
+        if is_next and user_id in list_context:
+            content_type, current_page = list_context[user_id]
+            question_text = f"Show page {current_page + 1} of {content_type}s from the portfolio."
+            list_context[user_id] = (content_type, current_page + 1)
+        else:
+            content_type = next((value for value in ("project", "article", "hackathon", "event") if value in normalized), None)
+            if content_type and any(word in normalized for word in ("show", "list", "what", "which")):
+                list_context[user_id] = (content_type, 1)
+        response = await answer(question_text)
     except Exception:
         logger.exception("Public portfolio lookup failed")
         response = "I couldn't reach the portfolio right now. Please try again shortly."

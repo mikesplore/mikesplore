@@ -422,6 +422,9 @@ This phase was completed before the schema and backend work.
 - Corrected the admin confirmation response so `/admin` create and update operations no longer
   incorrectly report “Entry deleted” after a successful database write.
 
+- Added lightweight per-user pagination context so confirmations such as “yes”, “next page”, and
+  “show more” continue the user's most recent project, article, hackathon, or event listing.
+
 ## Open items to resolve during the work, not before
 
 - Exact Telegram bot library (`python-telegram-bot` vs `aiogram`) — pick one during Phase 4,
