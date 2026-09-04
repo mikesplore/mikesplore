@@ -11,7 +11,7 @@ from .tools import list_certificates
 
 from .config import settings
 from .llm import answer
-from .llm import extract_admin_operation, extract_entry, extract_profile_update, extract_update, tailor_cv
+from .llm import extract_admin_operation, extract_entry, extract_job_description_from_image, extract_profile_update, extract_update, tailor_cv
 from .admin import apply_sync, create_entry, delete_asset, delete_certificate, delete_entry, get_cv_base, manage_content, preview_sync, render_cv, save_cv_base, search_admin_content, update_entry, update_profile, upload_asset, upload_certificate
 from .formatting import telegram_html
 
@@ -518,7 +518,8 @@ async def document(message: types.Message):
         return
     asset_type = "certificate"
     try:
-        await message.answer("File received. Uploading it now…")
+        if message.from_user.id not in awaiting_cv or pending_upload.get(message.from_user.id):
+            await message.answer("File received. Uploading it now…")
         await show_typing(message)
         asset_request = pending_upload.get(message.from_user.id)
         telegram_file_id = message.document.file_id if message.document else message.photo[-1].file_id
@@ -530,6 +531,22 @@ async def document(message: types.Message):
         await bot.download_file(telegram_file.file_path, buffer)
         filename = message.document.file_name if message.document else "upload.jpg"
         mime_type = message.document.mime_type if message.document else "image/jpeg"
+        if message.from_user.id in awaiting_cv and not asset_request:
+            if mime_type.startswith("image/"):
+                await message.answer("Reading the job poster…")
+                job_description = await extract_job_description_from_image(buffer.getvalue(), mime_type)
+            elif mime_type == "application/pdf":
+                from pypdf import PdfReader
+                job_description = "\n".join(page.extract_text() or "" for page in PdfReader(buffer).pages).strip()
+                if len(job_description) < 30:
+                    await message.answer("That PDF has no readable text. Please send an image poster or a text-based PDF.")
+                    return
+            else:
+                await message.answer("For a job description, send a poster image or PDF.")
+                return
+            awaiting_cv.discard(message.from_user.id)
+            await prepare_cv_patch(message, job_description)
+            return
         if asset_request:
             asset_type, label = asset_request
             if asset_type == "cv-json":

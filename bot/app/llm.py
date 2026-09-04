@@ -1,4 +1,5 @@
 import json
+import base64
 
 from groq import AsyncGroq
 
@@ -163,6 +164,24 @@ async def tailor_cv(job_description: str, existing_patch: dict | None = None, re
             result = await execute_cv_tool(call.function.name, json.loads(call.function.arguments or "{}"))
             messages.append({"role": "tool", "tool_call_id": call.id, "content": json.dumps(result)})
     raise ValueError("CV tailoring did not produce a patch")
+
+
+async def extract_job_description_from_image(content: bytes, mime_type: str) -> str:
+    encoded = base64.b64encode(content).decode("ascii")
+    completion = await client.chat.completions.create(
+        model=settings.groq_vision_model,
+        messages=[{"role": "user", "content": [
+            {"type": "text", "text": "Extract the complete job description text from this poster. Return only JSON: {\"job_description\": \"...\"}. Do not summarize, invent, or add commentary."},
+            {"type": "image_url", "image_url": {"url": f"data:{mime_type};base64,{encoded}"}},
+        ]}],
+        response_format={"type": "json_object"},
+        temperature=0,
+    )
+    result = json.loads(completion.choices[0].message.content or "{}")
+    text = result.get("job_description")
+    if not isinstance(text, str) or len(text.strip()) < 30:
+        raise ValueError("The poster did not contain enough readable job description text")
+    return text.strip()
 
 
 async def extract_admin_operation(instruction: str, candidates: list[dict] | None = None) -> dict:

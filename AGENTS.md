@@ -519,6 +519,14 @@ This phase was completed before the schema and backend work.
 - Added an explicit out-of-domain rejection path for tailoring requests. The LLM must reject roles
   without verified project/skill evidence instead of forcing a match, and the bot/backend reject empty
   project or skill selections as a second enforcement layer.
+
+### Job poster extraction (2026-09-05)
+
+- Added configurable Groq vision extraction using `GROQ_VISION_MODEL`, defaulting to
+  `meta-llama/llama-4-scout-17b-16e-instruct`.
+- After `/apply` without inline text, administrators can send an image poster or text-based PDF. Image
+  text is extracted as structured job-description JSON, then enters the same relevance and patch review
+  flow. Scanned PDFs require an image upload because local OCR is not included.
 - Added the backend-only `DEVTO_USERNAME`, `GITHUB_USERNAME`, and optional `GITHUB_TOKEN` entries to
   the root `.env.example` so source synchronization setup is discoverable for clones.
 
