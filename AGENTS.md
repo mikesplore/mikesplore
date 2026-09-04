@@ -489,6 +489,8 @@ This phase was completed before the schema and backend work.
   when source synchronization is attempted without a configured username.
 - Generalized bot/API identity text and tool descriptions so the code no longer assumes Michael or
   mikesplore. Route names, content types, and schema fields remain intentional application behavior.
+- Added the backend-only `DEVTO_USERNAME`, `GITHUB_USERNAME`, and optional `GITHUB_TOKEN` entries to
+  the root `.env.example` so source synchronization setup is discoverable for clones.
 
 ## Open items to resolve during the work, not before
 
