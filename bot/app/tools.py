@@ -54,6 +54,14 @@ async def list_contact_links() -> list[dict]:
         return [{"name": item["name"], "url": item["url"], "label": item.get("label"), "handle": item.get("handle"), "category": item.get("category")} for item in response.json()]
 
 
+async def request_cv_delivery() -> dict:
+    return {"action": "send_cv"}
+
+
+async def request_certificate_delivery(query: str = "") -> dict:
+    return {"action": "send_certificates", "query": query}
+
+
 async def search_cv(query: str) -> dict:
     async with httpx.AsyncClient(base_url=settings.backend_url, timeout=10) as client:
         response = await client.get("/cv/search", params={"q": query})
@@ -76,6 +84,12 @@ TOOLS = [{
         "description": "List public portfolio entries. Use this before answering facts about Mike's work.",
         "parameters": {"type": "object", "properties": {"content_type": {"type": "string", "enum": ["project", "article", "hackathon", "event"]}, "page": {"type": "integer", "minimum": 1, "default": 1}}, "required": []},
     },
+}, {
+    "type": "function",
+    "function": {"name": "request_cv_delivery", "description": "Send Michael's verified CV file directly to the user when they ask to see, view, download, share, attach, or receive it.", "parameters": {"type": "object", "properties": {}, "required": []}},
+}, {
+    "type": "function",
+    "function": {"name": "request_certificate_delivery", "description": "Send verified certificate files directly to the user when they ask to see or receive certificates. Include a title or keyword query when the user asks for a specific certificate.", "parameters": {"type": "object", "properties": {"query": {"type": "string"}}, "required": []}},
 }, {
     "type": "function",
     "function": {"name": "list_contact_links", "description": "List all verified public professional and social contact links for Michael. Use this for contact, social media, or how-to-reach-him questions.", "parameters": {"type": "object", "properties": {}, "required": []}},
@@ -114,6 +128,10 @@ async def execute_tool(name: str, arguments: dict):
         return await list_skills()
     if name == "list_contact_links":
         return await list_contact_links()
+    if name == "request_cv_delivery":
+        return await request_cv_delivery()
+    if name == "request_certificate_delivery":
+        return await request_certificate_delivery(arguments.get("query", ""))
     if name == "search_cv":
         return await search_cv(arguments["query"])
     if name == "search_portfolio":

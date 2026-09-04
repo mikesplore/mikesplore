@@ -253,7 +253,23 @@ async def certificates(message: types.Message):
         await message.answer("I couldn't retrieve the certificates right now. Please try again shortly.")
 
 
-@dispatcher.message(lambda message: message.text and any(term in message.text.lower() for term in ("cv", "resume")) and any(word in message.text.lower() for word in ("send", "download", "attach", "share")))
+async def deliver_certificates(message: types.Message, query: str = ""):
+    items = await list_certificates()
+    query = query.lower()
+    selected = [item for item in items if query and (query in item["title"].lower() or any(word in item["title"].lower().split() for word in query.split() if len(word) > 2))] if query else items
+    selected = selected or items
+    await message.answer(f"I found {len(selected)} certificate(s). Sending them directly:")
+    for item in selected:
+        image_url = item.get("image_url")
+        if image_url:
+            async with httpx.AsyncClient(timeout=20) as client:
+                file_response = await client.get(image_url)
+                file_response.raise_for_status()
+            filename = image_url.rstrip("/").rsplit("/", 1)[-1] or "certificate"
+            await message.answer_document(types.BufferedInputFile(file_response.content, filename=filename), caption=html.escape(item["title"], quote=False))
+
+
+@dispatcher.message(lambda message: message.text and any(term in message.text.lower() for term in ("cv", "resume", "curriculum vitae")) and any(word in message.text.lower() for word in ("send", "download", "attach", "share", "see", "view", "open")))
 async def send_cv(message: types.Message):
     try:
         await show_typing(message)
@@ -342,6 +358,17 @@ async def question(message: types.Message):
     except Exception:
         logger.exception("Public portfolio lookup failed")
         response = "I couldn't reach the portfolio right now. Please try again shortly."
+    if response.startswith("__BOT_ACTION__"):
+        action = __import__('json').loads(response.removeprefix("__BOT_ACTION__"))
+        try:
+            if action["action"] == "send_cv":
+                await send_cv(message)
+            elif action["action"] == "send_certificates":
+                await deliver_certificates(message, action.get("query", ""))
+        except Exception:
+            logger.exception("Bot action failed")
+            await message.answer("I couldn't complete that request right now. Please try again shortly.")
+        return
     await message.answer(telegram_html(response))
 
 

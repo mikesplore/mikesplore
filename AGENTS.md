@@ -415,6 +415,10 @@ This phase was completed before the schema and backend work.
   `.pdf` filename, preventing an HTML/error response or ambiguous asset label from being presented
   as the CV.
 
+- Added constrained LLM actions for CV and certificate delivery. The model can request only these
+  predefined actions; the bot still fetches files from verified backend assets and admin commands
+  remain explicit and authorization-protected.
+
 ## Open items to resolve during the work, not before
 
 - Exact Telegram bot library (`python-telegram-bot` vs `aiogram`) — pick one during Phase 4,

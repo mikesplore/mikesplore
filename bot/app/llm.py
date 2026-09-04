@@ -66,6 +66,8 @@ async def answer(question: str) -> str:
         messages.append(message)
         for call in message.tool_calls:
             result = await execute_tool(call.function.name, json.loads(call.function.arguments or "{}"))
+            if result.get("action") in {"send_cv", "send_certificates"}:
+                return "__BOT_ACTION__" + json.dumps(result)
             messages.append({"role": "tool", "tool_call_id": call.id, "content": json.dumps(result)})
     return "I couldn't complete that lookup. Please try again."
 
