@@ -419,6 +419,9 @@ This phase was completed before the schema and backend work.
   predefined actions; the bot still fetches files from verified backend assets and admin commands
   remain explicit and authorization-protected.
 
+- Corrected the admin confirmation response so `/admin` create and update operations no longer
+  incorrectly report “Entry deleted” after a successful database write.
+
 ## Open items to resolve during the work, not before
 
 - Exact Telegram bot library (`python-telegram-bot` vs `aiogram`) — pick one during Phase 4,

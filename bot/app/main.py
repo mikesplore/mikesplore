@@ -327,7 +327,18 @@ async def question(message: types.Message):
                                 payload["id"] = operation["id"]
                             await manage_content(resource, action, payload)
                     else: await update_entry(mutation[1], mutation[2] or {})
-                    await message.answer("Profile updated." if mutation[0] == "profile" else "Content managed." if mutation[0] == "manage" else "Entry updated." if mutation[0] == "edit" else "Entry deleted.")
+                    if mutation[0] == "profile":
+                        result_message = "Profile updated."
+                    elif mutation[0] == "manage":
+                        result_message = "Content managed."
+                    elif mutation[0] == "edit":
+                        result_message = "Entry updated."
+                    elif mutation[0] == "admin":
+                        action = (mutation[2] or {}).get("action")
+                        result_message = {"create": "Entry created.", "update": "Entry updated.", "delete": "Entry deleted."}.get(action, "Change applied.")
+                    else:
+                        result_message = "Entry deleted."
+                    await message.answer(result_message)
                 except Exception:
                     await message.answer("The backend rejected that change.")
                 return
