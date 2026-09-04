@@ -372,6 +372,11 @@ This phase was completed before the schema and backend work.
   application code, while Render deployments now run Alembic migrations only. Historical Git
   commits remain unchanged.
 
+### CORS origin configuration update (2026-09-04)
+
+- Backend CORS now accepts comma-separated origins and trims trailing slashes, allowing production
+  deployments to support both apex and `www` frontend domains without wildcard access.
+
 ## Open items to resolve during the work, not before
 
 - Exact Telegram bot library (`python-telegram-bot` vs `aiogram`) — pick one during Phase 4,

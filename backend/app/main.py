@@ -15,7 +15,8 @@ from .schemas import EntryCreate, EntryRead, EntryUpdate
 
 app = FastAPI(title="mikesplore portfolio API", version="1.0.0")
 from .config import settings
-app.add_middleware(CORSMiddleware, allow_origins=[settings.frontend_origin], allow_credentials=False, allow_methods=["GET", "POST", "PATCH", "DELETE"], allow_headers=["*"])
+frontend_origins = [origin.strip().rstrip("/") for origin in settings.frontend_origin.split(",") if origin.strip()]
+app.add_middleware(CORSMiddleware, allow_origins=frontend_origins, allow_credentials=False, allow_methods=["GET", "POST", "PATCH", "DELETE"], allow_headers=["*"])
 
 
 def slugify(value: str) -> str:
