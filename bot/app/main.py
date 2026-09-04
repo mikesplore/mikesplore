@@ -484,6 +484,13 @@ async def document(message: types.Message):
         mime_type = message.document.mime_type if message.document else "image/jpeg"
         if asset_request:
             asset_type, label = asset_request
+            if asset_type == "certificate":
+                # Certificates have their own database collection and public
+                # listing endpoint. Do not store them as generic site assets.
+                result = await upload_certificate(label, filename, buffer.getvalue(), mime_type)
+                pending_upload.pop(message.from_user.id, None)
+                await message.answer(f"Certificate uploaded: {html.escape(result['title'], quote=False)}")
+                return
             result = await upload_asset(asset_type, label, filename, buffer.getvalue(), mime_type)
             pending_upload.pop(message.from_user.id, None)
             await message.answer(f"Asset uploaded: {html.escape(result['label'], quote=False)}")

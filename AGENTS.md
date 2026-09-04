@@ -450,6 +450,14 @@ This phase was completed before the schema and backend work.
   and asset/certificate deletion commands that were previously omitted.
 - Expanded the administrator Telegram command menu to expose the implemented admin commands.
 
+### Certificate upload routing fix (2026-09-04)
+
+- Fixed `/upload certificate <title>` to call the protected certificate upload endpoint and create
+  a record in `certificates`, which is the collection used by public certificate lookup and delivery.
+- Previously, the document handler routed all `/upload` requests through generic `/assets`, so the
+  file upload succeeded but certificate lookup returned zero records. Existing orphaned generic
+  assets are not automatically converted; re-upload those certificates after deployment.
+
 ## Open items to resolve during the work, not before
 
 ### Manual source synchronization update (2026-09-04)
