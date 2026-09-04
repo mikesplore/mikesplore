@@ -68,3 +68,48 @@ async def answer(question: str) -> str:
             result = await execute_tool(call.function.name, json.loads(call.function.arguments or "{}"))
             messages.append({"role": "tool", "tool_call_id": call.id, "content": json.dumps(result)})
     return "I couldn't complete that lookup. Please try again."
+
+
+async def extract_entry(instruction: str) -> dict:
+    completion = await client.chat.completions.create(
+        model=settings.groq_model,
+        messages=[{"role": "system", "content": EXTRACT_SYSTEM}, {"role": "user", "content": instruction}],
+        response_format={"type": "json_object"},
+        temperature=0,
+    )
+    return json.loads(completion.choices[0].message.content or "{}")
+
+
+async def extract_update(instruction: str) -> dict:
+    completion = await client.chat.completions.create(
+        model=settings.groq_model,
+        messages=[{"role": "system", "content": "Extract only fields the admin explicitly asks to change. Return JSON using fields title, blurb, date, year, is_visible, is_featured, custom_order, tech_stack, tags, details, links, and media. Return an empty JSON object if unclear."}, {"role": "user", "content": instruction}],
+        response_format={"type": "json_object"},
+        temperature=0,
+    )
+    return json.loads(completion.choices[0].message.content or "{}")
+
+
+async def extract_profile_update(instruction: str) -> dict:
+    completion = await client.chat.completions.create(
+        model=settings.groq_model,
+        messages=[{"role": "system", "content": "Extract only profile fields explicitly requested by the admin. Return JSON using name, tagline, location, focus, experience, availability_status, availability_detail, and about."}, {"role": "user", "content": instruction}],
+        response_format={"type": "json_object"},
+        temperature=0,
+    )
+    return json.loads(completion.choices[0].message.content or "{}")
+
+
+async def extract_admin_operation(instruction: str, candidates: list[dict] | None = None) -> dict:
+    allowed_resources = {"entries", "certificates", "assets", "links", "skills", "education", "bucket-list", "settings", "profile"}
+    system = "Extract one admin portfolio CRUD operation as JSON with resource, action (create/update/delete), id, and payload. Never invent IDs or values. Use profile for profile updates. If candidates contain multiple plausible records, return action null.\nCandidates:\n" + json.dumps(candidates or [])
+    completion = await client.chat.completions.create(
+        model=settings.groq_model,
+        messages=[{"role": "system", "content": system}, {"role": "user", "content": instruction}],
+        response_format={"type": "json_object"},
+        temperature=0,
+    )
+    result = json.loads(completion.choices[0].message.content or "{}")
+    if result.get("action") is not None and (result.get("resource") not in allowed_resources or result.get("action") not in {"create", "update", "delete"}):
+        raise ValueError("Unsupported admin operation")
+    return result
