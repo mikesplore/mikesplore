@@ -7,6 +7,8 @@ from sqlalchemy import cast, func, or_, select, String
 from sqlalchemy.orm import Session
 from uuid import UUID, uuid4
 import re
+import httpx
+from datetime import date as date_value
 
 from .auth import require_service_key
 from .db import get_db
@@ -19,6 +21,41 @@ frontend_origins = [origin.strip().rstrip("/") for origin in settings.frontend_o
 app.add_middleware(CORSMiddleware, allow_origins=frontend_origins, allow_credentials=False, allow_methods=["GET", "POST", "PATCH", "DELETE"], allow_headers=["*"])
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 PUBLIC_SETTING_KEYS = {"public_notice"}
+
+
+def _source_entry(source: str, item: dict, visible: bool) -> dict:
+    if source == "devto":
+        url = item.get("url") or item.get("canonical_url")
+        title = item.get("title", "Untitled article")
+        return {"slug": slugify(title), "content_type": "article", "title": title,
+                "blurb": item.get("description") or item.get("description_markdown") or "",
+                "date": (item.get("published_at") or item.get("created_at", ""))[:10] or None,
+                "is_visible": True, "tags": item.get("tag_list", []),
+                "details": {"readTime": item.get("reading_time_minutes")},
+                "links": {"url": url}, "media": {"thumbnail": item.get("cover_image") or item.get("social_image")},
+                "source": {"provider": "dev.to", "key": url}}
+    url = item.get("html_url")
+    title = item.get("name", "Untitled repository")
+    return {"slug": slugify(title), "content_type": "project", "title": title,
+            "blurb": item.get("description") or "", "date": (item.get("created_at", ""))[:10] or None,
+            "is_visible": visible, "tech_stack": [item["language"]] if item.get("language") else [],
+            "tags": [], "details": {"stars": item.get("stargazers_count", 0), "fork": item.get("fork", False)},
+            "links": {"url": url, "repo": url}, "media": {"thumbnail": (item.get("owner") or {}).get("avatar_url")},
+            "source": {"provider": "github", "key": url, "repo": item.get("full_name")}}
+
+
+async def _fetch_source(source: str) -> list[dict]:
+    if source not in {"devto", "github"}:
+        raise HTTPException(status_code=400, detail="Source must be devto or github")
+    url = (f"https://dev.to/api/articles?username={settings.devto_username}&per_page=100" if source == "devto"
+           else f"https://api.github.com/users/{settings.github_username}/repos?per_page=100&sort=updated")
+    headers = {"Accept": "application/vnd.github+json"}
+    if source == "github" and settings.github_token:
+        headers["Authorization"] = f"Bearer {settings.github_token}"
+    async with httpx.AsyncClient(timeout=20) as client:
+        response = await client.get(url, headers=headers)
+        response.raise_for_status()
+        return response.json()
 
 
 def slugify(value: str) -> str:
@@ -101,6 +138,45 @@ def admin_search(q: str = Query(min_length=1), db: Session = Depends(get_db)):
             if score:
                 results.append({"resource": resource, "score": score, "record": values})
     return sorted(results, key=lambda result: result["score"], reverse=True)[:10]
+
+
+@app.get("/admin/sync/{source}", dependencies=[Depends(require_service_key)])
+async def preview_sync(source: str):
+    """Fetch source data without changing the database; the bot shows this result for approval."""
+    try:
+        items = await _fetch_source(source)
+    except httpx.HTTPError as error:
+        raise HTTPException(status_code=502, detail=f"{source} fetch failed: {error}")
+    return {"source": source, "items": [_source_entry(source, item, source == "devto") for item in items]}
+
+
+@app.post("/admin/sync/{source}", dependencies=[Depends(require_service_key)])
+def apply_sync(source: str, payload: dict, db: Session = Depends(get_db)):
+    """Upsert an approved preview. Source URLs are the idempotency key."""
+    if source not in {"devto", "github"}:
+        raise HTTPException(status_code=400, detail="Source must be devto or github")
+    selected = set(payload.get("selected", []))
+    items = payload.get("items", [])
+    changed = []
+    for data in items:
+        key = (data.get("source") or {}).get("key")
+        if not key:
+            continue
+        entry = db.scalar(select(Entry).where(cast(Entry.source, String).ilike(f"%{key}%")))
+        if not entry:
+            entry = Entry(**data)
+            db.add(entry)
+        else:
+            # Imported fields may refresh, but editorial fields and GitHub selection survive.
+            old_visible = entry.is_visible
+            for field in ("title", "blurb", "date", "tech_stack", "tags", "details", "links", "media", "source"):
+                setattr(entry, field, data[field])
+            entry.is_visible = old_visible if source == "github" and key not in selected else (key in selected if source == "github" else True)
+        if source == "github" and key in selected:
+            entry.is_visible = True
+        changed.append({"title": data.get("title"), "key": key, "visible": entry.is_visible})
+    db.commit()
+    return {"source": source, "updated": len(changed), "items": changed}
 
 
 @app.get("/certificates")

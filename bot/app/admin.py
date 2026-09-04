@@ -3,6 +3,20 @@ import httpx
 from .config import settings
 
 
+async def preview_sync(source: str) -> dict:
+    async with httpx.AsyncClient(base_url=settings.backend_url, timeout=30) as client:
+        response = await client.get(f"/admin/sync/{source}", headers={"X-Service-Api-Key": settings.service_api_key})
+        response.raise_for_status()
+        return response.json()
+
+
+async def apply_sync(source: str, items: list[dict], selected: list[str]) -> dict:
+    async with httpx.AsyncClient(base_url=settings.backend_url, timeout=30) as client:
+        response = await client.post(f"/admin/sync/{source}", json={"items": items, "selected": selected}, headers={"X-Service-Api-Key": settings.service_api_key})
+        response.raise_for_status()
+        return response.json()
+
+
 async def create_entry(entry: dict) -> dict:
     async with httpx.AsyncClient(base_url=settings.backend_url, timeout=10) as client:
         response = await client.post("/entries", json=entry, headers={"X-Service-Api-Key": settings.service_api_key})

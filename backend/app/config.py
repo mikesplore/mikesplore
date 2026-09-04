@@ -28,6 +28,9 @@ class Settings(BaseSettings):
     r2_bucket_name: str = ""
     r2_public_base_url: str = ""
     frontend_origin: str = "http://localhost:5173"
+    devto_username: str = "mikesplore"
+    github_username: str = "mikesplore"
+    github_token: str = ""
     model_config = SettingsConfigDict(env_file=ENV_FILE, extra="ignore")
 
 

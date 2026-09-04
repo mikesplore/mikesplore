@@ -439,6 +439,18 @@ This phase was completed before the schema and backend work.
 
 ## Open items to resolve during the work, not before
 
+### Manual source synchronization update (2026-09-04)
+
+- Added protected backend source preview/apply endpoints for Dev.to and GitHub. The backend is
+  the only component that calls those providers; imported records use the provider URL as the
+  stable upsert key stored in `Entry.source`.
+- Added admin Telegram `/sync devto` and `/sync github` commands with an explicit confirmation
+  step. Dev.to imports default to visible. GitHub imports default to hidden and can be selected
+  by preview number, for example `/sync github 1,3`, before `/confirm`; unselected repositories
+  remain hidden. Existing GitHub visibility is preserved on later syncs unless explicitly selected.
+- Added `DEVTO_USERNAME`, `GITHUB_USERNAME`, and optional `GITHUB_TOKEN` configuration. No schema
+  migration was needed because provider provenance already has a JSONB field.
+
 - Exact Telegram bot library (`python-telegram-bot` vs `aiogram`) — pick one during Phase 4,
   document the choice and why here.
 - Exact Groq model for tool-calling — confirm current smallest tool-capable model at

@@ -11,7 +11,7 @@ from .tools import list_certificates
 from .config import settings
 from .llm import answer
 from .llm import extract_admin_operation, extract_entry, extract_profile_update, extract_update
-from .admin import create_entry, delete_asset, delete_certificate, delete_entry, manage_content, search_admin_content, update_entry, update_profile, upload_asset, upload_certificate
+from .admin import apply_sync, create_entry, delete_asset, delete_certificate, delete_entry, manage_content, preview_sync, search_admin_content, update_entry, update_profile, upload_asset, upload_certificate
 from .formatting import telegram_html
 
 bot = Bot(settings.telegram_bot_token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
@@ -22,6 +22,7 @@ pending: dict[int, dict] = {}
 awaiting_entry: set[int] = set()
 pending_upload: dict[int, tuple[str, str]] = {}
 pending_mutation: dict[int, tuple[str, str, dict | None]] = {}
+pending_sync: dict[int, tuple[str, list[dict], list[str]]] = {}
 list_context: dict[int, tuple[str, int]] = {}
 
 
@@ -47,6 +48,7 @@ async def register_commands():
     admin_commands = public_commands + [
         types.BotCommand(command="admin", description="Manage data using an instruction"),
         types.BotCommand(command="upload", description="Upload an asset or certificate"),
+        types.BotCommand(command="sync", description="Fetch Dev.to or GitHub content"),
         types.BotCommand(command="confirm", description="Confirm a pending change"),
         types.BotCommand(command="cancel", description="Cancel a pending change"),
     ]
@@ -72,6 +74,7 @@ async def help_command(message: types.Message):
         "\n\nAdmin commands:\n"
         "/admin &lt;instruction&gt; — manage any database content\n"
         "/upload &lt;asset_type&gt; [label] — upload a file\n"
+        "/sync devto|github [numbers] — fetch and select entries\n"
         "/confirm or /cancel — complete or discard a pending change"
         if is_admin(message) else ""
     )
@@ -98,6 +101,33 @@ async def upload_command(message: types.Message):
         return
     pending_upload[message.from_user.id] = (parts[1], parts[2] if len(parts) > 2 else parts[1])
     await message.answer("Send the file now (maximum size: 10 MB). Use /cancel to discard it.")
+
+
+@dispatcher.message(Command("sync"))
+async def sync_command(message: types.Message):
+    if not is_admin(message):
+        await message.answer("That command is restricted to the administrator.")
+        return
+    parts = (message.text or "").split(maxsplit=2)
+    source = parts[1].lower() if len(parts) > 1 else ""
+    if source not in {"devto", "github"}:
+        await message.answer("Usage: /sync devto or /sync github")
+        return
+    try:
+        await show_typing(message)
+        result = await preview_sync(source)
+        items = result["items"]
+        selected = [item["source"]["key"] for item in items] if source == "devto" else []
+        if source == "github" and len(parts) > 2:
+            indexes = {int(value) - 1 for value in parts[2].replace(" ", "").split(",") if value.isdigit()}
+            selected = [item["source"]["key"] for index, item in enumerate(items) if index in indexes]
+        pending_sync[message.from_user.id] = (source, items, selected)
+        lines = [f"{index + 1}. {item['title']} — {'show' if item['source']['key'] in selected else 'hide'}" for index, item in enumerate(items)]
+        instruction = "Articles default to show. Send /confirm to import." if source == "devto" else "GitHub defaults to hidden. Reply /sync github 1,3 (or similar) to choose, then /confirm."
+        await message.answer(f"{source.title()} sync preview ({len(items)} items):\n\n" + "\n".join(lines[:80]) + f"\n\n{instruction}")
+    except Exception:
+        logger.exception("%s sync preview failed", source)
+        await message.answer(f"I couldn't fetch {source} right now. Check the backend source configuration.")
 
 
 @dispatcher.message(Command("edit"))
@@ -304,9 +334,20 @@ async def question(message: types.Message):
             pending.pop(message.from_user.id, None)
             awaiting_entry.discard(message.from_user.id)
             pending_mutation.pop(message.from_user.id, None)
+            pending_sync.pop(message.from_user.id, None)
             await message.answer("Cancelled.")
             return
         if message.text.strip().lower() in {"/confirm", "confirm"}:
+            sync = pending_sync.pop(message.from_user.id, None)
+            if sync:
+                try:
+                    result = await apply_sync(sync[0], sync[1], sync[2])
+                    await message.answer(f"{sync[0].title()} sync complete: {result['updated']} entries upserted.")
+                except Exception:
+                    pending_sync[message.from_user.id] = sync
+                    logger.exception("Sync apply failed")
+                    await message.answer("The sync could not be completed. The preview is still pending; try /confirm again.")
+                return
             mutation = pending_mutation.pop(message.from_user.id, None)
             if mutation:
                 try:
