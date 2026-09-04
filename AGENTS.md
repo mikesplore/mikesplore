@@ -511,6 +511,8 @@ This phase was completed before the schema and backend work.
   patch-key validation, base revision conflict detection, and version records containing the patch and
   base snapshot.
 - `/cv base` remains only for uploading/replacing the source JSON. Tailoring never writes to it.
+- Updated `/help` and the administrator Telegram command menu to expose `/apply` as the tailoring
+  command and `/cv` as the base-JSON upload command.
 - Added the backend-only `DEVTO_USERNAME`, `GITHUB_USERNAME`, and optional `GITHUB_TOKEN` entries to
   the root `.env.example` so source synchronization setup is discoverable for clones.
 
