@@ -437,6 +437,13 @@ This phase was completed before the schema and backend work.
 - Added lightweight per-user pagination context so confirmations such as “yes”, “next page”, and
   “show more” continue the user's most recent project, article, hackathon, or event listing.
 
+### Contact lookup runtime fix (2026-09-04)
+
+- Fixed the public LLM tool loop to handle list-valued tool results. `list_contact_links` correctly
+  returns a list, but the action-detection code called `.get()` on every tool result, causing contact,
+  email, and WhatsApp questions to fail after the backend successfully returned HTTP 200.
+- Delivery-action detection now checks that the result is a dictionary before reading `action`.
+
 ## Open items to resolve during the work, not before
 
 ### Manual source synchronization update (2026-09-04)
