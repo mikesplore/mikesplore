@@ -266,8 +266,15 @@ async def send_cv(message: types.Message):
                 return
             file_response = await client.get(cv["url"])
             file_response.raise_for_status()
+        file_bytes = file_response.content
+        if not file_bytes.startswith(b"%PDF-"):
+            logger.error("CV asset did not return a PDF (content-type=%s)", file_response.headers.get("content-type"))
+            await message.answer("The stored CV file is invalid or unavailable. Please upload the CV again.")
+            return
         filename = cv.get("label") or "Michael-Odhiambo-CV.pdf"
-        await message.answer_document(types.BufferedInputFile(file_response.content, filename=filename), caption="Michael Odhiambo's CV")
+        if not filename.lower().endswith(".pdf"):
+            filename += ".pdf"
+        await message.answer_document(types.BufferedInputFile(file_bytes, filename=filename), caption="Michael Odhiambo's CV")
     except Exception:
         logger.exception("CV delivery failed")
         await message.answer("I couldn't retrieve the CV right now. Please try again shortly.")
