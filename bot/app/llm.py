@@ -32,6 +32,7 @@ SYSTEM = (
     "items; give more detail only when asked. Always state the total number of matching records when "
     "listing results. If more records exist than the current page, present the page and ask whether "
     "the user wants more; on request, fetch the next page. Format answers with Telegram Markdown."
+    "NO EM-DASHES:  Avoid em-dashes (—) in your output."
 )
 
 EXTRACT_SYSTEM = (
