@@ -2,34 +2,21 @@ import { useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Header from './Header';
 import Nav from './Nav';
+import { fetchProfile } from '../lib/portfolioApi';
 
 const Layout = () => {
   const { pathname } = useLocation();
 
   useEffect(() => {
-    const pageMetadata = {
-      '/': {
-        title: 'Michael Odhiambo',
-        description: 'Michael Odhiambo - full-stack developer building Kotlin backends, Android apps, and LLM-assisted tooling.',
-      },
-      '/timeline': { title: 'Timeline', description: 'Michael Odhiambo\'s development, writing, and career timeline.' },
-      '/projects': { title: 'Projects', description: 'Selected software projects by Michael Odhiambo.' },
-      '/hackathons': { title: 'Hackathons', description: 'Hackathons and competitions completed by Michael Odhiambo.' },
-      '/certificates': { title: 'Certificates', description: 'Professional certificates and learning achievements earned by Michael Odhiambo.' },
-      '/events': { title: 'Events', description: 'Events and community activities involving Michael Odhiambo.' },
-      '/bucket-list': { title: 'Bucket List', description: 'Michael Odhiambo\'s goals, ambitions, and things to experience.' },
-      '/cv': { title: 'CV', description: 'Michael Odhiambo\'s curriculum vitae and professional experience.' },
-      '/contact': { title: 'Contact', description: 'Get in touch with Michael Odhiambo.' },
-    };
-    const projectMatch = pathname.match(/^\/projects\/([^/]+)$/);
-    const projectName = projectMatch?.[1].replace(/-/g, ' ');
-    const metadata = projectName
-      ? { title: projectName.replace(/\b\w/g, (letter) => letter.toUpperCase()), description: `A software project by Michael Odhiambo: ${projectName}.` }
-      : pageMetadata[pathname] || pageMetadata['/'];
-    const pageTitle = metadata.title === 'Michael Odhiambo'
-      ? metadata.title
-      : `${metadata.title} | Michael Odhiambo`;
-    const canonicalUrl = `https://www.mikesplore.me${pathname === '/' ? '/' : pathname}`;
+    const controller = new AbortController();
+    fetchProfile(controller.signal).then((profile) => {
+      const owner = profile.name || 'Portfolio';
+      const pageNames = { '/': 'Home', '/timeline': 'Timeline', '/projects': 'Projects', '/hackathons': 'Hackathons', '/certificates': 'Certificates', '/events': 'Events', '/bucket-list': 'Bucket List', '/cv': 'CV', '/contact': 'Contact' };
+      const projectMatch = pathname.match(/^\/projects\/([^/]+)$/);
+      const pageName = projectMatch?.[1].replace(/-/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase()) || pageNames[pathname] || 'Portfolio';
+      const pageTitle = pathname === '/' ? owner : `${pageName} | ${owner}`;
+      const pageDescription = profile.tagline || `${pageName} from ${owner}'s portfolio.`;
+      const canonicalUrl = `${window.location.origin}${pathname === '/' ? '/' : pathname}`;
 
     document.title = pageTitle;
 
@@ -47,14 +34,16 @@ const Layout = () => {
       description.setAttribute('name', 'description');
       document.head.appendChild(description);
     }
-    description.setAttribute('content', metadata.description);
+    description.setAttribute('content', pageDescription);
 
     let ogTitle = document.querySelector('meta[property="og:title"]');
     if (ogTitle) ogTitle.setAttribute('content', pageTitle);
     let ogDescription = document.querySelector('meta[property="og:description"]');
-    if (ogDescription) ogDescription.setAttribute('content', metadata.description);
+    if (ogDescription) ogDescription.setAttribute('content', pageDescription);
     let ogUrl = document.querySelector('meta[property="og:url"]');
     if (ogUrl) ogUrl.setAttribute('content', canonicalUrl);
+    }).catch(() => undefined);
+    return () => controller.abort();
   }, [pathname]);
 
   return (

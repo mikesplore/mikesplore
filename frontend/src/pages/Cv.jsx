@@ -31,7 +31,7 @@ const Cv = () => {
       </div>
 
       {cvUrl ? <div className="overflow-hidden rounded-xl border border-divider bg-elevated">
-        <iframe src={cvUrl} title="Michael Odhiambo CV" className="h-[min(80vh,900px)] w-full" />
+        <iframe src={cvUrl} title="Portfolio owner CV" className="h-[min(80vh,900px)] w-full" />
       </div> : <EmptyState title="CV not available yet">The CV will appear here once it has been uploaded.</EmptyState>}
 
       <SectionCard title="Education" icon={GraduationCap}>

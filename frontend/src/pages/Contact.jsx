@@ -44,7 +44,7 @@ const Contact = () => {
   if (status === 'loading') return <p className="py-8 text-center text-base text-subtle">Loading contact details…</p>;
   if (status === 'error') return <p className="py-8 text-center text-base text-subtle">Contact details are temporarily unavailable.</p>;
 
-  const emailLink = links.find((link) => link.name === 'Email')?.url || 'mailto:mikepremium8@gmail.com';
+  const emailLink = links.find((link) => link.category === 'professional' && link.name.toLowerCase() === 'email')?.url;
   const professionalLinks = links.filter((link) => link.category === 'professional' && link.name !== 'Email');
   const messagingLinks = links.filter((link) => link.category === 'social' && ['WhatsApp', 'Telegram'].includes(link.name));
   const socialLinksList = links.filter((link) => link.category === 'social' && !['WhatsApp', 'Telegram'].includes(link.name));
@@ -59,13 +59,7 @@ const Contact = () => {
           <div className="min-w-0 flex-1">
             <p className="text-base font-semibold text-ink">{profile.availability_status}</p>
             <p className="mt-1 text-base leading-relaxed text-muted">{profile.availability_detail}</p>
-            <a
-              href={emailLink}
-              className="mt-4 inline-flex items-center gap-2 rounded-xl bg-accent px-5 py-2.5 text-base font-medium text-on-accent transition-opacity hover:opacity-90"
-            >
-              <Mail className="h-4 w-4" />
-              Email me
-            </a>
+            {emailLink && <a href={emailLink} className="mt-4 inline-flex items-center gap-2 rounded-xl bg-accent px-5 py-2.5 text-base font-medium text-on-accent transition-opacity hover:opacity-90"><Mail className="h-4 w-4" />Email me</a>}
           </div>
         </div>
       </div>
@@ -106,7 +100,7 @@ const Contact = () => {
 
       <SectionCard
         title="Social"
-        description="Connect with Michael across the web."
+        description="Connect with the portfolio owner across the web."
         icon={Users}
       >
         <div className="grid gap-3 sm:grid-cols-2">

@@ -16,7 +16,7 @@ from .formatting import telegram_html
 
 bot = Bot(settings.telegram_bot_token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 dispatcher = Dispatcher()
-app = FastAPI(title="mikesplore Telegram bot")
+app = FastAPI(title="Portfolio Telegram bot")
 logger = logging.getLogger(__name__)
 pending: dict[int, dict] = {}
 awaiting_entry: set[int] = set()
@@ -35,10 +35,10 @@ async def show_typing(message: types.Message) -> None:
 async def register_commands():
     """Publish Telegram's command menu when the webhook process starts."""
     await bot.set_my_short_description(
-        "Ask about Michael's portfolio, projects, skills, and certifications."
+        "Ask about the portfolio, projects, skills, and certifications."
     )
     await bot.set_my_description(
-        "Mikesplore is Michael Odhiambo's portfolio assistant. Ask about his projects, "
+        "This is a portfolio assistant. Ask about the owner's projects, "
         "skills, writing, hackathons, certifications, education, or experience. "
         "Answers are grounded in his current portfolio data."
     )
@@ -71,7 +71,7 @@ def is_admin(message: types.Message) -> bool:
 
 @dispatcher.message(Command("start"))
 async def start(message: types.Message):
-    await message.answer("Ask me about Michael's projects, writing, hackathons, or events.")
+    await message.answer("Ask me about the portfolio owner's projects, writing, hackathons, or events.")
 
 
 @dispatcher.message(Command("help"))
@@ -95,7 +95,7 @@ async def help_command(message: types.Message):
         if is_admin(message) else ""
     )
     await message.answer("Public commands:\n/start — start the assistant\n/help — show this help\n\n"
-                         "You can also ask questions about Michael's portfolio, projects, writing, "
+                         "You can also ask questions about the portfolio owner's projects, writing, "
                          "skills, education, certificates, CV, and contact details." + admin_hint)
 
 

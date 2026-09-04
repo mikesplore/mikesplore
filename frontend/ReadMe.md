@@ -1,3 +1,3 @@
-# Mikesplore frontend
+# Portfolio frontend
 
-React frontend for Michael Odhiambo's database-driven portfolio.
+React frontend for a database-driven portfolio.

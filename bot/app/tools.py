@@ -98,16 +98,16 @@ TOOLS = [{
     },
 }, {
     "type": "function",
-    "function": {"name": "request_cv_delivery", "description": "Send Michael's verified CV file directly to the user when they ask to see, view, download, share, attach, or receive it.", "parameters": {"type": "object", "properties": {}, "required": []}},
+    "function": {"name": "request_cv_delivery", "description": "Send the portfolio owner's verified CV file directly to the user when they ask to see, view, download, share, attach, or receive it.", "parameters": {"type": "object", "properties": {}, "required": []}},
 }, {
     "type": "function",
     "function": {"name": "request_certificate_delivery", "description": "Send verified certificate files directly to the user when they ask to see or receive certificates. Include a title or keyword query when the user asks for a specific certificate.", "parameters": {"type": "object", "properties": {"query": {"type": "string"}}, "required": []}},
 }, {
     "type": "function",
-    "function": {"name": "list_contact_links", "description": "List all verified public professional and social contact links for Michael. Use this for contact, social media, or how-to-reach-him questions.", "parameters": {"type": "object", "properties": {}, "required": []}},
+    "function": {"name": "list_contact_links", "description": "List all verified public professional and social contact links for the portfolio owner. Use this for contact, social media, or how-to-reach-the-owner questions.", "parameters": {"type": "object", "properties": {}, "required": []}},
 }, {
     "type": "function",
-    "function": {"name": "search_cv", "description": "Search verified text extracted from Michael's uploaded CV.", "parameters": {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]}},
+    "function": {"name": "search_cv", "description": "Search verified text extracted from the portfolio owner's uploaded CV.", "parameters": {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]}},
 }, {
     "type": "function",
     "function": {"name": "list_skills", "description": "List verified skills from the public portfolio database.", "parameters": {"type": "object", "properties": {}, "required": []}},
@@ -115,7 +115,7 @@ TOOLS = [{
     "type": "function",
     "function": {
         "name": "get_profile",
-        "description": "Get verified public profile information about Michael Odhiambo.",
+        "description": "Get verified public profile information about the portfolio owner.",
         "parameters": {"type": "object", "properties": {}, "required": []},
     },
 }, {

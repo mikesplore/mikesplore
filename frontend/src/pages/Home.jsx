@@ -1,4 +1,3 @@
-import { Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import AvailabilityBanner from '../components/AvailabilityBanner';
 import { fetchProfile } from '../lib/portfolioApi';
@@ -33,7 +32,6 @@ const Home = () => {
             {section.paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
           </section>
         ))}
-        <section className="space-y-3"><p>For a complete look at the systems I've built, start with <Link to="/projects" className="font-medium text-accent hover:text-accent/80">projects</Link> and then browse the <Link to="/timeline" className="font-medium text-accent hover:text-accent/80">timeline</Link>.</p></section>
         {/*
         <section className="space-y-3">
           <h2 className="text-xl font-semibold text-ink">The Backstory</h2>

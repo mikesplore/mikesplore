@@ -478,6 +478,18 @@ This phase was completed before the schema and backend work.
 - Updated the grounding prompt to require delivery actions for explicit file requests and prevent the
   model from claiming that a file was sent without requesting the action.
 
+### Portable clone configuration (2026-09-04)
+
+- Audited portfolio-specific literals across the frontend, backend, and bot. Runtime profile, links,
+  assets, and entries remain database/API-backed; frontend SEO metadata now derives from the profile
+  API and the current browser origin.
+- Removed the hardcoded email fallback, owner/domain-specific HTML metadata, CNAME, sitemap, and
+  unused static profile images. A clone must provide its own profile and asset records.
+- Replaced provider username defaults with empty configuration values and added a clear 503 response
+  when source synchronization is attempted without a configured username.
+- Generalized bot/API identity text and tool descriptions so the code no longer assumes Michael or
+  mikesplore. Route names, content types, and schema fields remain intentional application behavior.
+
 ## Open items to resolve during the work, not before
 
 ### Manual source synchronization update (2026-09-04)

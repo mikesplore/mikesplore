@@ -15,7 +15,7 @@ from .db import get_db
 from .models import BucketListItem, Certificate, Education, Entry, Profile, ProfileLink, SiteAsset, SkillGroup, SiteSetting
 from .schemas import EntryCreate, EntryRead, EntryUpdate
 
-app = FastAPI(title="mikesplore portfolio API", version="1.0.0")
+app = FastAPI(title="Portfolio API", version="1.0.0")
 from .config import settings
 frontend_origins = [origin.strip().rstrip("/") for origin in settings.frontend_origin.split(",") if origin.strip()]
 app.add_middleware(CORSMiddleware, allow_origins=frontend_origins, allow_credentials=False, allow_methods=["GET", "POST", "PATCH", "DELETE"], allow_headers=["*"])
@@ -47,6 +47,9 @@ def _source_entry(source: str, item: dict, visible: bool) -> dict:
 async def _fetch_source(source: str) -> list[dict]:
     if source not in {"devto", "github"}:
         raise HTTPException(status_code=400, detail="Source must be devto or github")
+    username = settings.devto_username if source == "devto" else settings.github_username
+    if not username:
+        raise HTTPException(status_code=503, detail=f"{source} username is not configured")
     url = (f"https://dev.to/api/articles?username={settings.devto_username}&per_page=100" if source == "devto"
            else f"https://api.github.com/users/{settings.github_username}/repos?per_page=100&sort=updated")
     headers = {"Accept": "application/vnd.github+json"}
@@ -320,7 +323,9 @@ def search_portfolio(q: str = Query(min_length=1), page: int = Query(default=1, 
     query = select(Entry).where(Entry.is_visible.is_(True), or_(Entry.title.ilike(term), Entry.blurb.ilike(term), cast(Entry.tags, String).ilike(term), cast(Entry.links, String).ilike(term))).order_by(Entry.custom_order, Entry.date.desc().nullslast())
     total = db.scalar(select(func.count()).select_from(query.subquery())) or 0
     entries = db.scalars(query.offset((page - 1) * page_size).limit(page_size)).all()
-    profile = db.get(Profile, 1) if any(word in q.lower() for word in ("who", "michael", "person", "about", "background")) else None
+    stored_profile = db.get(Profile, 1)
+    owner_name = (stored_profile.name or "").lower() if stored_profile else ""
+    profile = stored_profile if any(word in q.lower() for word in ("who", "person", "about", "background")) or (owner_name and owner_name in q.lower()) else None
     profile_data = None if not profile else {key: getattr(profile, key) for key in ("name", "tagline", "location", "focus", "experience", "availability_status", "availability_detail", "about")}
     certificate_query = select(Certificate).where(Certificate.is_visible.is_(True), Certificate.title.ilike(term))
     certificates = db.scalars(certificate_query).all()
