@@ -283,6 +283,13 @@ def get_entry(entry_id: UUID, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Entry not found")
     return entry
 
+@app.get("/entries/slug/{slug}", response_model=EntryRead)
+def get_entry_by_slug(slug: str, db: Session = Depends(get_db)):
+    entry = db.scalar(select(Entry).where(Entry.slug == slug, Entry.is_visible.is_(True)))
+    if not entry:
+        raise HTTPException(status_code=404, detail="Entry not found")
+    return entry
+
 
 @app.post("/entries", response_model=EntryRead, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_service_key)])
 def create_entry(payload: EntryCreate, db: Session = Depends(get_db)):

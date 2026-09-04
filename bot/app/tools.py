@@ -53,6 +53,15 @@ async def list_contact_links() -> list[dict]:
         response.raise_for_status()
         return [{"name": item["name"], "url": item["url"], "label": item.get("label"), "handle": item.get("handle"), "category": item.get("category")} for item in response.json()]
 
+async def get_entry_by_slug(slug: str) -> dict:
+    async with httpx.AsyncClient(base_url=settings.backend_url, timeout=10) as client:
+        response = await client.get(f"/entries/slug/{slug}")
+        if response.status_code == 404:
+            return {"found": False, "slug": slug}
+        response.raise_for_status()
+        entry = response.json()
+        return {"found": True, **{key: entry.get(key) for key in ("slug", "content_type", "title", "blurb", "date", "year", "tags", "tech_stack", "details", "links")}}
+
 
 async def request_cv_delivery() -> dict:
     return {"action": "send_cv"}
@@ -78,6 +87,9 @@ async def search_portfolio(query: str, page: int = 1) -> dict:
 
 
 TOOLS = [{
+    "type": "function",
+    "function": {"name": "get_entry_by_slug", "description": "Get one verified visible portfolio entry by its exact slug.", "parameters": {"type": "object", "properties": {"slug": {"type": "string"}}, "required": ["slug"]}},
+}, {
     "type": "function",
     "function": {
         "name": "list_entries",
@@ -128,6 +140,8 @@ async def execute_tool(name: str, arguments: dict):
         return await list_skills()
     if name == "list_contact_links":
         return await list_contact_links()
+    if name == "get_entry_by_slug":
+        return await get_entry_by_slug(arguments["slug"])
     if name == "request_cv_delivery":
         return await request_cv_delivery()
     if name == "request_certificate_delivery":
