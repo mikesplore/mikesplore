@@ -470,6 +470,14 @@ This phase was completed before the schema and backend work.
   questions now use the LLM tool-calling path; constrained CV/certificate delivery actions remain
   available when the model determines that the user explicitly requested a file.
 
+### Conversational follow-up context (2026-09-04)
+
+- Added bounded per-user conversation history to public LLM requests. Follow-ups such as “the Redis
+  one” now resolve against the preceding verified certificate list instead of being treated as a
+  standalone ambiguous query.
+- Updated the grounding prompt to require delivery actions for explicit file requests and prevent the
+  model from claiming that a file was sent without requesting the action.
+
 ## Open items to resolve during the work, not before
 
 ### Manual source synchronization update (2026-09-04)

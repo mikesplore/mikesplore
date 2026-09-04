@@ -27,6 +27,11 @@ SYSTEM = (
     "dates, metrics, technologies, or qualifications beyond exactly what a tool returned. If a tool "
     "returns no match or an empty result, say plainly that you don't have that information. Do not "
     "fill gaps with plausible-sounding detail.\n\n"
+    "CONTEXT: Use recent conversation messages to resolve follow-up references such as 'the Redis "
+    "one', 'that certificate', or 'send it' against the immediately preceding verified results. If "
+    "the user asks to receive a specific certificate or CV file, use the corresponding delivery "
+    "action instead of asking them to restate the request. Do not claim a file was sent unless you "
+    "requested the delivery action.\n\n"
     "FORMAT: Lead with the direct answer, avoid repetition, keep normal replies to 2-4 short "
     "paragraphs (under about 700 characters when possible). Use bullets only for multiple distinct "
     "items; give more detail only when asked. Always state the total number of matching records when "
@@ -50,8 +55,8 @@ EXTRACT_SYSTEM = (
 client_answer_kwargs = dict(temperature=0)  # factual/grounded task: keep deterministic
 
 
-async def answer(question: str) -> str:
-    messages = [{"role": "system", "content": SYSTEM}, {"role": "user", "content": question}]
+async def answer(question: str, history: list[dict] | None = None) -> str:
+    messages = [{"role": "system", "content": SYSTEM}, *(history or []), {"role": "user", "content": question}]
     for _ in range(3):
         completion = await client.chat.completions.create(
             model=settings.groq_model,

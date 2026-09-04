@@ -24,6 +24,7 @@ pending_upload: dict[int, tuple[str, str]] = {}
 pending_mutation: dict[int, tuple[str, str, dict | None]] = {}
 pending_sync: dict[int, tuple[str, list[dict], list[str]]] = {}
 list_context: dict[int, tuple[str, int]] = {}
+conversation_history: dict[int, list[dict[str, str]]] = {}
 
 
 async def show_typing(message: types.Message) -> None:
@@ -390,7 +391,13 @@ async def question(message: types.Message):
             content_type = next((value for value in ("project", "article", "hackathon", "event") if value in normalized), None)
             if content_type and any(word in normalized for word in ("show", "list", "what", "which")):
                 list_context[user_id] = (content_type, 1)
-        response = await answer(question_text)
+        history = conversation_history.setdefault(user_id, [])
+        response = await answer(question_text, history[-10:])
+        history.extend([
+            {"role": "user", "content": question_text},
+            {"role": "assistant", "content": response},
+        ])
+        del history[:-10]
     except Exception:
         logger.exception("Public portfolio lookup failed")
         response = "I couldn't reach the portfolio right now. Please try again shortly."
