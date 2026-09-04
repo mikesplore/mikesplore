@@ -359,6 +359,12 @@ This phase was completed before the schema and backend work.
   after the runtime API migration, while curated timeline collections are imported by
   `seed_curated`; deployment seeding now completes successfully and reports skipped snapshots.
 
+### Combined Render service update (2026-09-04)
+
+- Mounted the Telegram webhook app into the backend service so the portfolio API and bot share
+  one paid Render instance. The combined service starts from the repository root with
+  `uvicorn backend.app.main:app`; the bot's `BACKEND_URL` points to the same backend URL.
+
 ## Open items to resolve during the work, not before
 
 - Exact Telegram bot library (`python-telegram-bot` vs `aiogram`) — pick one during Phase 4,

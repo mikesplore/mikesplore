@@ -6,19 +6,13 @@ file is introduced, and only after verifying `DATABASE_URL` points to the intend
 
 ## Services
 
-Run the backend from `backend/`:
+Run the combined backend and Telegram webhook service from the repository root:
 
 ```bash
-uvicorn app.main:app --host 0.0.0.0 --port 8000
+uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT
 ```
 
-Run the bot from `bot/`:
-
-```bash
-uvicorn app.main:app --host 0.0.0.0 --port 8001
-```
-
-The reverse proxy must expose the bot at `/telegram/webhook` and forward the
+The backend also hosts the bot at `/telegram/webhook` and forwards the
 `X-Telegram-Bot-Api-Secret-Token` header. Configure Telegram with the public HTTPS webhook URL.
 
 ## Environment
@@ -31,7 +25,7 @@ Never commit `.env`.
 
 ```bash
 curl https://api.example.com/health
-curl https://bot.example.com/health
+curl https://api.example.com/health
 curl "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/getWebhookInfo"
 ```
 

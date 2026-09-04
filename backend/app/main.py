@@ -296,3 +296,9 @@ def delete_entry(entry_id: UUID, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Entry not found")
     db.delete(entry)
     db.commit()
+
+
+# Host the Telegram webhook in the same Render service as the portfolio API.
+# This keeps one always-on instance while preserving /telegram/webhook.
+from bot.app.main import app as telegram_app
+app.mount("/", telegram_app)
