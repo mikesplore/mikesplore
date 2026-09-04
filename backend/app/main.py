@@ -5,7 +5,7 @@ from pypdf import PdfReader
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import cast, func, or_, select, String
 from sqlalchemy.orm import Session
-from uuid import UUID
+from uuid import UUID, uuid4
 import re
 
 from .auth import require_service_key
@@ -120,7 +120,7 @@ def upload_certificate(title: str = Form(...), file: UploadFile = File(...), db:
     from .config import settings
     if not all((settings.r2_endpoint_url, settings.r2_access_key_id, settings.r2_secret_access_key, settings.r2_bucket_name, settings.r2_public_base_url)):
         raise HTTPException(status_code=503, detail="R2 storage is not configured")
-    object_key = f"certificates/{slugify(title)}-{file.filename}"
+    object_key = f"certificates/{slugify(title)}-{uuid4().hex}-{file.filename}"
     client = boto3.client("s3", endpoint_url=settings.r2_endpoint_url, aws_access_key_id=settings.r2_access_key_id, aws_secret_access_key=settings.r2_secret_access_key, region_name="auto")
     file_bytes = file.file.read(MAX_UPLOAD_BYTES + 1)
     if len(file_bytes) > MAX_UPLOAD_BYTES:
@@ -170,7 +170,7 @@ async def upload_asset(asset_type: str = Form(...), label: str = Form(""), file:
     from .config import settings
     if not all((settings.r2_endpoint_url, settings.r2_access_key_id, settings.r2_secret_access_key, settings.r2_bucket_name, settings.r2_public_base_url)):
         raise HTTPException(status_code=503, detail="R2 storage is not configured")
-    object_key = f"assets/{slugify(asset_type)}/{slugify(label or file.filename or 'upload')}-{file.filename}"
+    object_key = f"assets/{slugify(asset_type)}/{slugify(label or file.filename or 'upload')}-{uuid4().hex}-{file.filename}"
     client = boto3.client("s3", endpoint_url=settings.r2_endpoint_url, aws_access_key_id=settings.r2_access_key_id, aws_secret_access_key=settings.r2_secret_access_key, region_name="auto")
     file_bytes = await file.read(MAX_UPLOAD_BYTES + 1)
     if len(file_bytes) > MAX_UPLOAD_BYTES:

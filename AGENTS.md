@@ -398,6 +398,14 @@ This phase was completed before the schema and backend work.
 - Tightened the public assistant prompt to refuse unrelated questions and prohibit unsupported
   employers, roles, metrics, technologies, and qualifications.
 
+- Added a dedicated public contact-links tool so the assistant can retrieve the complete verified
+  professional and social contact list instead of relying on partial search matches.
+
+### Asset cache-busting update (2026-09-04)
+
+- R2 upload object keys now include a UUID, ensuring replacement profile images, CVs, and other
+  assets receive new URLs instead of being served from a CDN-cached previous object key.
+
 - CV delivery now verifies the downloaded asset has a PDF signature and always sends it with a
   `.pdf` filename, preventing an HTML/error response or ambiguous asset label from being presented
   as the CV.
