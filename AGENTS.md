@@ -444,6 +444,12 @@ This phase was completed before the schema and backend work.
   email, and WhatsApp questions to fail after the backend successfully returned HTTP 200.
 - Delivery-action detection now checks that the result is a dictionary before reading `action`.
 
+### Help command update (2026-09-04)
+
+- Expanded `/help` to list all public and administrator commands, including `/admin`, `/profile`,
+  and asset/certificate deletion commands that were previously omitted.
+- Expanded the administrator Telegram command menu to expose the implemented admin commands.
+
 ## Open items to resolve during the work, not before
 
 ### Manual source synchronization update (2026-09-04)

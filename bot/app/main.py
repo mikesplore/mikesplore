@@ -46,9 +46,14 @@ async def register_commands():
         types.BotCommand(command="help", description="Show help"),
     ]
     admin_commands = public_commands + [
+        types.BotCommand(command="add", description="Add a curated entry"),
         types.BotCommand(command="admin", description="Manage data using an instruction"),
+        types.BotCommand(command="edit", description="Edit an entry"),
+        types.BotCommand(command="delete", description="Delete an entry"),
+        types.BotCommand(command="profile", description="Update profile text"),
         types.BotCommand(command="upload", description="Upload an asset or certificate"),
         types.BotCommand(command="sync", description="Fetch Dev.to or GitHub content"),
+        types.BotCommand(command="manage", description="Manage portfolio collections"),
         types.BotCommand(command="confirm", description="Confirm a pending change"),
         types.BotCommand(command="cancel", description="Cancel a pending change"),
     ]
@@ -73,18 +78,24 @@ async def help_command(message: types.Message):
     admin_hint = (
         "\n\nAdmin commands:\n"
         "/add — add a curated entry\n"
+        "/admin &lt;instruction&gt; — create, update, or delete content\n"
         "/edit &lt;entry&gt; &lt;changes&gt; — edit an entry\n"
         "/delete &lt;entry&gt; — delete an entry\n"
+        "/profile &lt;changes&gt; — update profile text\n"
         "/sync devto — preview and import Dev.to articles\n"
         "/sync github — preview GitHub repositories (hidden by default)\n"
         "/sync github 1,3 — select repositories to show\n"
         "/upload &lt;asset_type&gt; [label] — upload a file\n"
         "/manage &lt;resource&gt; &lt;action&gt; [JSON] — manage other content\n"
+        "/delete-asset &lt;id&gt; — delete an uploaded asset\n"
+        "/delete-certificate &lt;id&gt; — delete a certificate\n"
         "/confirm — apply a pending change or sync\n"
         "/cancel — discard a pending change or sync"
         if is_admin(message) else ""
     )
-    await message.answer("Use /start, /help, or ask a question about the public portfolio." + admin_hint)
+    await message.answer("Public commands:\n/start — start the assistant\n/help — show this help\n\n"
+                         "You can also ask questions about Michael's portfolio, projects, writing, "
+                         "skills, education, certificates, CV, and contact details." + admin_hint)
 
 
 @dispatcher.message(Command("add"))
