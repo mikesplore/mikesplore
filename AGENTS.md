@@ -419,6 +419,9 @@ This phase was completed before the schema and backend work.
   predefined actions; the bot still fetches files from verified backend assets and admin commands
   remain explicit and authorization-protected.
 
+- Hardened admin confirmation handling to accept both nested and flat LLM payloads, preserve failed
+  previews for retry, and show the administrator the backend rejection detail when a write fails.
+
 - Corrected the admin confirmation response so `/admin` create and update operations no longer
   incorrectly report “Entry deleted” after a successful database write.
 

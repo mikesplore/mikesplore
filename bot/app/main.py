@@ -323,7 +323,10 @@ async def question(message: types.Message):
                         if resource == "profile":
                             await update_profile(operation.get("payload", {}))
                         else:
-                            payload = dict(operation.get("payload", {}))
+                            payload = dict(operation.get("payload") or {
+                                key: value for key, value in operation.items()
+                                if key not in {"resource", "action", "id", "candidates", "payload"}
+                            })
                             if operation.get("id"):
                                 payload["id"] = operation["id"]
                             await manage_content(resource, action, payload)
@@ -340,8 +343,14 @@ async def question(message: types.Message):
                     else:
                         result_message = "Entry deleted."
                     await message.answer(result_message)
+                except httpx.HTTPStatusError as error:
+                    logger.exception("Admin mutation rejected")
+                    pending_mutation[message.from_user.id] = mutation
+                    await message.answer(f"The backend rejected that change: {error.response.text[:500]}")
                 except Exception:
-                    await message.answer("The backend rejected that change.")
+                    logger.exception("Admin mutation failed")
+                    pending_mutation[message.from_user.id] = mutation
+                    await message.answer("The change could not be completed. The preview is still available; try /confirm again.")
                 return
             entry = pending.pop(message.from_user.id, None)
             if not entry:
