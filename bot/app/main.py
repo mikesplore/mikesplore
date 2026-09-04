@@ -6,12 +6,13 @@ from fastapi import FastAPI, Header, HTTPException, Request
 import html
 import httpx
 import logging
+import json
 from .tools import list_certificates
 
 from .config import settings
 from .llm import answer
-from .llm import extract_admin_operation, extract_entry, extract_profile_update, extract_update
-from .admin import apply_sync, create_entry, delete_asset, delete_certificate, delete_entry, manage_content, preview_sync, search_admin_content, update_entry, update_profile, upload_asset, upload_certificate
+from .llm import extract_admin_operation, extract_entry, extract_profile_update, extract_update, tailor_cv
+from .admin import apply_sync, create_entry, delete_asset, delete_certificate, delete_entry, get_cv_base, manage_content, preview_sync, render_cv, save_cv_base, search_admin_content, update_entry, update_profile, upload_asset, upload_certificate
 from .formatting import telegram_html
 
 bot = Bot(settings.telegram_bot_token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
@@ -23,6 +24,8 @@ awaiting_entry: set[int] = set()
 pending_upload: dict[int, tuple[str, str]] = {}
 pending_mutation: dict[int, tuple[str, str, dict | None]] = {}
 pending_sync: dict[int, tuple[str, list[dict], list[str]]] = {}
+awaiting_cv: set[int] = set()
+pending_cv: dict[int, tuple[dict, str, str, str]] = {}
 list_context: dict[int, tuple[str, int]] = {}
 conversation_history: dict[int, list[dict[str, str]]] = {}
 
@@ -52,6 +55,7 @@ async def register_commands():
         types.BotCommand(command="edit", description="Edit an entry"),
         types.BotCommand(command="delete", description="Delete an entry"),
         types.BotCommand(command="profile", description="Update profile text"),
+        types.BotCommand(command="cv", description="Tailor CV to a job description"),
         types.BotCommand(command="upload", description="Upload an asset or certificate"),
         types.BotCommand(command="sync", description="Fetch Dev.to or GitHub content"),
         types.BotCommand(command="manage", description="Manage portfolio collections"),
@@ -83,6 +87,8 @@ async def help_command(message: types.Message):
         "/edit &lt;entry&gt; &lt;changes&gt; — edit an entry\n"
         "/delete &lt;entry&gt; — delete an entry\n"
         "/profile &lt;changes&gt; — update profile text\n"
+        "/apply &lt;job description&gt; — propose a tailored CV patch\n"
+        "/cv base — upload the source cv_data.json\n"
         "/sync devto — preview and import Dev.to articles\n"
         "/sync github — preview GitHub repositories (hidden by default)\n"
         "/sync github 1,3 — select repositories to show\n"
@@ -182,6 +188,47 @@ async def profile_command(message: types.Message):
         await message.answer("Profile preview (send /confirm to save, /cancel to discard):\n\n" + format_preview(changes))
     except Exception:
         await message.answer("I couldn't understand those profile changes.")
+
+
+@dispatcher.message(Command("cv"))
+async def cv_command(message: types.Message):
+    if not is_admin(message):
+        await message.answer("That command is restricted to the administrator.")
+        return
+    action = (message.text or "").strip().lower()
+    if action == "/cv base":
+        pending_upload[message.from_user.id] = ("cv-json", "base")
+        await message.answer("Send the source cv_data.json file now. It will replace the stored base CV JSON.")
+        return
+    await message.answer("Usage: /cv base (upload cv_data.json). Use /apply <job description> to tailor a CV.")
+
+
+async def prepare_cv_patch(message: types.Message, job_description: str, revision: str | None = None):
+    status = await message.answer("Analyzing the job description…")
+    try:
+        await status.edit_text("Searching relevant projects and skills…")
+        current = pending_cv.get(message.from_user.id)
+        patch = await tailor_cv(job_description, current[0] if current else None, revision)
+        base = await get_cv_base()
+        pending_cv[message.from_user.id] = (patch, job_description, "Tailored CV", base["revision"])
+        await status.edit_text("Preparing proposed CV changes…")
+        await status.edit_text("Proposed CV changes:\n\n" + format_cv_patch(patch) + "\n\nConfirm, or tell me what to change.")
+    except Exception:
+        logger.exception("CV patch preparation failed")
+        await status.edit_text("I couldn't prepare a valid CV patch. Please check the base CV and try again.")
+
+
+@dispatcher.message(Command("apply"))
+async def apply_command(message: types.Message):
+    if not is_admin(message):
+        await message.answer("That command is restricted to the administrator.")
+        return
+    job_description = (message.text or "").partition(" ")[2].strip()
+    if not job_description:
+        awaiting_cv.add(message.from_user.id)
+        await message.answer("Send the job description now. I will propose changes for review.")
+        return
+    await prepare_cv_patch(message, job_description)
 
 
 @dispatcher.message(Command("manage"))
@@ -290,6 +337,25 @@ async def deliver_certificates(message: types.Message, query: str = ""):
             await message.answer_document(types.BufferedInputFile(file_response.content, filename=filename), caption=html.escape(item["title"], quote=False))
 
 
+async def send_cv(message: types.Message):
+    async with httpx.AsyncClient(base_url=settings.backend_url, timeout=20) as client:
+        response = await client.get("/assets")
+        response.raise_for_status()
+        cv = next((asset for asset in response.json() if asset.get("asset_type") == "cv"), None)
+        if not cv:
+            await message.answer("The base CV is not available right now.")
+            return
+        file_response = await client.get(cv["url"])
+        file_response.raise_for_status()
+    if not file_response.content.startswith(b"%PDF-"):
+        await message.answer("The stored CV file is invalid or unavailable.")
+        return
+    filename = cv.get("label") or "CV.pdf"
+    if not filename.lower().endswith(".pdf"):
+        filename += ".pdf"
+    await message.answer_document(types.BufferedInputFile(file_response.content, filename=filename), caption="CV")
+
+
 @dispatcher.message(lambda message: not message.document and not message.photo)
 async def question(message: types.Message):
     if is_admin(message) and message.text:
@@ -298,6 +364,8 @@ async def question(message: types.Message):
             awaiting_entry.discard(message.from_user.id)
             pending_mutation.pop(message.from_user.id, None)
             pending_sync.pop(message.from_user.id, None)
+            awaiting_cv.discard(message.from_user.id)
+            pending_cv.pop(message.from_user.id, None)
             await message.answer("Cancelled.")
             return
         if message.text.strip().lower() in {"/confirm", "confirm"}:
@@ -310,6 +378,20 @@ async def question(message: types.Message):
                     pending_sync[message.from_user.id] = sync
                     logger.exception("Sync apply failed")
                     await message.answer("The sync could not be completed. The preview is still pending; try /confirm again.")
+                return
+            tailored = pending_cv.pop(message.from_user.id, None)
+            if tailored:
+                try:
+                    patch, job_description, label, base_revision = tailored
+                    result = await render_cv(patch, base_revision, job_description, label)
+                    async with httpx.AsyncClient(timeout=30) as client:
+                        pdf_response = await client.get(result["pdf_url"])
+                        pdf_response.raise_for_status()
+                    await message.answer_document(types.BufferedInputFile(pdf_response.content, filename=f"{label}.pdf"), caption=html.escape(label, quote=False))
+                except Exception:
+                    pending_cv[message.from_user.id] = tailored
+                    logger.exception("Tailored CV rendering failed")
+                    await message.answer("The tailored CV could not be rendered. The preview is still pending; try /confirm again.")
                 return
             mutation = pending_mutation.pop(message.from_user.id, None)
             if mutation:
@@ -366,6 +448,14 @@ async def question(message: types.Message):
             except Exception:
                 pending[message.from_user.id] = entry
                 await message.answer("The backend rejected the entry. The preview is still pending.")
+            return
+        if message.from_user.id in awaiting_cv:
+            awaiting_cv.discard(message.from_user.id)
+            await prepare_cv_patch(message, message.text)
+            return
+        if message.from_user.id in pending_cv:
+            patch, job_description, _label, _revision = pending_cv[message.from_user.id]
+            await prepare_cv_patch(message, job_description, message.text)
             return
         if message.from_user.id in awaiting_entry:
             try:
@@ -436,6 +526,18 @@ async def document(message: types.Message):
         mime_type = message.document.mime_type if message.document else "image/jpeg"
         if asset_request:
             asset_type, label = asset_request
+            if asset_type == "cv-json":
+                import json
+                try:
+                    data = json.loads(buffer.getvalue().decode("utf-8"))
+                    await save_cv_base(data)
+                except Exception:
+                    logger.exception("Base CV JSON upload failed")
+                    await message.answer("That is not a valid CV JSON file or it failed backend validation.")
+                    return
+                pending_upload.pop(message.from_user.id, None)
+                await message.answer("Base CV JSON saved.")
+                return
             if asset_type == "certificate":
                 # Certificates have their own database collection and public
                 # listing endpoint. Do not store them as generic site assets.
@@ -484,6 +586,18 @@ def format_preview(entry: dict) -> str:
         return "\n".join(f"{candidate.get('resource')}: {candidate.get('record')}" for candidate in entry["candidates"])
     fields = ("resource", "action", "id", "title", "content_type", "blurb", "date", "year", "tech_stack", "tags", "links", "payload", "candidates")
     return "\n".join(f"{field}: {html.escape(str(entry.get(field) or '—'), quote=False)}" for field in fields)
+
+
+def format_cv_patch(patch: dict) -> str:
+    summary = patch.get("summary") or {}
+    projects = patch.get("selected_projects") or []
+    skills = patch.get("selected_skills") or {}
+    return (
+        f"Summary old:\n{html.escape(str(summary.get('old', '')))}\n\n"
+        f"Summary new:\n{html.escape(str(summary.get('new', '')))}\n\n"
+        f"Selected project IDs: {', '.join(html.escape(str(item)) for item in projects) or 'none'}\n"
+        f"Selected skills:\n{html.escape(json.dumps(skills, indent=2))}"
+    )
 
 
 @app.get("/health")

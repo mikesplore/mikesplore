@@ -489,6 +489,28 @@ This phase was completed before the schema and backend work.
   when source synchronization is attempted without a configured username.
 - Generalized bot/API identity text and tool descriptions so the code no longer assumes Michael or
   mikesplore. Route names, content types, and schema fields remain intentional application behavior.
+
+### CV tailoring workflow (2026-09-05)
+
+- Connected the structured CV schema and ReportLab renderer to the backend and admin bot. The base JSON
+  is stored as the protected `cv_data` site setting; `/cv base` uploads/replaces it.
+- Added migration `0004_add_cv_versions` and protected CV base/render endpoints. Tailored versions are
+  retained in PostgreSQL with their job description, JSON data, and rendered R2 PDF URL.
+- Added `/cv tailor`: the administrator sends a job description, Groq returns JSON-only changes against
+  the base CV, the bot previews the result, and `/confirm` renders and sends the PDF. Layout rendering
+  remains deterministic and contains no LLM logic.
+
+### CV tailoring workflow correction (2026-09-05)
+
+- Replaced the initial full-CV `/cv tailor` replacement flow with `/apply <job description>` and a
+  field-level pending `job_patch`. The base CV remains immutable during tailoring; omitted projects and
+  skills are hidden only in the rendered version.
+- Added tool-backed CV profile/project/skill search so the LLM does not receive the complete CV JSON in
+  one request. Stable project IDs are slugs derived from project names.
+- Added conversational pending-patch revisions, one-message edited-in-place progress updates, exact
+  patch-key validation, base revision conflict detection, and version records containing the patch and
+  base snapshot.
+- `/cv base` remains only for uploading/replacing the source JSON. Tailoring never writes to it.
 - Added the backend-only `DEVTO_USERNAME`, `GITHUB_USERNAME`, and optional `GITHUB_TOKEN` entries to
   the root `.env.example` so source synchronization setup is discoverable for clones.
 

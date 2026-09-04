@@ -4,6 +4,7 @@ from groq import AsyncGroq
 
 from .config import settings
 from .tools import TOOLS, execute_tool
+from .admin import get_cv_profile, search_cv_projects, search_cv_skills
 
 client = AsyncGroq(api_key=settings.groq_api_key)
 
@@ -51,6 +52,33 @@ EXTRACT_SYSTEM = (
     "- Unspecified booleans (is_visible, is_featured): null, not True/False\n"
     "- Unspecified numbers (year, custom_order): null"
 )
+
+CV_TAILOR_SYSTEM = (
+    "You tailor a CV using search tools. First inspect the job description, then search for relevant "
+    "projects and skills. Return ONLY this exact JSON shape: {\"summary\": {\"old\": \"...\", \"new\": \"...\"}, "
+    "\"selected_projects\": [\"stable-project-id\"], \"selected_skills\": {\"category\": [\"skill\"]}}. "
+    "Project IDs must come from search results. Selected projects and skills are inclusion lists. Never "
+    "invent projects, skills, dates, metrics, qualifications, or contact details. Do not return full "
+    "project objects, CV data, layout fields, or any extra keys."
+)
+
+CV_TOOLS = [{
+    "type": "function", "function": {"name": "get_base_cv_profile", "description": "Get the base CV identity, contact, current summary, and revision.", "parameters": {"type": "object", "properties": {}, "required": []}}
+}, {
+    "type": "function", "function": {"name": "search_cv_projects", "description": "Search base CV projects by job-related keywords. Returns stable IDs and details.", "parameters": {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]}}
+}, {
+    "type": "function", "function": {"name": "search_cv_skills", "description": "Search base CV skills by job-related keywords.", "parameters": {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]}}
+}]
+
+
+async def execute_cv_tool(name: str, arguments: dict):
+    if name == "get_base_cv_profile":
+        return await get_cv_profile()
+    if name == "search_cv_projects":
+        return await search_cv_projects(arguments["query"])
+    if name == "search_cv_skills":
+        return await search_cv_skills(arguments["query"])
+    raise ValueError(f"Unknown CV tool: {name}")
 
 client_answer_kwargs = dict(temperature=0)  # factual/grounded task: keep deterministic
 
@@ -109,6 +137,26 @@ async def extract_profile_update(instruction: str) -> dict:
         temperature=0,
     )
     return json.loads(completion.choices[0].message.content or "{}")
+
+
+async def tailor_cv(job_description: str, existing_patch: dict | None = None, revision: str | None = None) -> dict:
+    instruction = "JOB DESCRIPTION:\n" + job_description
+    if existing_patch:
+        instruction += "\n\nPENDING PATCH:\n" + json.dumps(existing_patch) + "\n\nREVISION REQUEST:\n" + (revision or "")
+    messages = [{"role": "system", "content": CV_TAILOR_SYSTEM}, {"role": "user", "content": instruction}]
+    for _ in range(4):
+        completion = await client.chat.completions.create(model=settings.groq_model, messages=messages, tools=CV_TOOLS, tool_choice="auto", max_tokens=1200, temperature=0)
+        message = completion.choices[0].message
+        if not message.tool_calls:
+            result = json.loads(message.content or "{}")
+            if set(result) != {"summary", "selected_projects", "selected_skills"}:
+                raise ValueError("CV patch contains unexpected fields")
+            return result
+        messages.append(message)
+        for call in message.tool_calls:
+            result = await execute_cv_tool(call.function.name, json.loads(call.function.arguments or "{}"))
+            messages.append({"role": "tool", "tool_call_id": call.id, "content": json.dumps(result)})
+    raise ValueError("CV tailoring did not produce a patch")
 
 
 async def extract_admin_operation(instruction: str, candidates: list[dict] | None = None) -> dict:

@@ -1,6 +1,8 @@
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Query, Response, UploadFile, status
 import boto3
 from io import BytesIO
+from pathlib import Path
+import tempfile
 from pypdf import PdfReader
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import cast, func, or_, select, String
@@ -8,11 +10,13 @@ from sqlalchemy.orm import Session
 from uuid import UUID, uuid4
 import re
 import httpx
+import json
+import hashlib
 from datetime import date as date_value
 
 from .auth import require_service_key
 from .db import get_db
-from .models import BucketListItem, Certificate, Education, Entry, Profile, ProfileLink, SiteAsset, SkillGroup, SiteSetting
+from .models import BucketListItem, Certificate, CvVersion, Education, Entry, Profile, ProfileLink, SiteAsset, SkillGroup, SiteSetting
 from .schemas import EntryCreate, EntryRead, EntryUpdate
 
 app = FastAPI(title="Portfolio API", version="1.0.0")
@@ -290,6 +294,150 @@ async def upload_asset(asset_type: str = Form(...), label: str = Form(""), file:
             except Exception:
                 pass
     return {"id": item.id, "asset_type": item.asset_type, "label": item.label, "url": item.url}
+
+
+def _validate_cv_data(data: dict) -> dict:
+    required = {"name", "title", "contact", "summary", "skills", "projects", "certifications", "education"}
+    if not isinstance(data, dict) or not required.issubset(data):
+        raise HTTPException(status_code=422, detail=f"CV JSON must contain: {', '.join(sorted(required))}")
+    if not isinstance(data["contact"], dict) or not isinstance(data["summary"], str):
+        raise HTTPException(status_code=422, detail="CV contact must be an object and summary must be text")
+    if not isinstance(data["skills"], list) or not isinstance(data["projects"], list) or not isinstance(data["education"], list):
+        raise HTTPException(status_code=422, detail="CV skills, projects, and education must be arrays")
+    if any(not isinstance(group, dict) or not isinstance(group.get("category"), str) or not isinstance(group.get("items"), list) for group in data["skills"]):
+        raise HTTPException(status_code=422, detail="Each CV skill group needs category and items")
+    if any(not isinstance(project, dict) or not all(key in project for key in ("name", "date", "stack", "bullets")) or not isinstance(project["bullets"], list) for project in data["projects"]):
+        raise HTTPException(status_code=422, detail="Each CV project needs name, date, stack, and bullets")
+    if any(not isinstance(item, str) for item in data["certifications"]):
+        raise HTTPException(status_code=422, detail="CV certifications must be text values")
+    if any(not isinstance(item, dict) or not all(key in item for key in ("institution", "degree")) for item in data["education"]):
+        raise HTTPException(status_code=422, detail="Each CV education item needs institution and degree")
+    return data
+
+
+def _cv_base_hash(data: dict) -> str:
+    return hashlib.sha256(json.dumps(data, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
+
+
+def _project_id(project: dict) -> str:
+    return slugify(project.get("name", ""))
+
+
+def _validate_cv_patch(patch: dict) -> dict:
+    allowed = {"summary", "selected_projects", "selected_skills"}
+    if not isinstance(patch, dict) or set(patch) != allowed:
+        raise HTTPException(status_code=422, detail="CV patch must contain exactly summary, selected_projects, and selected_skills")
+    summary = patch["summary"]
+    if not isinstance(summary, dict) or set(summary) != {"old", "new"} or not all(isinstance(summary[key], str) for key in summary):
+        raise HTTPException(status_code=422, detail="CV summary patch must contain old and new text")
+    if not isinstance(patch["selected_projects"], list) or not all(isinstance(item, str) for item in patch["selected_projects"]):
+        raise HTTPException(status_code=422, detail="selected_projects must be a list of stable IDs")
+    if not isinstance(patch["selected_skills"], dict) or any(not isinstance(value, list) or not all(isinstance(item, str) for item in value) for value in patch["selected_skills"].values()):
+        raise HTTPException(status_code=422, detail="selected_skills must map categories to skill names")
+    return patch
+
+
+def _apply_cv_patch(base: dict, patch: dict) -> dict:
+    _validate_cv_data(base)
+    _validate_cv_patch(patch)
+    projects = { _project_id(project): project for project in base["projects"] }
+    unknown_projects = set(patch["selected_projects"]) - set(projects)
+    if unknown_projects:
+        raise HTTPException(status_code=422, detail=f"Unknown project IDs: {', '.join(sorted(unknown_projects))}")
+    skills = {group["category"]: set(group["items"]) for group in base["skills"]}
+    for category, selected in patch["selected_skills"].items():
+        if category not in skills or not set(selected).issubset(skills[category]):
+            raise HTTPException(status_code=422, detail=f"Unknown skills in category: {category}")
+    tailored = dict(base)
+    tailored["summary"] = patch["summary"]["new"]
+    tailored["projects"] = [projects[project_id] for project_id in patch["selected_projects"]]
+    tailored["skills"] = [{"category": category, "items": selected} for category, selected in patch["selected_skills"].items()]
+    return tailored
+
+
+@app.get("/admin/cv/base", dependencies=[Depends(require_service_key)])
+def get_cv_base(db: Session = Depends(get_db)):
+    setting = db.get(SiteSetting, "cv_data")
+    if not setting:
+        raise HTTPException(status_code=404, detail="Base CV JSON has not been configured")
+    return {"data": setting.value, "revision": _cv_base_hash(setting.value)}
+
+
+@app.get("/admin/cv/profile", dependencies=[Depends(require_service_key)])
+def get_cv_profile(db: Session = Depends(get_db)):
+    setting = db.get(SiteSetting, "cv_data")
+    if not setting:
+        raise HTTPException(status_code=404, detail="Base CV JSON has not been configured")
+    data = setting.value
+    return {"name": data.get("name"), "title": data.get("title"), "contact": data.get("contact"), "summary": data.get("summary"), "revision": _cv_base_hash(data)}
+
+
+@app.get("/admin/cv/projects", dependencies=[Depends(require_service_key)])
+def search_cv_projects(q: str = Query(default=""), db: Session = Depends(get_db)):
+    setting = db.get(SiteSetting, "cv_data")
+    if not setting:
+        raise HTTPException(status_code=404, detail="Base CV JSON has not been configured")
+    term = q.lower().strip()
+    results = []
+    for project in setting.value.get("projects", []):
+        haystack = json.dumps(project).lower()
+        if not term or term in haystack:
+            results.append({"id": _project_id(project), "name": project["name"], "date": project.get("date"), "stack": project.get("stack"), "bullets": project.get("bullets", [])})
+    return results
+
+
+@app.get("/admin/cv/skills", dependencies=[Depends(require_service_key)])
+def search_cv_skills(q: str = Query(default=""), db: Session = Depends(get_db)):
+    setting = db.get(SiteSetting, "cv_data")
+    if not setting:
+        raise HTTPException(status_code=404, detail="Base CV JSON has not been configured")
+    term = q.lower().strip()
+    return [{"category": group["category"], "items": [item for item in group["items"] if not term or term in item.lower() or term in group["category"].lower()]}
+            for group in setting.value.get("skills", [])]
+
+
+@app.post("/admin/cv/base", dependencies=[Depends(require_service_key)])
+def save_cv_base(payload: dict, db: Session = Depends(get_db)):
+    data = _validate_cv_data(payload)
+    setting = db.get(SiteSetting, "cv_data")
+    if setting:
+        setting.value = data
+    else:
+        db.add(SiteSetting(key="cv_data", value=data))
+    db.commit()
+    return {"status": "saved"}
+
+
+@app.post("/admin/cv/render", dependencies=[Depends(require_service_key)])
+def render_cv_version(payload: dict, db: Session = Depends(get_db)):
+    setting = db.get(SiteSetting, "cv_data")
+    if not setting:
+        raise HTTPException(status_code=404, detail="Base CV JSON has not been configured")
+    base = setting.value
+    if payload.get("base_revision") != _cv_base_hash(base):
+        raise HTTPException(status_code=409, detail="The base CV changed while this patch was pending; run /apply again")
+    patch = _validate_cv_patch(payload.get("patch") or {})
+    data = _apply_cv_patch(base, patch)
+    job_description = str(payload.get("job_description") or "").strip()
+    label = str(payload.get("label") or "Tailored CV")[:255]
+    if not job_description:
+        raise HTTPException(status_code=422, detail="job_description is required")
+    from .cv_renderer import render
+    from .config import settings
+    if not all((settings.r2_endpoint_url, settings.r2_access_key_id, settings.r2_secret_access_key, settings.r2_bucket_name, settings.r2_public_base_url)):
+        raise HTTPException(status_code=503, detail="R2 storage is not configured")
+    version_id = uuid4()
+    with tempfile.TemporaryDirectory() as directory:
+        output_path = Path(directory) / "cv.pdf"
+        render(data, str(output_path))
+        pdf_bytes = output_path.read_bytes()
+    object_key = f"cv-versions/{version_id}.pdf"
+    client = boto3.client("s3", endpoint_url=settings.r2_endpoint_url, aws_access_key_id=settings.r2_access_key_id, aws_secret_access_key=settings.r2_secret_access_key, region_name="auto")
+    client.upload_fileobj(BytesIO(pdf_bytes), settings.r2_bucket_name, object_key, ExtraArgs={"ContentType": "application/pdf"})
+    pdf_url = f"{settings.r2_public_base_url.rstrip('/')}/{object_key}"
+    db.add(CvVersion(id=version_id, label=label, job_description=job_description, data=data, patch=patch, base_snapshot=base, pdf_url=pdf_url))
+    db.commit()
+    return {"id": str(version_id), "label": label, "pdf_url": pdf_url}
 
 
 @app.get("/cv/search")

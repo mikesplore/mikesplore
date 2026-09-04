@@ -73,6 +73,18 @@ class SiteSetting(Base):
     value: Mapped[dict] = mapped_column(JSONB)
 
 
+class CvVersion(Base):
+    __tablename__ = "cv_versions"
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    label: Mapped[str] = mapped_column(String(255))
+    job_description: Mapped[str] = mapped_column(Text)
+    data: Mapped[dict] = mapped_column(JSONB)
+    patch: Mapped[dict] = mapped_column(JSONB, default=dict)
+    base_snapshot: Mapped[dict] = mapped_column(JSONB, default=dict)
+    pdf_url: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class ProfileLink(Base):
     __tablename__ = "profile_links"
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
