@@ -419,6 +419,9 @@ This phase was completed before the schema and backend work.
   predefined actions; the bot still fetches files from verified backend assets and admin commands
   remain explicit and authorization-protected.
 
+- Admin content creation now returns a clear HTTP 409 conflict when an entry slug already exists,
+  instead of allowing a raw database unique-constraint traceback to surface.
+
 - Hardened admin confirmation handling to accept both nested and flat LLM payloads, preserve failed
   previews for retry, and show the administrator the backend rejection detail when a write fails.
 

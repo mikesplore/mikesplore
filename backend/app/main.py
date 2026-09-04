@@ -81,6 +81,8 @@ def manage_content(resource: str, action: str, payload: dict, db: Session = Depe
         for key, value in payload.items():
             if key not in {"id", "key"} and hasattr(item, key): setattr(item, key, value)
     else:
+        if model is Entry and payload.get("slug") and db.scalar(select(Entry).where(Entry.slug == payload["slug"])):
+            raise HTTPException(status_code=409, detail=f"An entry with slug '{payload['slug']}' already exists; use update instead")
         db.add(model(**{key: value for key, value in payload.items() if hasattr(model, key)}))
     db.commit()
     return {"status": action, "resource": resource}
