@@ -273,34 +273,6 @@ async def delete_certificate_command(message: types.Message):
     await message.answer(f"Delete certificate {html.escape(parts[1], quote=False)}? Send /confirm to delete or /cancel to abort.")
 
 
-@dispatcher.message(lambda message: message.text and ("certificate" in message.text.lower() or "certification" in message.text.lower()))
-async def certificates(message: types.Message):
-    try:
-        await show_typing(message)
-        items = await list_certificates()
-        query = (message.text or "").lower()
-        specific = [item for item in items if item["title"].lower() in query or any(word in query for word in item["title"].lower().split() if len(word) > 2)]
-        selected = specific if specific else items
-        if specific:
-            await message.answer(f"I found {len(specific)} matching certificate(s). Sending them directly:")
-        else:
-            await message.answer(f"I found {len(items)} certificates. Sending them directly:")
-        for item in selected:
-            image_url = item.get("image_url")
-            if image_url:
-                async with httpx.AsyncClient(timeout=20) as client:
-                    file_response = await client.get(image_url)
-                    file_response.raise_for_status()
-                filename = image_url.rstrip("/").rsplit("/", 1)[-1] or "certificate"
-                await message.answer_document(
-                    types.BufferedInputFile(file_response.content, filename=filename),
-                    caption=html.escape(item["title"], quote=False),
-                )
-    except Exception:
-        logger.exception("Certificate lookup failed")
-        await message.answer("I couldn't retrieve the certificates right now. Please try again shortly.")
-
-
 async def deliver_certificates(message: types.Message, query: str = ""):
     items = await list_certificates()
     query = query.lower()
@@ -315,33 +287,6 @@ async def deliver_certificates(message: types.Message, query: str = ""):
                 file_response.raise_for_status()
             filename = image_url.rstrip("/").rsplit("/", 1)[-1] or "certificate"
             await message.answer_document(types.BufferedInputFile(file_response.content, filename=filename), caption=html.escape(item["title"], quote=False))
-
-
-@dispatcher.message(lambda message: message.text and any(term in message.text.lower() for term in ("cv", "resume", "curriculum vitae")) and any(word in message.text.lower() for word in ("send", "download", "attach", "share", "see", "view", "open")))
-async def send_cv(message: types.Message):
-    try:
-        await show_typing(message)
-        async with httpx.AsyncClient(base_url=settings.backend_url, timeout=20) as client:
-            response = await client.get("/assets")
-            response.raise_for_status()
-            cv = next((asset for asset in response.json() if asset.get("asset_type") == "cv"), None)
-            if not cv:
-                await message.answer("The CV is not available right now.")
-                return
-            file_response = await client.get(cv["url"])
-            file_response.raise_for_status()
-        file_bytes = file_response.content
-        if not file_bytes.startswith(b"%PDF-"):
-            logger.error("CV asset did not return a PDF (content-type=%s)", file_response.headers.get("content-type"))
-            await message.answer("The stored CV file is invalid or unavailable. Please upload the CV again.")
-            return
-        filename = cv.get("label") or "Michael-Odhiambo-CV.pdf"
-        if not filename.lower().endswith(".pdf"):
-            filename += ".pdf"
-        await message.answer_document(types.BufferedInputFile(file_bytes, filename=filename), caption="Michael Odhiambo's CV")
-    except Exception:
-        logger.exception("CV delivery failed")
-        await message.answer("I couldn't retrieve the CV right now. Please try again shortly.")
 
 
 @dispatcher.message(lambda message: not message.document and not message.photo)

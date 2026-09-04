@@ -458,6 +458,18 @@ This phase was completed before the schema and backend work.
   file upload succeeded but certificate lookup returned zero records. Existing orphaned generic
   assets are not automatically converted; re-upload those certificates after deployment.
 
+### Certificate question handling fix (2026-09-04)
+
+- Restricted direct certificate file delivery to explicit requests such as “send”, “show”,
+  “download”, or “attach certificates”. Questions such as “how many certificates” now pass through
+  the LLM listing tool and receive a direct count without triggering file delivery.
+
+### Query routing cleanup (2026-09-04)
+
+- Removed regex-based public certificate and CV query interceptors. All natural-language portfolio
+  questions now use the LLM tool-calling path; constrained CV/certificate delivery actions remain
+  available when the model determines that the user explicitly requested a file.
+
 ## Open items to resolve during the work, not before
 
 ### Manual source synchronization update (2026-09-04)
