@@ -9,12 +9,16 @@ const TimelineFeed = () => {
   const [expandedKey, setExpandedKey] = useState(null);
   const [entries, setEntries] = useState([]);
   const [status, setStatus] = useState('loading');
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
-    fetchTimelineEntries(controller.signal)
-      .then((items) => {
+    fetchTimelineEntries(1, controller.signal)
+      .then(({ items, total: totalEntries }) => {
         setEntries(items);
+        setTotal(totalEntries);
         setStatus('ready');
       })
       .catch((error) => {
@@ -39,6 +43,20 @@ const TimelineFeed = () => {
 
   const handleToggle = (key) => {
     setExpandedKey((current) => (current === key ? null : key));
+  };
+
+  const loadMore = async () => {
+    setLoadingMore(true);
+    try {
+      const result = await fetchTimelineEntries(page + 1);
+      setEntries((current) => [...current, ...result.items]);
+      setPage((current) => current + 1);
+      setTotal(result.total);
+    } catch {
+      // Keep the entries already loaded; the next click can retry.
+    } finally {
+      setLoadingMore(false);
+    }
   };
 
   return (
@@ -68,6 +86,11 @@ const TimelineFeed = () => {
               );
             })}
           </div>
+        )}
+        {status === 'ready' && entries.length < total && (
+          <button type="button" onClick={loadMore} disabled={loadingMore} className="mt-4 w-full rounded-xl border border-divider px-4 py-3 text-sm font-medium text-muted transition-colors hover:bg-accent/5 hover:text-ink disabled:cursor-wait disabled:opacity-60">
+            {loadingMore ? 'Loading more…' : `Load more entries (${entries.length} of ${total})`}
+          </button>
         )}
       </div>
     </section>

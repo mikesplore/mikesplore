@@ -406,6 +406,11 @@ This phase was completed before the schema and backend work.
 - R2 upload object keys now include a UUID, ensuring replacement profile images, CVs, and other
   assets receive new URLs instead of being served from a CDN-cached previous object key.
 
+### Dynamic profile icon update (2026-09-04)
+
+- The browser favicon and Apple touch icon now update from the current database/R2 `profile-image`
+  asset, with the static frontend icon remaining as the initial fallback.
+
 - CV delivery now verifies the downloaded asset has a PDF signature and always sends it with a
   `.pdf` filename, preventing an HTML/error response or ambiguous asset label from being presented
   as the CV.

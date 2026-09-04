@@ -12,11 +12,11 @@ const toTimelineEntry = (entry) => ({
   thumbnail: entry.media?.thumbnail || entry.media?.image || '',
 });
 
-export async function fetchTimelineEntries(signal) {
-  const response = await fetch(`${API_BASE_URL}/entries`, { signal });
+export async function fetchTimelineEntries(page = 1, signal) {
+  const response = await fetch(`${API_BASE_URL}/entries?page=${page}&page_size=10`, { signal });
   if (!response.ok) throw new Error(`Portfolio API request failed (${response.status})`);
   const entries = await response.json();
-  return entries.map(toTimelineEntry);
+  return { items: entries.map(toTimelineEntry), total: Number(response.headers.get('X-Total-Count') || entries.length) };
 }
 
 async function fetchJson(path, signal) {
