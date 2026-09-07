@@ -5,7 +5,7 @@ from groq import AsyncGroq
 
 from .config import settings
 from .tools import TOOLS, execute_tool
-from .admin import get_cv_tailoring_context
+from .admin import get_cv_tailoring_context, list_profile_links, search_admin_content
 
 client = AsyncGroq(api_key=settings.groq_api_key)
 
@@ -67,6 +67,18 @@ CV_TAILOR_SYSTEM = (
 )
 
 client_answer_kwargs = dict(temperature=0)  # factual/grounded task: keep deterministic
+
+ADMIN_TOOLS = [
+    {"type": "function", "function": {"name": "list_profile_links", "description": "List all existing contact and social profile links before updating or deleting one.", "parameters": {"type": "object", "properties": {}, "required": []}}},
+    {"type": "function", "function": {"name": "search_admin_content", "description": "Search existing admin-managed portfolio records when the requested record is not a contact link.", "parameters": {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]}}},
+]
+
+async def execute_admin_tool(name: str, arguments: dict) -> list[dict]:
+    if name == "list_profile_links":
+        return await list_profile_links()
+    if name == "search_admin_content":
+        return await search_admin_content(arguments.get("query", ""))
+    raise ValueError(f"Unsupported admin lookup tool: {name}")
 
 
 async def answer(question: str, history: list[dict] | None = None, on_text=None) -> str:
@@ -199,9 +211,9 @@ async def extract_job_description_from_image(content: bytes, mime_type: str) -> 
 
 
 
-async def extract_admin_operation(instruction: str, candidates: list[dict] | None = None) -> dict:
+async def extract_admin_operation(instruction: str) -> dict:
     allowed_resources = {"entries", "certificates", "assets", "links", "skills", "education", "bucket-list", "settings", "profile"}
-    system = "Extract one admin portfolio CRUD operation as JSON with resource, action (create/update/delete), id, and payload. Never invent IDs or values. For update or delete, select the matching record from Candidates and copy its exact id into the top-level id field; never omit it. Use profile only for profile text such as name, tagline, location, focus, experience, availability, or about. Contact and social details such as email, WhatsApp, Telegram, GitHub, dev.to, LinkedIn, X, Kaggle, Google Developers, or LabLab AI MUST use resource links with action create or update. Use only these link categories: professional for work/code/writing profiles, social for public social profiles, and contact for direct messaging or contact methods. If several new contact links are requested together, return one operation with resource links, action create, and payload {links:[{name,url,label,category,handle,is_visible},...]}. For a new contact link, payload must include name, url, label, category, and is_visible where known. If the admin gives only a username, construct the standard public URL when unambiguous: Telegram https://t.me/<username>, WhatsApp https://wa.me/<number> only when it is a phone number, dev.to https://dev.to/<username>, LabLab AI https://lablab.ai/u/<username>, GitHub https://github.com/<username>, LinkedIn https://linkedin.com/in/<username>, and X https://x.com/<username>. Preserve the username in handle. If candidates contain multiple plausible records, return action null.\nCandidates:\n" + json.dumps(candidates or [])
+    system = "Extract one admin portfolio CRUD operation as JSON with resource, action (create/update/delete), id, and payload. Use the lookup tools before updating or deleting an existing record; copy the exact returned id and never invent one. Use profile only for profile text. Contact and social details MUST use resource links. Use categories professional, social, or contact. Multiple new contacts use payload {links:[{name,url,label,category,handle,is_visible},...]}. If only a username is given, construct an unambiguous standard URL and preserve the username in handle. Return action null if lookup results are ambiguous."
     async def extract(system_prompt: str, user_prompt: str) -> dict:
         completion = await client.chat.completions.create(
             model=settings.groq_model,
@@ -211,12 +223,19 @@ async def extract_admin_operation(instruction: str, candidates: list[dict] | Non
         )
         return json.loads(completion.choices[0].message.content or "{}")
 
-    result = await extract(system, instruction)
-    payload = result.get("payload") if isinstance(result.get("payload"), dict) else {}
-    contact_fields = {"email", "whatsapp", "telegram", "github", "devto", "lablab_ai", "linkedin", "kaggle", "x"}
-    if result.get("resource") == "profile" and contact_fields.intersection(payload):
-        correction = system + "\nIMPORTANT CORRECTION: This request contains contact details. Do not use profile. Return resource links, action create, and payload {links:[one object per contact]}. Return only that JSON operation."
-        result = await extract(correction, instruction)
+    messages = [{"role": "system", "content": system}, {"role": "user", "content": instruction}]
+    for _ in range(3):
+        completion = await client.chat.completions.create(model=settings.groq_model, messages=messages, tools=ADMIN_TOOLS, tool_choice="auto", response_format={"type": "json_object"}, temperature=0)
+        message = completion.choices[0].message
+        if not message.tool_calls:
+            result = json.loads(message.content or "{}")
+            break
+        messages.append(message)
+        for call in message.tool_calls:
+            tool_result = await execute_admin_tool(call.function.name, json.loads(call.function.arguments or "{}"))
+            messages.append({"role": "tool", "tool_call_id": call.id, "content": json.dumps(tool_result)})
+    else:
+        raise ValueError("Admin lookup did not produce an operation")
     if result.get("action") is not None and (result.get("resource") not in allowed_resources or result.get("action") not in {"create", "update", "delete"}):
         raise ValueError("Unsupported admin operation")
     if result.get("resource") == "links" and result.get("action") == "create":
