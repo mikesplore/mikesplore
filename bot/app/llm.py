@@ -219,7 +219,7 @@ async def extract_job_description_from_image(content: bytes, mime_type: str) -> 
 
 async def extract_admin_operation(instruction: str) -> dict:
     allowed_resources = {"entries", "certificates", "assets", "links", "skills", "education", "bucket-list", "settings", "profile", "entry-assets", "repositories", "technologies", "topology", "metrics", "decisions", "highlights", "quotes", "snippets", "documents", "badges"}
-    system = "Extract one admin portfolio CRUD operation as JSON with resource, action (create/update/delete), id, and payload. Use lookup tools before updating or deleting an existing record; copy exact returned IDs and never invent them. For attaching an asset, call list_assets and list_projects, then create resource entry-assets with payload containing the exact asset_id, entry_id, role, alt_text, caption, and custom_order. Use profile only for profile text. Contact details use links. Project content uses topology, metrics, decisions, highlights, quotes, snippets, documents, or badges with entry_id. Repository metadata uses repositories. Project demo/live links use documents with entry_id, title, url, link_style, and order_index. Return action null if lookup results are ambiguous."
+    system = "Extract one admin portfolio operation as JSON with resource, action (list/create/update/delete), id, and payload. Use lookup tools before updating or deleting an existing record; copy exact returned IDs and never invent them. For attaching an asset, call list_assets and list_projects, then create resource entry-assets with payload containing the exact asset_id, entry_id, role, alt_text, caption, and custom_order. Use profile only for profile text. Contact details use links. Project content uses topology, metrics, decisions, highlights, quotes, snippets, documents, or badges with entry_id. Repository metadata uses repositories. Project demo/live links use documents with entry_id, title, url, link_style, and order_index. Return action null if lookup results are ambiguous."
     async def extract(system_prompt: str, user_prompt: str) -> dict:
         completion = await client.chat.completions.create(
             model=settings.groq_model,
@@ -242,7 +242,7 @@ async def extract_admin_operation(instruction: str) -> dict:
             messages.append({"role": "tool", "tool_call_id": call.id, "content": json.dumps(tool_result)})
     else:
         raise ValueError("Admin lookup did not produce an operation")
-    if result.get("action") is not None and (result.get("resource") not in allowed_resources or result.get("action") not in {"create", "update", "delete"}):
+    if result.get("action") is not None and (result.get("resource") not in allowed_resources or result.get("action") not in {"list", "create", "update", "delete"}):
         raise ValueError("Unsupported admin operation")
     if result.get("action") in {"update", "delete"} and result.get("resource") != "profile" and not result.get("id"):
         raise ValueError("Admin updates and deletes require an exact record id from a lookup tool")

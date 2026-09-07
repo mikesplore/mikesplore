@@ -14,7 +14,7 @@ from .tools import list_certificates
 from .config import settings
 from .llm import answer
 from .llm import extract_admin_operation, extract_entry, extract_job_description_from_image, extract_profile_update, extract_update, tailor_cv
-from .admin import apply_sync, create_entry, delete_asset, delete_certificate, delete_entry, get_cv_base, list_certificates as list_certificate_records, manage_content, preview_sync, render_cv, save_cv_base, update_entry, update_profile, upload_asset, upload_certificate
+from .admin import apply_sync, bulk_manage_links, create_entry, delete_asset, delete_certificate, delete_entry, get_cv_base, list_certificates as list_certificate_records, manage_content, preview_sync, render_cv, save_cv_base, update_entry, update_profile, upload_asset, upload_certificate
 from .formatting import telegram_html
 
 bot = Bot(settings.telegram_bot_token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
@@ -286,6 +286,14 @@ async def admin_command(message: types.Message):
         if operation.get("action") is None:
             await message.answer("I found multiple possible records. Please make the instruction more specific.")
             return
+        if operation.get("action") == "list":
+            resource = operation.get("resource")
+            if resource == "profile":
+                await message.answer("Use the public profile lookup for profile details; admin listing is available for managed collections.")
+                return
+            items = await manage_content(resource, "list", {})
+            await message.answer(format_preview({"resource": resource, "items": items})[:3900])
+            return
         pending_mutation[message.from_user.id] = ("admin", operation["resource"] + ":" + operation["action"], operation)
         await message.answer("Admin preview (send /confirm to save, /cancel to discard):\n\n" + format_preview(operation))
     except Exception:
@@ -470,8 +478,7 @@ async def question(message: types.Message):
                             if operation.get("id"):
                                 payload["id"] = operation["id"]
                             if resource == "links" and isinstance(payload.get("links"), list):
-                                for link in payload["links"]:
-                                    await manage_content(resource, action, link)
+                                await bulk_manage_links([{"action": action, "payload": link} for link in payload["links"]])
                             else:
                                 await manage_content(resource, action, payload)
                     else: await update_entry(mutation[1], mutation[2] or {})
