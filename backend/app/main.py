@@ -16,7 +16,7 @@ from datetime import date as date_value
 
 from .auth import require_service_key
 from .db import get_db
-from .models import BucketListItem, Certificate, CvVersion, Education, Entry, Profile, ProfileLink, Project, Repository, SiteAsset, SkillGroup, SiteSetting
+from .models import BucketListItem, Certificate, CvVersion, Education, Entry, Profile, ProfileLink, Repository, SiteAsset, SkillGroup, SiteSetting
 from .schemas import EntryCreate, EntryRead, EntryUpdate
 
 app = FastAPI(title="Portfolio API", version="1.0.0")
@@ -35,16 +35,12 @@ def _source_entry(source: str, item: dict, visible: bool) -> dict:
                 "blurb": item.get("description") or item.get("description_markdown") or "",
                 "date": (item.get("published_at") or item.get("created_at", ""))[:10] or None,
                 "is_visible": True, "tags": item.get("tag_list", []),
-                "details": {"readTime": item.get("reading_time_minutes")},
-                "links": {"url": url}, "media": {"thumbnail": item.get("cover_image") or item.get("social_image")},
                 "source": {"provider": "dev.to", "key": url}}
     url = item.get("html_url")
     title = item.get("name", "Untitled repository")
     return {"slug": slugify(title), "content_type": "project", "title": title,
             "blurb": item.get("description") or "", "date": (item.get("created_at", ""))[:10] or None,
-            "is_visible": visible, "tech_stack": [item["language"]] if item.get("language") else [],
-            "tags": [], "details": {"stars": item.get("stargazers_count", 0), "fork": item.get("fork", False)},
-            "links": {"url": url, "repo": url}, "media": {"thumbnail": (item.get("owner") or {}).get("avatar_url")},
+            "is_visible": visible, "tags": [],
             "source": {"provider": "github", "key": url, "repo": item.get("full_name")}}
 
 
@@ -186,7 +182,7 @@ def apply_sync(source: str, payload: dict, db: Session = Depends(get_db)):
         else:
             # Imported fields may refresh, but editorial fields and GitHub selection survive.
             old_visible = entry.is_visible
-            for field in ("title", "blurb", "date", "tech_stack", "tags", "details", "links", "media", "source"):
+            for field in ("title", "blurb", "date", "tags", "source"):
                 setattr(entry, field, data[field])
             entry.is_visible = old_visible if source == "github" and key not in selected else (key in selected if source == "github" else True)
         if source == "github" and key in selected:
@@ -499,7 +495,7 @@ def get_setting(key: str, db: Session = Depends(get_db)):
 def search_portfolio(q: str = Query(min_length=1), page: int = Query(default=1, ge=1), page_size: int = Query(default=5, ge=1, le=50), db: Session = Depends(get_db)):
     term = f"%{q}%"
     terms = [word.lower() for word in re.findall(r"[a-z0-9]+", q.lower()) if len(word) > 2]
-    query = select(Entry).where(Entry.is_visible.is_(True), or_(Entry.title.ilike(term), Entry.blurb.ilike(term), cast(Entry.tags, String).ilike(term), cast(Entry.links, String).ilike(term))).order_by(Entry.custom_order, Entry.date.desc().nullslast())
+    query = select(Entry).where(Entry.is_visible.is_(True), or_(Entry.title.ilike(term), Entry.blurb.ilike(term), cast(Entry.tags, String).ilike(term))).order_by(Entry.custom_order, Entry.date.desc().nullslast())
     total = db.scalar(select(func.count()).select_from(query.subquery())) or 0
     entries = db.scalars(query.offset((page - 1) * page_size).limit(page_size)).all()
     stored_profile = db.get(Profile, 1)
@@ -522,8 +518,7 @@ def search_portfolio(q: str = Query(min_length=1), page: int = Query(default=1, 
 
 def _project_json(project: Entry, repositories: list[Repository]) -> dict:
     return {"id": str(project.id), "slug": project.slug, "title": project.title, "blurb": project.blurb,
-            "tech_stack": project.tech_stack or [], "tags": project.tags or [], "details": project.details or {},
-            "links": project.links or {}, "media": project.media or {}, "is_featured": project.is_featured,
+            "tags": project.tags or [], "details": {}, "links": {}, "media": {}, "is_featured": project.is_featured,
             "repositories": [{"name": repo.name, "url": repo.url, "is_primary": repo.is_primary} for repo in repositories]}
 
 

@@ -20,11 +20,7 @@ class EntryBase(BaseModel):
     is_visible: bool = True
     is_featured: bool = False
     custom_order: int = 0
-    tech_stack: list[str] = []
     tags: list[str] = []
-    details: dict[str, Any] = {}
-    links: dict[str, Any] = {}
-    media: dict[str, Any] = {}
     source: dict[str, Any] = {}
 
 
@@ -43,11 +39,7 @@ class EntryUpdate(BaseModel):
     is_visible: bool | None = None
     is_featured: bool | None = None
     custom_order: int | None = None
-    tech_stack: list[str] | None = None
     tags: list[str] | None = None
-    details: dict[str, Any] | None = None
-    links: dict[str, Any] | None = None
-    media: dict[str, Any] | None = None
     source: dict[str, Any] | None = None
 
 
