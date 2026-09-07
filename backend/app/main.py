@@ -114,14 +114,38 @@ def manage_content(resource: str, action: str, payload: dict, db: Session = Depe
         payload["normalized_url"] = payload["url"].strip().lower().rstrip("/")
         duplicate = db.scalar(select(ProfileLink).where(ProfileLink.normalized_name == payload["normalized_name"], ProfileLink.normalized_url == payload["normalized_url"]))
         if duplicate:
-            raise HTTPException(status_code=409, detail=f"A profile link with this name and URL already exists: {duplicate.id}")
+            for key, value in payload.items(): setattr(duplicate, key, value)
+            db.commit()
+            return {"status": "upserted", "resource": resource, "id": str(duplicate.id)}
     elif resource == "repositories" and action == "create":
         if not payload.get("name") and payload.get("url"):
             payload["name"] = payload["url"].rstrip("/").rsplit("/", 1)[-1].removesuffix(".git")
         if not payload.get("name"):
             raise HTTPException(status_code=422, detail="Repository name or URL is required")
         if payload.get("url") and db.scalar(select(Repository).where(Repository.url == payload["url"])):
-            raise HTTPException(status_code=409, detail="A repository with this URL already exists")
+            duplicate = db.scalar(select(Repository).where(Repository.url == payload["url"]))
+            for key, value in payload.items(): setattr(duplicate, key, value)
+            db.commit()
+            return {"status": "upserted", "resource": resource, "id": str(duplicate.id)}
+    elif resource == "technologies" and action == "create":
+        if not payload.get("name"):
+            raise HTTPException(status_code=422, detail="Technology name is required")
+        duplicate = db.scalar(select(Technology).where(func.lower(Technology.name) == payload["name"].strip().lower()))
+        if duplicate:
+            for key, value in payload.items():
+                if key != "id" and hasattr(duplicate, key): setattr(duplicate, key, value)
+            db.commit()
+            return {"status": "upserted", "resource": resource, "id": str(duplicate.id)}
+    elif resource == "entry-assets" and action == "create":
+        required = {"entry_id", "asset_id", "role"}
+        if not required.issubset(payload):
+            raise HTTPException(status_code=422, detail="entry-assets requires entry_id, asset_id, and role")
+        duplicate = db.scalar(select(EntryAsset).where(EntryAsset.entry_id == payload["entry_id"], EntryAsset.asset_id == payload["asset_id"], EntryAsset.role == payload["role"]))
+        if duplicate:
+            for key, value in payload.items():
+                if key != "id" and hasattr(duplicate, key): setattr(duplicate, key, value)
+            db.commit()
+            return {"status": "upserted", "resource": resource, "id": str(duplicate.id)}
     elif resource == "links" and action == "update":
         identity = payload.get("id")
         if not identity:
