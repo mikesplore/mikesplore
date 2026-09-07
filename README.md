@@ -1,39 +1,44 @@
 # Mikesplore
 
-Mikesplore is a production-style personal portfolio platform and Telegram assistant. The website
-serves curated projects, articles, hackathons, events, skills, certificates, and career information
-from a PostgreSQL-backed FastAPI API. The React frontend consumes the public API at runtime, while
-the Telegram bot provides grounded portfolio questions, CV delivery, CV tailoring, and protected
-content management workflows.
+> **The digital showcase and interactive AI assistant for Michael Odhiambo.**  
+> Full-stack systems, production projects, technical writing, and live interactive AI workflows.
 
-The platform is built with React, Vite, FastAPI, PostgreSQL, Alembic, Telegram, Groq, and Cloudflare
-R2. It uses service-key-protected administrative endpoints, Telegram administrator authorization,
-LLM tool calling for verified answers, and deterministic PDF rendering for tailored CVs.
-
-## Links
-
-- Website: [mikesplore.me](https://mikesplore.me)
-- Telegram bot: [@mikesplorebot](https://t.me/mikesplorebot)
-
-## GitHub Stats
-
-<p>
-  <img src="https://img.shields.io/github/followers/mikesplore?label=Followers&style=for-the-badge" alt="GitHub followers">
-  <img src="https://img.shields.io/github/stars/mikesplore?affiliations=OWNER%2CCOLLABORATOR&label=Total%20stars&style=for-the-badge" alt="GitHub stars">
-  <img src="https://img.shields.io/github/repos/mikesplore?label=Public%20repositories&style=for-the-badge" alt="Public repositories">
-</p>
-<p>
-  <a href="https://github.com/mikesplore?tab=repositories">View all repositories and activity on GitHub</a>
+<p align="center">
+  <a href="https://mikesplore.me"><strong>Visit Website (mikesplore.me)</strong></a> •
+  <a href="https://t.me/mikesplorebot"><strong>Chat with @mikesplorebot</strong></a>
 </p>
 
-## Local Development
+<p align="center">
+  <img src="https://readme-stats-github.pages.dev/api?username=mikesplore&theme=dark" alt="GitHub Stats" />
+</p>
 
-Install the shared Python dependencies and configure the root `.env` using `.env.example`.
+---
+
+## What's Inside?
+
+Explore the full interactive platform directly on **[mikesplore.me](https://mikesplore.me)**:
+
+* **Featured Work & Architecture:** In-depth case studies of full-stack, AI, and mobile systems.
+* **Articles & Insights:** Technical write-ups on software engineering, API design, and DevOps.
+* **Hackathons & Milestones:** Event breakdowns, awards, and local developer community involvement.
+* **Interactive Telegram Assistant:** Ask [@mikesplorebot](https://t.me/mikesplorebot) questions about my work, request a tailored CV, or explore grounded portfolio data in real time.
+
+---
+
+## Tech Stack Overview
+
+Built with **React**, **FastAPI**, **PostgreSQL**, **Groq LLM Tool Calling**, **Telegram Bot API**, and **Cloudflare R2**.
+
+---
+
+## Local Setup
 
 ```bash
+# Clone and set up backend dependencies
 pip install -r requirements.txt
 alembic -c backend/alembic.ini upgrade head
 uvicorn backend.app.main:app --reload
-```
 
-The frontend is developed separately from `frontend/` with `npm install` and `npm run dev`.
+# Run frontend (from /frontend directory)
+npm install
+npm run dev
