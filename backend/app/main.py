@@ -16,7 +16,7 @@ from datetime import date as date_value
 
 from .auth import require_service_key
 from .db import get_db
-from .models import BucketListItem, Certificate, CvVersion, Education, Entry, Profile, ProfileLink, Repository, SiteAsset, SkillGroup, SiteSetting
+from .models import BucketListItem, Certificate, CvVersion, Education, Entry, EntryTechnology, Metric, Profile, ProfileLink, Repository, SiteAsset, SkillGroup, SiteSetting, Technology, TopologyStep
 from .schemas import AdminLinkMutation, BulkLinkMutation, EntryCreate, EntryRead, EntryUpdate, ProfileLinkCreate, ProfileLinkUpdate, ProfileUpdate
 
 app = FastAPI(title="Portfolio API", version="1.0.0")
@@ -588,16 +588,25 @@ def search_portfolio(q: str = Query(min_length=1), page: int = Query(default=1, 
     return {"profile": profile_data, "entries": entries, "certificates": certificates, "skills": skills, "links": matching_links, "education": matching_education, "bucket_list": matching_bucket, "total": total + len(certificates) + len(skills) + len(matching_links) + len(matching_education) + len(matching_bucket), "page": page, "page_size": page_size}
 
 
-def _project_json(project: Entry, repositories: list[Repository]) -> dict:
+def _project_json(project: Entry, repositories: list[Repository], technologies: list[Technology], blocks: dict) -> dict:
     return {"id": str(project.id), "slug": project.slug, "title": project.title, "blurb": project.blurb,
-            "tags": project.tags or [], "details": {}, "links": {}, "media": {}, "is_featured": project.is_featured,
-            "repositories": [{"name": repo.name, "url": repo.url, "is_primary": repo.is_primary} for repo in repositories]}
+            "summary": project.blurb, "tags": project.tags or [], "technologies": [technology.name for technology in technologies],
+            "links": {"repo": next((repo.url for repo in repositories if repo.is_primary), repositories[0].url if repositories else None)},
+            "repositories": [{"name": repo.name, "url": repo.url, "is_primary": repo.is_primary, "role_label": repo.role_label, "primary_language": repo.primary_language, "link_label": repo.link_label} for repo in repositories],
+            "content_blocks": blocks, "is_featured": project.is_featured, "icon_label": project.icon_label, "icon_url": project.icon_url, "status": project.status, "version": project.version, "license": project.license, "category": project.category, "author_role": project.author_role, "origin": project.origin, "started_at": project.started_at, "ended_at": project.ended_at, "template": project.template}
+
+
+def _project_blocks(project_id, db: Session) -> dict:
+    return {
+        "topology": [item.__dict__ | {"id": str(item.id), "entry_id": str(item.entry_id), "_sa_instance_state": None} for item in db.scalars(select(TopologyStep).where(TopologyStep.entry_id == project_id).order_by(TopologyStep.order_index)).all()],
+        "metrics": [item.__dict__ | {"id": str(item.id), "entry_id": str(item.entry_id), "_sa_instance_state": None} for item in db.scalars(select(Metric).where(Metric.entry_id == project_id).order_by(Metric.order_index)).all()],
+    }
 
 
 @app.get("/projects")
 def list_projects(db: Session = Depends(get_db)):
     projects = db.scalars(select(Entry).where(Entry.content_type == "project", Entry.is_visible.is_(True)).order_by(Entry.custom_order, Entry.title)).all()
-    return [_project_json(project, db.scalars(select(Repository).where(Repository.entry_id == project.id).order_by(Repository.custom_order)).all()) for project in projects]
+    return [_project_json(project, db.scalars(select(Repository).where(Repository.entry_id == project.id).order_by(Repository.custom_order)).all(), db.scalars(select(Technology).join(EntryTechnology, EntryTechnology.technology_id == Technology.id).where(EntryTechnology.entry_id == project.id)).all(), _project_blocks(project.id, db)) for project in projects]
 
 
 @app.get("/projects/{slug}")
@@ -606,7 +615,21 @@ def get_project(slug: str, db: Session = Depends(get_db)):
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     repos = db.scalars(select(Repository).where(Repository.entry_id == project.id).order_by(Repository.custom_order)).all()
-    return _project_json(project, repos)
+    technologies = db.scalars(select(Technology).join(EntryTechnology, EntryTechnology.technology_id == Technology.id).where(EntryTechnology.entry_id == project.id)).all()
+    return _project_json(project, repos, technologies, _project_blocks(project.id, db))
+
+
+@app.get("/technologies")
+def list_technologies(db: Session = Depends(get_db)):
+    return db.scalars(select(Technology).order_by(Technology.name)).all()
+
+
+@app.get("/entries/{entry_id}/content-blocks")
+def entry_content_blocks(entry_id: UUID, db: Session = Depends(get_db)):
+    entry = db.scalar(select(Entry).where(Entry.id == entry_id, Entry.is_visible.is_(True)))
+    if not entry:
+        raise HTTPException(status_code=404, detail="Entry not found")
+    return _project_blocks(entry.id, db)
 
 
 @app.get("/entries", response_model=list[EntryRead])

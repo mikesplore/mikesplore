@@ -76,3 +76,11 @@ export function fetchCounts(signal) {
 export function fetchAssets(signal) {
   return fetchJson('/assets', signal);
 }
+
+export function fetchTechnologies(signal) {
+  return fetchJson('/technologies', signal);
+}
+
+export function fetchEntryContentBlocks(entryId, signal) {
+  return fetchJson(`/entries/${encodeURIComponent(entryId)}/content-blocks`, signal);
+}
