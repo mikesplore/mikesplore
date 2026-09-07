@@ -295,7 +295,7 @@ async def admin_command(message: types.Message):
                 await message.answer("Use the public profile lookup for profile details; admin listing is available for managed collections.")
                 return
             items = await manage_content(resource, "list", {})
-            await message.answer(f"{resource} ({len(items)}):\n\n" + html.escape(json.dumps(items, indent=2, default=str), quote=False)[:3800])
+            await message.answer(format_admin_list(resource, items))
             return
         pending_mutation[message.from_user.id] = ("admin", operation["resource"] + ":" + operation["action"], operation)
         await message.answer("Admin preview (send /confirm to save, /cancel to discard):\n\n" + format_preview(operation))
@@ -684,6 +684,21 @@ def format_preview(entry: dict) -> str:
         return "\n".join(f"{candidate.get('resource')}: {candidate.get('record')}" for candidate in entry["candidates"])
     fields = ("resource", "action", "id", "title", "content_type", "blurb", "date", "year", "tech_stack", "tags", "links", "payload", "candidates")
     return "\n".join(f"{field}: {html.escape(str(entry.get(field) or '—'), quote=False)}" for field in fields)
+
+
+def format_admin_list(resource: str, items: list[dict]) -> str:
+    lines = [f"{html.escape(resource.title(), quote=False)} ({len(items)})", ""]
+    for index, item in enumerate(items, 1):
+        if resource == "assets":
+            lines += [f"{index}. {html.escape(str(item.get('label') or item.get('asset_type') or 'Unnamed asset'), quote=False)}", f"   Asset ID: {item.get('id', '—')}", f"   Type: {html.escape(str(item.get('asset_type') or '—'), quote=False)}", f"   URL: {html.escape(str(item.get('url') or '—'), quote=False)}", ""]
+        elif resource == "entry-assets":
+            lines += [f"{index}. {html.escape(str(item.get('alt_text') or item.get('caption') or 'Unnamed asset'), quote=False)}", f"   Entry ID: {item.get('entry_id', '—')}", f"   Asset ID: {item.get('asset_id', '—')}", f"   Role: {html.escape(str(item.get('role') or '—'), quote=False)}", f"   Caption: {html.escape(str(item.get('caption') or '—'), quote=False)}", f"   Order: {item.get('custom_order', 0)}", ""]
+        elif resource == "links":
+            lines += [f"{index}. {html.escape(str(item.get('name') or item.get('label') or 'Unnamed link'), quote=False)}", f"   URL: {html.escape(str(item.get('url') or '—'), quote=False)}", f"   Category: {html.escape(str(item.get('category') or '—'), quote=False)}", f"   Handle: {html.escape(str(item.get('handle') or '—'), quote=False)}", ""]
+        else:
+            title = item.get("title") or item.get("name") or item.get("label") or item.get("id") or "Record"
+            lines.append(f"{index}. {html.escape(str(title), quote=False)} ({html.escape(str(item.get('id') or '—'), quote=False)})")
+    return "\n".join(lines)[:3900]
 
 
 def format_cv_patch(patch: dict) -> str:
