@@ -158,7 +158,10 @@ async def extract_profile_update(instruction: str) -> dict:
         response_format={"type": "json_object"},
         temperature=0,
     )
-    return json.loads(completion.choices[0].message.content or "{}")
+    result = json.loads(completion.choices[0].message.content or "{}")
+    # Profile updates are patch-style. Null fields from JSON mode mean
+    # "unspecified", not "clear this existing value".
+    return {key: value for key, value in result.items() if value is not None}
 
 
 async def tailor_cv(job_description: str, existing_patch: dict | None = None, revision: str | None = None) -> dict:
