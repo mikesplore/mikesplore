@@ -283,6 +283,9 @@ async def admin_command(message: types.Message):
     try:
         await show_typing(message)
         operation = await extract_admin_operation(instruction)
+        if not operation.get("action") and operation.get("resource") and instruction.lower().lstrip().startswith(("list ", "show ")):
+            operation["action"] = "list"
+            operation["payload"] = operation.get("payload") if isinstance(operation.get("payload"), dict) else {}
         if operation.get("action") is None:
             await message.answer("I found multiple possible records. Please make the instruction more specific.")
             return
