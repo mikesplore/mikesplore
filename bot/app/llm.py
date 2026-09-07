@@ -71,6 +71,7 @@ client_answer_kwargs = dict(temperature=0)  # factual/grounded task: keep determ
 
 async def answer(question: str, history: list[dict] | None = None, on_text=None) -> str:
     messages = [{"role": "system", "content": SYSTEM}, *(history or []), {"role": "user", "content": question}]
+    used_tools = False
     for _ in range(3):
         completion = await client.chat.completions.create(
             model=settings.groq_model,
@@ -82,8 +83,9 @@ async def answer(question: str, history: list[dict] | None = None, on_text=None)
         )
         message = completion.choices[0].message
         if not message.tool_calls:
-            if on_text is None:
-                return message.content or "I couldn't find an answer in the portfolio."
+            content = message.content or "I couldn't find an answer in the portfolio."
+            if on_text is None or not used_tools:
+                return content
             stream = await client.chat.completions.create(
                 model=settings.groq_model,
                 messages=messages,
@@ -99,6 +101,7 @@ async def answer(question: str, history: list[dict] | None = None, on_text=None)
                     await on_text("".join(parts))
             return "".join(parts) or "I couldn't find an answer in the portfolio."
         messages.append(message)
+        used_tools = True
         for call in message.tool_calls:
             result = await execute_tool(call.function.name, json.loads(call.function.arguments or "{}"))
             # Most tools return lists or structured dictionaries. Only delivery
