@@ -304,6 +304,12 @@ async def admin_command(message: types.Message):
                 operation["target"] = target
         pending_mutation[message.from_user.id] = ("admin", operation["resource"] + ":" + operation["action"], operation)
         await message.answer("Admin preview (send /confirm to save, /cancel to discard):\n\n" + format_preview(operation))
+    except ValueError as error:
+        if "exact record id" in str(error):
+            await message.answer("I couldn't find a matching existing record. It may already have been deleted.")
+        else:
+            logger.exception("Admin operation validation failed")
+            await message.answer("I couldn't validate that admin operation. Please make the target more specific.")
     except Exception:
         logger.exception("Admin operation extraction failed")
         await message.answer("I couldn't translate that into a safe database operation. Include the exact record ID for updates or deletes.")
