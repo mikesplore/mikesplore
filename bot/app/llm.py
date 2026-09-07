@@ -255,6 +255,12 @@ async def extract_admin_operation(instruction: str) -> dict:
         break
     else:
         raise ValueError("Admin lookup did not produce an operation")
+    if not result.get("action") and instruction.lower().lstrip().startswith(("list ", "show ")):
+        messages.append({"role": "user", "content": "Return the final operation now. This is a read-only list request. Call create_admin_operation with the correct resource, action=list, and payload={}."})
+        completion = await client.chat.completions.create(model=settings.groq_model, messages=messages, tools=ADMIN_TOOLS, tool_choice={"type": "function", "function": {"name": "create_admin_operation"}}, max_tokens=120, temperature=0)
+        forced = completion.choices[0].message
+        if forced.tool_calls:
+            result = json.loads(forced.tool_calls[0].function.arguments or "{}")
     if result.get("action") is not None and (result.get("resource") not in allowed_resources or result.get("action") not in {"list", "create", "update", "delete"}):
         raise ValueError("Unsupported admin operation")
     if result.get("action") in {"update", "delete"} and result.get("resource") != "profile" and not result.get("id"):
