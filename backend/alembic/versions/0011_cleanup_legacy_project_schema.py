@@ -1,7 +1,7 @@
 """Remove legacy project storage after unified-entry cutover."""
 from alembic import op
 
-revision = "0011_cleanup_legacy_project_schema"
+revision = "0011_cleanup_legacy"
 down_revision = "0010_relationships"
 branch_labels = None
 depends_on = None
