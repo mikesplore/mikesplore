@@ -27,6 +27,17 @@ class Entry(Base):
     links: Mapped[dict] = mapped_column(JSONB, default=dict)
     media: Mapped[dict] = mapped_column(JSONB, default=dict)
     source: Mapped[dict] = mapped_column(JSONB, default=dict)
+    icon_label: Mapped[str | None] = mapped_column(Text)
+    icon_url: Mapped[str | None] = mapped_column(Text)
+    status: Mapped[str | None] = mapped_column(Text)
+    version: Mapped[str | None] = mapped_column(Text)
+    license: Mapped[str | None] = mapped_column(Text)
+    category: Mapped[str | None] = mapped_column(Text)
+    author_role: Mapped[str | None] = mapped_column(Text)
+    origin: Mapped[str | None] = mapped_column(Text)
+    started_at: Mapped[date | None] = mapped_column(Date)
+    ended_at: Mapped[date | None] = mapped_column(Date)
+    template: Mapped[str] = mapped_column(Text, default="standard")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
@@ -58,6 +69,21 @@ class ProjectRepository(Base):
     is_primary: Mapped[bool] = mapped_column(Boolean, default=False)
     custom_order: Mapped[int] = mapped_column(Integer, default=0)
     repo_metadata: Mapped[dict] = mapped_column("metadata", JSONB, default=dict)
+
+
+class Technology(Base):
+    __tablename__ = "technologies"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name: Mapped[str] = mapped_column(Text, unique=True)
+    category: Mapped[str | None] = mapped_column(Text)
+
+
+class EntryTechnology(Base):
+    __tablename__ = "entry_technologies"
+
+    entry_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    technology_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
 
 
 class Profile(Base):
