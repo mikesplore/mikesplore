@@ -84,22 +84,7 @@ async def answer(question: str, history: list[dict] | None = None, on_text=None)
         message = completion.choices[0].message
         if not message.tool_calls:
             content = message.content or "I couldn't find an answer in the portfolio."
-            if on_text is None or not used_tools:
-                return content
-            stream = await client.chat.completions.create(
-                model=settings.groq_model,
-                messages=messages,
-                max_tokens=500,
-                stream=True,
-                **client_answer_kwargs,
-            )
-            parts = []
-            async for chunk in stream:
-                text = chunk.choices[0].delta.content or ""
-                if text:
-                    parts.append(text)
-                    await on_text("".join(parts))
-            return "".join(parts) or "I couldn't find an answer in the portfolio."
+            return content
         messages.append(message)
         used_tools = True
         for call in message.tool_calls:
