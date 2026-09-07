@@ -104,7 +104,7 @@ def update_profile(payload: ProfileUpdate, db: Session = Depends(get_db)):
 
 @app.post("/admin/content", dependencies=[Depends(require_service_key)])
 def manage_content(resource: str, action: str, payload: dict, db: Session = Depends(get_db)):
-    models = {"entries": Entry, "certificates": Certificate, "assets": SiteAsset, "links": ProfileLink, "skills": SkillGroup, "education": Education, "bucket-list": BucketListItem, "settings": SiteSetting, "entry-assets": EntryAsset, "repositories": Repository, "technologies": Technology, "topology": TopologyStep, "metrics": Metric, "decisions": ArchitectureDecision, "highlights": Highlight, "quotes": Quote, "snippets": CodeSnippet, "documents": Document, "badges": Badge}
+    models = {"entries": Entry, "certificates": Certificate, "assets": SiteAsset, "links": ProfileLink, "skills": SkillGroup, "education": Education, "bucket-list": BucketListItem, "settings": SiteSetting, "entry-assets": EntryAsset, "entry-technologies": EntryTechnology, "repositories": Repository, "technologies": Technology, "topology": TopologyStep, "metrics": Metric, "decisions": ArchitectureDecision, "highlights": Highlight, "quotes": Quote, "snippets": CodeSnippet, "documents": Document, "badges": Badge}
     model = models.get(resource)
     if not model or action not in {"list", "create", "update", "delete"}:
         raise HTTPException(status_code=400, detail="Unsupported resource or action")
@@ -146,6 +146,13 @@ def manage_content(resource: str, action: str, payload: dict, db: Session = Depe
                 if key != "id" and hasattr(duplicate, key): setattr(duplicate, key, value)
             db.commit()
             return {"status": "upserted", "resource": resource, "id": str(duplicate.id)}
+    elif resource == "entry-technologies" and action == "create":
+        required = {"entry_id", "technology_id"}
+        if not required.issubset(payload):
+            raise HTTPException(status_code=422, detail="entry-technologies requires entry_id and technology_id")
+        duplicate = db.scalar(select(EntryTechnology).where(EntryTechnology.entry_id == payload["entry_id"], EntryTechnology.technology_id == payload["technology_id"]))
+        if duplicate:
+            return {"status": "upserted", "resource": resource}
     elif resource == "links" and action == "update":
         identity = payload.get("id")
         if not identity:
