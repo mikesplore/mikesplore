@@ -287,6 +287,23 @@ async def admin_command(message: types.Message):
         if operation.get("action") is None:
             await message.answer("I found multiple possible records. Please make the instruction more specific:\n\n" + format_preview({"candidates": candidates}))
             return
+        if operation.get("resource") == "links" and operation.get("action") in {"update", "delete"}:
+            payload = operation.setdefault("payload", {})
+            if not operation.get("id") and not payload.get("id"):
+                terms = {str(payload.get(key, "")).strip().lower() for key in ("name", "url", "handle", "label") if payload.get(key)}
+                matches = []
+                for candidate in candidates:
+                    if candidate.get("resource") != "links":
+                        continue
+                    record = candidate.get("record") or {}
+                    values = {str(record.get(key, "")).strip().lower() for key in ("name", "url", "handle", "label") if record.get(key)}
+                    if terms.intersection(values):
+                        matches.append(record)
+                if len(matches) == 1 and matches[0].get("id"):
+                    operation["id"] = matches[0]["id"]
+                else:
+                    await message.answer("I found no single matching contact link. Please include its exact name or ID.")
+                    return
         pending_mutation[message.from_user.id] = ("admin", operation["resource"] + ":" + operation["action"], operation)
         await message.answer("Admin preview (send /confirm to save, /cancel to discard):\n\n" + format_preview(operation))
     except Exception:
