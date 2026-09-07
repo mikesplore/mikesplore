@@ -95,6 +95,9 @@ def update_profile(payload: dict, db: Session = Depends(get_db)):
     if not profile:
         raise HTTPException(status_code=404, detail="Profile not found")
     allowed = {"name", "tagline", "location", "focus", "experience", "availability_status", "availability_detail", "about"}
+    unsupported = set(payload) - allowed
+    if unsupported:
+        raise HTTPException(status_code=422, detail=f"Unsupported profile fields: {', '.join(sorted(unsupported))}; use profile links for contact details")
     for key, value in payload.items():
         if key in allowed:
             setattr(profile, key, value)
