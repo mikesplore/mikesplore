@@ -13,7 +13,7 @@ const toTimelineEntry = (entry) => ({
 });
 
 export async function fetchTimelineEntries(page = 1, signal) {
-  const response = await fetch(`${API_BASE_URL}/entries?page=${page}&page_size=10`, { signal });
+  const response = await fetch(`${API_BASE_URL}/entries?content_type=article&page=${page}&page_size=10`, { signal });
   if (!response.ok) throw new Error(`Portfolio API request failed (${response.status})`);
   const entries = await response.json();
   return { items: entries.map(toTimelineEntry), total: Number(response.headers.get('X-Total-Count') || entries.length) };

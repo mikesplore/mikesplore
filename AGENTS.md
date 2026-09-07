@@ -651,3 +651,16 @@ This phase was completed before the schema and backend work.
   document the choice and why here.
 - Exact Groq model for tool-calling — confirm current smallest tool-capable model at
   implementation time and record it here.
+
+### Timeline curation boundary (2026-09-07)
+
+- The frontend Timeline now requests only `article` entries. Dev.to synchronization remains the
+  automated writing source; projects, hackathons, and events stay in their dedicated tabs. Manual
+  Timeline additions should use the `article` content type, so GitHub repository sync does not add
+  repositories to the Timeline.
+
+### Project detail rendering fix (2026-09-07)
+
+- Fixed the blank project detail page caused by rendering the JSONB `details` object as a React
+  child and calling string methods on absent metadata. Detail mapping now separates textual overview
+  and technical details and renders optional platform, type, and status fields safely.

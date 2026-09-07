@@ -12,7 +12,21 @@ const ProjectDetail = () => {
     const controller = new AbortController();
     fetchProjects(controller.signal).then((items) => {
       const item = items.find((entry) => entry.slug === projectId);
-      setProject(item && { id: item.slug, title: item.title, summary: item.blurb, ...(item.details || {}), stack: item.tech_stack, tags: item.tags, links: item.links, ...(item.media || {}) });
+      setProject(item && {
+        id: item.slug,
+        title: item.title,
+        summary: item.blurb,
+        overview: item.details?.overview || item.blurb,
+        technicalDetails: item.details?.details || item.details?.technical_details,
+        tagline: item.details?.tagline,
+        platform: item.details?.platform,
+        type: item.details?.type,
+        status: item.details?.status,
+        stack: item.tech_stack,
+        tags: item.tags,
+        links: item.links,
+        ...(item.media || {}),
+      });
       setStatus('ready');
     }).catch((error) => { if (error.name !== 'AbortError') setStatus('error'); });
     return () => controller.abort();
@@ -96,7 +110,7 @@ const ProjectDetail = () => {
             <h2 className="text-sm font-semibold text-ink uppercase tracking-wide mb-2">
               Overview
             </h2>
-            <p className="text-muted leading-relaxed">{project.overview}</p>
+            <p className="text-muted leading-relaxed">{project.overview || project.summary}</p>
           </div>
 
           {/* Stack */}
@@ -119,12 +133,12 @@ const ProjectDetail = () => {
           )}
 
           {/* Details (optional) */}
-          {hasDetails && (
+          {project.technicalDetails && (
             <div>
               <h2 className="text-sm font-semibold text-ink uppercase tracking-wide mb-2">
                 Technical Details
               </h2>
-              <p className="text-muted leading-relaxed">{project.details}</p>
+              <p className="text-muted leading-relaxed">{project.technicalDetails}</p>
             </div>
           )}
 
@@ -163,15 +177,9 @@ const ProjectDetail = () => {
 
           {/* Metadata pills */}
           <div className="flex flex-wrap gap-2 pt-2">
-            <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-teal-soft text-teal capitalize">
-              {project.platform}
-            </span>
-            <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-accent-soft text-accent capitalize">
-              {project.type.replace('-', ' ')}
-            </span>
-            <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-elevated text-muted capitalize">
-              {project.status.replace('-', ' ')}
-            </span>
+            {project.platform && <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-teal-soft text-teal capitalize">{project.platform}</span>}
+            {project.type && <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-accent-soft text-accent capitalize">{project.type.replace('-', ' ')}</span>}
+            {project.status && <span className="px-2.5 py-1 rounded-full text-xs font-medium bg-elevated text-muted capitalize">{project.status.replace('-', ' ')}</span>}
           </div>
         </div>
       </section>

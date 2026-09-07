@@ -95,8 +95,6 @@ async def help_command(message: types.Message):
         "/apply &lt;job description&gt; — propose a tailored CV patch\n"
         "/cv base — upload the source cv_data.json\n"
         "/sync devto — preview and import Dev.to articles\n"
-        "/sync github — preview GitHub repositories (hidden by default)\n"
-        "/sync github 1,3 — select repositories to show\n"
         "/upload &lt;asset_type&gt; [label] — upload a file\n"
         "/manage &lt;resource&gt; &lt;action&gt; [JSON] — manage other content, including certificates\n"
         "/delete-asset &lt;id&gt; — delete an uploaded asset\n"
