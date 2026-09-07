@@ -111,6 +111,13 @@ async def search_admin_content(query: str) -> list[dict]:
         return response.json()
 
 
+async def list_profile_links() -> list[dict]:
+    async with httpx.AsyncClient(base_url=settings.backend_url, timeout=10) as client:
+        response = await client.get("/profile/links")
+        response.raise_for_status()
+        return response.json()
+
+
 async def delete_asset(asset_id: str) -> None:
     async with httpx.AsyncClient(base_url=settings.backend_url, timeout=10) as client:
         response = await client.delete(f"/assets/{asset_id}", headers={"X-Service-Api-Key": settings.service_api_key})

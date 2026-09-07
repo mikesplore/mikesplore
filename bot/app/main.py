@@ -14,7 +14,7 @@ from .tools import list_certificates
 from .config import settings
 from .llm import answer
 from .llm import extract_admin_operation, extract_entry, extract_job_description_from_image, extract_profile_update, extract_update, tailor_cv
-from .admin import apply_sync, create_entry, delete_asset, delete_certificate, delete_entry, get_cv_base, list_certificates as list_certificate_records, manage_content, preview_sync, render_cv, save_cv_base, search_admin_content, update_entry, update_profile, upload_asset, upload_certificate
+from .admin import apply_sync, create_entry, delete_asset, delete_certificate, delete_entry, get_cv_base, list_certificates as list_certificate_records, list_profile_links, manage_content, preview_sync, render_cv, save_cv_base, search_admin_content, update_entry, update_profile, upload_asset, upload_certificate
 from .formatting import telegram_html
 
 bot = Bot(settings.telegram_bot_token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
@@ -283,6 +283,7 @@ async def admin_command(message: types.Message):
     try:
         await show_typing(message)
         candidates = await search_admin_content(instruction)
+        candidates.extend({"resource": "links", "score": 1, "record": link} for link in await list_profile_links())
         operation = await extract_admin_operation(instruction, candidates)
         if operation.get("action") is None:
             await message.answer("I found multiple possible records. Please make the instruction more specific:\n\n" + format_preview({"candidates": candidates}))
@@ -290,13 +291,14 @@ async def admin_command(message: types.Message):
         if operation.get("resource") == "links" and operation.get("action") in {"update", "delete"}:
             payload = operation.setdefault("payload", {})
             if not operation.get("id") and not payload.get("id"):
-                terms = {str(payload.get(key, "")).strip().lower() for key in ("name", "url", "handle", "label") if payload.get(key)}
-                link_candidates = await manage_content("links", "list", {})
+                terms = {"".join(character for character in str(payload.get(key, "")).strip().lower() if character.isalnum()) for key in ("name", "url", "handle", "label") if payload.get(key)}
+                link_candidates = await list_profile_links()
                 instruction_text = instruction.lower()
                 matches = []
                 for record in link_candidates:
-                    values = {str(record.get(key, "")).strip().lower() for key in ("name", "url", "handle", "label") if record.get(key)}
-                    if any(term == value or term in value or value in term for term in terms for value in values) or any(value and value in instruction_text for value in values):
+                    values = {"".join(character for character in str(record.get(key, "")).strip().lower() if character.isalnum()) for key in ("name", "url", "handle", "label") if record.get(key)}
+                    normalized_instruction = "".join(character for character in instruction_text if character.isalnum())
+                    if any(term == value or term in value or value in term for term in terms for value in values) or any(value and value in normalized_instruction for value in values):
                         matches.append(record)
                 if len(matches) == 1 and matches[0].get("id"):
                     operation["id"] = matches[0]["id"]
