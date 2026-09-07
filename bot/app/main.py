@@ -470,7 +470,11 @@ async def question(message: types.Message):
                             })
                             if operation.get("id"):
                                 payload["id"] = operation["id"]
-                            await manage_content(resource, action, payload)
+                            if resource == "links" and isinstance(payload.get("links"), list):
+                                for link in payload["links"]:
+                                    await manage_content(resource, action, link)
+                            else:
+                                await manage_content(resource, action, payload)
                     else: await update_entry(mutation[1], mutation[2] or {})
                     if mutation[0] == "profile":
                         result_message = "Profile updated."
