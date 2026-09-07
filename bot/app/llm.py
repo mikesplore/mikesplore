@@ -80,11 +80,12 @@ async def execute_admin_tool(name: str, arguments: dict) -> list[dict]:
     if name == "list_profile_links":
         return await list_profile_links()
     if name == "list_assets":
-        return await list_admin_resource("assets")
+        return [{key: item.get(key) for key in ("id", "asset_type", "url", "label")} for item in (await list_admin_resource("assets"))[:50]]
     if name == "list_projects":
-        return await list_admin_resource("entries")
+        return [{key: item.get(key) for key in ("id", "slug", "title", "content_type")} for item in (await list_admin_resource("entries")) if item.get("content_type") == "project"][:50]
     if name == "search_admin_content":
-        return await search_admin_content(arguments.get("query", ""))
+        results = await search_admin_content(arguments.get("query", ""))
+        return [{"resource": item.get("resource"), "score": item.get("score"), "record": {key: value for key, value in (item.get("record") or {}).items() if key in {"id", "slug", "name", "title", "url", "label", "handle", "asset_type", "content_type"}}} for item in results[:20]]
     if name == "create_admin_operation":
         return arguments
     raise ValueError(f"Unsupported admin lookup tool: {name}")
