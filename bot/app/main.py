@@ -189,7 +189,7 @@ async def profile_command(message: types.Message):
         await show_typing(message)
         changes = await extract_profile_update(instruction)
         pending_mutation[message.from_user.id] = ("profile", "profile", changes)
-        await message.answer("Profile preview (send /confirm to save, /cancel to discard):\n\n" + format_preview(changes))
+        await message.answer("Profile preview (send /confirm to save, /cancel to discard):\n\n" + format_profile_preview(changes))
     except Exception:
         await message.answer("I couldn't understand those profile changes.")
 
@@ -704,6 +704,11 @@ def format_preview(entry: dict) -> str:
         return "\n".join(f"{candidate.get('resource')}: {candidate.get('record')}" for candidate in entry["candidates"])
     fields = ("resource", "action", "id", "title", "content_type", "blurb", "date", "year", "tech_stack", "tags", "links", "payload", "candidates")
     return "\n".join(f"{field}: {html.escape(str(entry.get(field) or '—'), quote=False)}" for field in fields)
+
+
+def format_profile_preview(changes: dict) -> str:
+    fields = ("name", "tagline", "location", "focus", "experience", "availability_status", "availability_detail", "about")
+    return "\n".join(f"{field}: {html.escape(str(changes.get(field) or '—'), quote=False)}" for field in fields if field in changes)
 
 
 def format_admin_list(resource: str, items: list[dict]) -> str:
