@@ -10,7 +10,7 @@ const Events = () => {
   useEffect(() => {
     const controller = new AbortController();
     fetchEntriesByType('event', controller.signal).then((items) => {
-      setEvents(items.map((item) => ({ title: item.title, date: item.date, blurb: item.blurb, location: item.details?.location, link: item.links?.url, image: item.media?.image, photos: item.media?.photos }))); setStatus('ready');
+      setEvents(items.map((item) => ({ ...item, location: item.location || item.details?.location, link: item.links?.url || item.links?.demo, image: item.cardImage, photos: item.photos || item.gallery || item.content?.photos }))); setStatus('ready');
     }).catch((error) => { if (error.name !== 'AbortError') setStatus('error'); });
     return () => controller.abort();
   }, []);

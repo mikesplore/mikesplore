@@ -23,7 +23,7 @@ const Hackathons = () => {
   useEffect(() => {
     const controller = new AbortController();
     fetchEntriesByType('hackathon', controller.signal).then((items) => {
-      setHackathons(items.map((item) => ({ title: item.title, description: item.blurb, year: item.year, ...(item.details || {}), link: item.links?.url, image: item.media?.image }))); setStatus('ready');
+      setHackathons(items.map((item) => ({ ...item, description: item.description || item.blurb, link: item.links?.url || item.links?.repo, image: item.cardImage }))); setStatus('ready');
     }).catch((error) => { if (error.name !== 'AbortError') setStatus('error'); });
     return () => controller.abort();
   }, []);

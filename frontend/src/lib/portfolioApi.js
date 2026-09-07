@@ -1,6 +1,17 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
-const toTimelineEntry = (entry) => ({
+const content = (entry, key) => entry.content_blocks?.[key] || entry[key] || [];
+
+export const normalizeEntry = (entry) => {
+  const repositories = entry.repositories || [];
+  const primaryRepository = repositories.find((repo) => repo.is_primary) || repositories[0];
+  const links = entry.links || {};
+  return { ...entry, summary: entry.summary || entry.blurb || '', tagline: entry.tagline || entry.subtitle || '', stack: entry.stack || entry.technologies || entry.tech_stack || [], links: { ...links, repo: links.repo || primaryRepository?.url, demo: links.demo || entry.demo_url }, cardImage: entry.card_image || entry.icon_url || entry.media?.image || entry.media?.thumbnail || '', topology: content(entry, 'topology'), metrics: content(entry, 'metrics'), highlights: content(entry, 'highlights'), documents: content(entry, 'documents') };
+};
+
+const toTimelineEntry = (rawEntry) => {
+  const entry = normalizeEntry(rawEntry);
+  return {
   date: entry.date || `${entry.year || new Date().getFullYear()}-01-01`,
   type: entry.content_type,
   title: entry.title,
@@ -10,7 +21,8 @@ const toTimelineEntry = (entry) => ({
   readTime: entry.details?.readTime ?? 0,
   stars: entry.details?.stars ?? 0,
   thumbnail: entry.media?.thumbnail || entry.media?.image || '',
-});
+  };
+};
 
 export async function fetchTimelineEntries(page = 1, signal) {
   const response = await fetch(`${API_BASE_URL}/entries?content_type=article&page=${page}&page_size=10`, { signal });
@@ -38,15 +50,15 @@ export function fetchProfile(signal) {
 }
 
 export function fetchProjects(signal) {
-  return fetchJson('/projects', signal);
+  return fetchJson('/projects', signal).then((items) => items.map(normalizeEntry));
 }
 
 export function fetchProject(slug, signal) {
-  return fetchJson(`/projects/${encodeURIComponent(slug)}`, signal);
+  return fetchJson(`/projects/${encodeURIComponent(slug)}`, signal).then(normalizeEntry);
 }
 
 export function fetchEntriesByType(type, signal) {
-  return fetchJson(`/entries?content_type=${encodeURIComponent(type)}&page_size=50`, signal);
+  return fetchJson(`/entries?content_type=${encodeURIComponent(type)}&page_size=50`, signal).then((items) => items.map(normalizeEntry));
 }
 
 export function fetchCertificates(signal) {
