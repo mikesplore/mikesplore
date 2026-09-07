@@ -95,6 +95,32 @@ class RepositoryTechnology(Base):
     technology_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
 
 
+class ContentBlockBase:
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    entry_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), index=True)
+
+
+class TopologyStep(ContentBlockBase, Base):
+    __tablename__ = "topology_steps"
+    order_index: Mapped[int] = mapped_column(Integer, default=0)
+    role_label: Mapped[str | None] = mapped_column(Text)
+    icon: Mapped[str | None] = mapped_column(Text)
+    title: Mapped[str | None] = mapped_column(Text)
+    description: Mapped[str | None] = mapped_column(Text)
+    footnote_label: Mapped[str | None] = mapped_column(Text)
+    footnote_value: Mapped[str | None] = mapped_column(Text)
+
+
+class Metric(ContentBlockBase, Base):
+    __tablename__ = "metrics"
+    label: Mapped[str | None] = mapped_column(Text)
+    value: Mapped[str | None] = mapped_column(Text)
+    unit: Mapped[str | None] = mapped_column(Text)
+    group_tag: Mapped[str | None] = mapped_column(Text)
+    is_highlighted: Mapped[bool] = mapped_column(Boolean, default=False)
+    order_index: Mapped[int] = mapped_column(Integer, default=0)
+
+
 class Technology(Base):
     __tablename__ = "technologies"
 
