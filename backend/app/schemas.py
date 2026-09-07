@@ -78,3 +78,15 @@ class ProfileLinkUpdate(ProfileLinkCreate):
     name: str | None = Field(default=None, min_length=1, max_length=64)
     url: str | None = Field(default=None, min_length=1, max_length=2048)
     category: LinkCategory | None = None
+
+
+class AdminLinkMutation(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    action: Literal["create", "update", "delete"]
+    id: UUID | None = None
+    payload: dict[str, Any] = Field(default_factory=dict)
+
+
+class BulkLinkMutation(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    operations: list[AdminLinkMutation] = Field(min_length=1, max_length=50)

@@ -104,6 +104,13 @@ async def manage_content(resource: str, action: str, payload: dict) -> dict:
         return response.json()
 
 
+async def bulk_manage_links(operations: list[dict]) -> dict:
+    async with httpx.AsyncClient(base_url=settings.backend_url, timeout=10) as client:
+        response = await client.post("/admin/content/bulk", json={"operations": operations}, headers={"X-Service-Api-Key": settings.service_api_key})
+        response.raise_for_status()
+        return response.json()
+
+
 async def search_admin_content(query: str) -> list[dict]:
     async with httpx.AsyncClient(base_url=settings.backend_url, timeout=10) as client:
         response = await client.get("/admin/search", params={"q": query}, headers={"X-Service-Api-Key": settings.service_api_key})

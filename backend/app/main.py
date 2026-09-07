@@ -17,7 +17,7 @@ from datetime import date as date_value
 from .auth import require_service_key
 from .db import get_db
 from .models import BucketListItem, Certificate, CvVersion, Education, Entry, Profile, ProfileLink, Repository, SiteAsset, SkillGroup, SiteSetting
-from .schemas import EntryCreate, EntryRead, EntryUpdate, ProfileLinkCreate, ProfileLinkUpdate, ProfileUpdate
+from .schemas import AdminLinkMutation, BulkLinkMutation, EntryCreate, EntryRead, EntryUpdate, ProfileLinkCreate, ProfileLinkUpdate, ProfileUpdate
 
 app = FastAPI(title="Portfolio API", version="1.0.0")
 from .config import settings
@@ -148,6 +148,56 @@ def manage_content(resource: str, action: str, payload: dict, db: Session = Depe
         db.add(model(**{key: value for key, value in payload.items() if hasattr(model, key)}))
     db.commit()
     return {"status": action, "resource": resource}
+
+
+@app.post("/admin/content/bulk", dependencies=[Depends(require_service_key)])
+def bulk_manage_links(request: BulkLinkMutation, db: Session = Depends(get_db)):
+    """Validate and apply contact-link mutations atomically."""
+    prepared = []
+    for operation in request.operations:
+        payload = dict(operation.payload)
+        if operation.action == "create":
+            data = ProfileLinkCreate.model_validate(payload).model_dump()
+            data["normalized_name"] = data["name"].strip().lower()
+            data["normalized_url"] = data["url"].strip().lower().rstrip("/")
+            prepared.append((operation, data, None))
+        elif operation.action == "update":
+            if not operation.id:
+                raise HTTPException(status_code=422, detail="Link updates require an id")
+            item = db.get(ProfileLink, operation.id)
+            if not item:
+                raise HTTPException(status_code=404, detail=f"Link not found: {operation.id}")
+            data = ProfileLinkUpdate.model_validate(payload).model_dump(exclude_unset=True)
+            name = data.get("name", item.name).strip().lower()
+            url = data.get("url", item.url).strip().lower().rstrip("/")
+            data.update(normalized_name=name, normalized_url=url)
+            prepared.append((operation, data, item))
+        else:
+            if not operation.id:
+                raise HTTPException(status_code=422, detail="Link deletes require an id")
+            item = db.get(ProfileLink, operation.id)
+            if not item:
+                raise HTTPException(status_code=404, detail=f"Link not found: {operation.id}")
+            prepared.append((operation, {}, item))
+    identities = [(data.get("normalized_name"), data.get("normalized_url")) for _, data, _ in prepared if data]
+    if len(identities) != len(set(identities)):
+        raise HTTPException(status_code=409, detail="Bulk request contains duplicate link identities")
+    for operation, data, item in prepared:
+        if operation.action == "create":
+            duplicate = db.scalar(select(ProfileLink).where(ProfileLink.normalized_name == data["normalized_name"], ProfileLink.normalized_url == data["normalized_url"]))
+            if duplicate:
+                raise HTTPException(status_code=409, detail=f"Profile link already exists: {duplicate.id}")
+            db.add(ProfileLink(**data))
+        elif operation.action == "update":
+            duplicate = db.scalar(select(ProfileLink).where(ProfileLink.id != item.id, ProfileLink.normalized_name == data["normalized_name"], ProfileLink.normalized_url == data["normalized_url"]))
+            if duplicate:
+                raise HTTPException(status_code=409, detail=f"Profile link already exists: {duplicate.id}")
+            for key, value in data.items():
+                setattr(item, key, value)
+        else:
+            db.delete(item)
+    db.commit()
+    return {"status": "applied", "resource": "links", "count": len(prepared)}
 
 
 @app.get("/admin/search", dependencies=[Depends(require_service_key)])
