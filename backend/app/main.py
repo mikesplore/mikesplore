@@ -233,8 +233,12 @@ def bulk_manage_links(request: BulkLinkMutation, db: Session = Depends(get_db)):
         if operation.action == "create":
             duplicate = db.scalar(select(ProfileLink).where(ProfileLink.normalized_name == data["normalized_name"], ProfileLink.normalized_url == data["normalized_url"]))
             if duplicate:
-                raise HTTPException(status_code=409, detail=f"Profile link already exists: {duplicate.id}")
-            db.add(ProfileLink(**data))
+                # Link creation is intentionally idempotent. Re-adding the same
+                # identity updates its supplied metadata instead of failing.
+                for key, value in data.items():
+                    setattr(duplicate, key, value)
+            else:
+                db.add(ProfileLink(**data))
         elif operation.action == "update":
             duplicate = db.scalar(select(ProfileLink).where(ProfileLink.id != item.id, ProfileLink.normalized_name == data["normalized_name"], ProfileLink.normalized_url == data["normalized_url"]))
             if duplicate:
