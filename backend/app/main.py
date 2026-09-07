@@ -131,8 +131,11 @@ def manage_content(resource: str, action: str, payload: dict, db: Session = Depe
         payload["normalized_name"] = name
         payload["normalized_url"] = url
     if action == "list":
+        query = select(model)
+        if resource == "entry-assets" and payload.get("entry_id"):
+            query = query.where(EntryAsset.entry_id == payload["entry_id"])
         return [{column.name: getattr(item, column.name) for column in model.__table__.columns}
-                for item in db.scalars(select(model)).all()]
+                for item in db.scalars(query).all()]
     identity = payload.get("id") or payload.get("key")
     item = db.get(model, identity) if identity else None
     if action == "delete":

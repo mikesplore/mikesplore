@@ -262,6 +262,9 @@ async def extract_admin_operation(instruction: str) -> dict:
         forced = completion.choices[0].message
         if forced.tool_calls:
             result = json.loads(forced.tool_calls[0].function.arguments or "{}")
+    if not result.get("action") and result.get("resource") and instruction.lower().lstrip().startswith(("list ", "show ")):
+        result["action"] = "list"
+        result["payload"] = result.get("payload") if isinstance(result.get("payload"), dict) else {}
     if result.get("action") is not None and (result.get("resource") not in allowed_resources or result.get("action") not in {"list", "create", "update", "delete"}):
         raise ValueError("Unsupported admin operation")
     if result.get("action") in {"update", "delete"} and result.get("resource") != "profile" and not result.get("id"):
