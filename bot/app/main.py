@@ -297,6 +297,11 @@ async def admin_command(message: types.Message):
             items = await manage_content(resource, "list", {})
             await message.answer(format_admin_list(resource, items))
             return
+        if operation.get("action") in {"update", "delete"} and operation.get("id"):
+            records = await manage_content(operation["resource"], "list", {})
+            target = next((record for record in records if str(record.get("id")) == str(operation["id"])), None)
+            if target:
+                operation["target"] = target
         pending_mutation[message.from_user.id] = ("admin", operation["resource"] + ":" + operation["action"], operation)
         await message.answer("Admin preview (send /confirm to save, /cancel to discard):\n\n" + format_preview(operation))
     except Exception:
@@ -685,6 +690,7 @@ def format_preview(entry: dict) -> str:
             f"Resource: {html.escape(str(entry.get('resource')), quote=False)}",
             f"Action: {html.escape(str(entry.get('action')), quote=False)}",
             f"Record ID: {html.escape(str(entry.get('id') or 'new record'), quote=False)}",
+            *( ["Target:", html.escape(json.dumps(entry.get("target"), indent=2, default=str), quote=False)] if entry.get("target") else [] ),
             "Changes:",
             html.escape(str(entry.get("payload") or "—"), quote=False),
         ])
