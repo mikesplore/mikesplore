@@ -231,7 +231,7 @@ async def extract_admin_operation(instruction: str) -> dict:
 
     messages = [{"role": "system", "content": system}, {"role": "user", "content": instruction}]
     for _ in range(3):
-        completion = await client.chat.completions.create(model=settings.groq_model, messages=messages, tools=ADMIN_TOOLS, tool_choice="auto", temperature=0)
+        completion = await client.chat.completions.create(model=settings.groq_model, messages=messages, tools=ADMIN_TOOLS, tool_choice="auto", max_tokens=300, temperature=0)
         message = completion.choices[0].message
         if not message.tool_calls:
             result = json.loads(message.content or "{}")
