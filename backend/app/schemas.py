@@ -8,6 +8,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 
 ContentType = Literal["project", "article", "hackathon", "event"]
+LinkCategory = Literal["professional", "social", "contact"]
 
 
 class EntryBase(BaseModel):
@@ -48,3 +49,32 @@ class EntryRead(EntryBase):
     id: UUID
     created_at: datetime
     updated_at: datetime
+
+
+class ProfileUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    name: str | None = None
+    tagline: str | None = None
+    location: str | None = None
+    focus: str | None = None
+    experience: str | None = None
+    availability_status: str | None = None
+    availability_detail: str | None = None
+    about: str | None = None
+
+
+class ProfileLinkCreate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    name: str = Field(min_length=1, max_length=64)
+    url: str = Field(min_length=1, max_length=2048)
+    label: str | None = Field(default=None, max_length=255)
+    handle: str | None = Field(default=None, max_length=255)
+    category: LinkCategory
+    custom_order: int = 0
+    is_visible: bool = True
+
+
+class ProfileLinkUpdate(ProfileLinkCreate):
+    name: str | None = Field(default=None, min_length=1, max_length=64)
+    url: str | None = Field(default=None, min_length=1, max_length=2048)
+    category: LinkCategory | None = None

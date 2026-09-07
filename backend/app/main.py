@@ -17,7 +17,7 @@ from datetime import date as date_value
 from .auth import require_service_key
 from .db import get_db
 from .models import BucketListItem, Certificate, CvVersion, Education, Entry, Profile, ProfileLink, Repository, SiteAsset, SkillGroup, SiteSetting
-from .schemas import EntryCreate, EntryRead, EntryUpdate
+from .schemas import EntryCreate, EntryRead, EntryUpdate, ProfileLinkCreate, ProfileLinkUpdate, ProfileUpdate
 
 app = FastAPI(title="Portfolio API", version="1.0.0")
 from .config import settings
@@ -90,15 +90,12 @@ def get_profile(db: Session = Depends(get_db)):
 
 
 @app.patch("/profile", response_model=dict, dependencies=[Depends(require_service_key)])
-def update_profile(payload: dict, db: Session = Depends(get_db)):
+def update_profile(payload: ProfileUpdate, db: Session = Depends(get_db)):
     profile = db.get(Profile, 1)
     if not profile:
         raise HTTPException(status_code=404, detail="Profile not found")
     allowed = {"name", "tagline", "location", "focus", "experience", "availability_status", "availability_detail", "about"}
-    unsupported = set(payload) - allowed
-    if unsupported:
-        raise HTTPException(status_code=422, detail=f"Unsupported profile fields: {', '.join(sorted(unsupported))}; use profile links for contact details")
-    for key, value in payload.items():
+    for key, value in payload.model_dump(exclude_unset=True).items():
         if key in allowed:
             setattr(profile, key, value)
     db.commit(); db.refresh(profile)
@@ -111,6 +108,13 @@ def manage_content(resource: str, action: str, payload: dict, db: Session = Depe
     model = models.get(resource)
     if not model or action not in {"list", "create", "update", "delete"}:
         raise HTTPException(status_code=400, detail="Unsupported resource or action")
+    if resource == "links" and action == "create":
+        payload = ProfileLinkCreate.model_validate(payload).model_dump()
+    elif resource == "links" and action == "update":
+        identity = payload.get("id")
+        if not identity:
+            raise HTTPException(status_code=422, detail="Link updates require an id")
+        payload = ProfileLinkUpdate.model_validate({key: value for key, value in payload.items() if key != "id"}).model_dump(exclude_unset=True) | {"id": identity}
     if action == "list":
         return [{column.name: getattr(item, column.name) for column in model.__table__.columns}
                 for item in db.scalars(select(model)).all()]
