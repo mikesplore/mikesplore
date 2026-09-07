@@ -175,6 +175,8 @@ class ProfileLink(Base):
     category: Mapped[str] = mapped_column(String(32))
     custom_order: Mapped[int] = mapped_column(Integer, default=0)
     is_visible: Mapped[bool] = mapped_column(Boolean, default=True)
+    normalized_name: Mapped[str] = mapped_column(String(64), default="")
+    normalized_url: Mapped[str] = mapped_column(Text, default="")
 
 
 class Education(Base):

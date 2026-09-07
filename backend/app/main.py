@@ -110,11 +110,26 @@ def manage_content(resource: str, action: str, payload: dict, db: Session = Depe
         raise HTTPException(status_code=400, detail="Unsupported resource or action")
     if resource == "links" and action == "create":
         payload = ProfileLinkCreate.model_validate(payload).model_dump()
+        payload["normalized_name"] = payload["name"].strip().lower()
+        payload["normalized_url"] = payload["url"].strip().lower().rstrip("/")
+        duplicate = db.scalar(select(ProfileLink).where(ProfileLink.normalized_name == payload["normalized_name"], ProfileLink.normalized_url == payload["normalized_url"]))
+        if duplicate:
+            raise HTTPException(status_code=409, detail=f"A profile link with this name and URL already exists: {duplicate.id}")
     elif resource == "links" and action == "update":
         identity = payload.get("id")
         if not identity:
             raise HTTPException(status_code=422, detail="Link updates require an id")
         payload = ProfileLinkUpdate.model_validate({key: value for key, value in payload.items() if key != "id"}).model_dump(exclude_unset=True) | {"id": identity}
+        existing = db.get(ProfileLink, identity)
+        if not existing:
+            raise HTTPException(status_code=404, detail="Content not found")
+        name = payload.get("name", existing.name).strip().lower()
+        url = payload.get("url", existing.url).strip().lower().rstrip("/")
+        duplicate = db.scalar(select(ProfileLink).where(ProfileLink.id != identity, ProfileLink.normalized_name == name, ProfileLink.normalized_url == url))
+        if duplicate:
+            raise HTTPException(status_code=409, detail=f"A profile link with this name and URL already exists: {duplicate.id}")
+        payload["normalized_name"] = name
+        payload["normalized_url"] = url
     if action == "list":
         return [{column.name: getattr(item, column.name) for column in model.__table__.columns}
                 for item in db.scalars(select(model)).all()]
