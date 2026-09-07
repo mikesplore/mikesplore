@@ -111,6 +111,55 @@ class Metric(ContentBlockBase, Base):
     order_index: Mapped[int] = mapped_column(Integer, default=0)
 
 
+class ArchitectureDecision(ContentBlockBase, Base):
+    __tablename__ = "architecture_decisions"
+    icon: Mapped[str | None] = mapped_column(Text)
+    title: Mapped[str | None] = mapped_column(Text)
+    body: Mapped[str | None] = mapped_column(Text)
+    order_index: Mapped[int] = mapped_column(Integer, default=0)
+
+
+class Highlight(ContentBlockBase, Base):
+    __tablename__ = "highlights"
+    icon: Mapped[str | None] = mapped_column(Text)
+    title: Mapped[str | None] = mapped_column(Text)
+    description: Mapped[str | None] = mapped_column(Text)
+    order_index: Mapped[int] = mapped_column(Integer, default=0)
+
+
+class Quote(ContentBlockBase, Base):
+    __tablename__ = "quotes"
+    quote_text: Mapped[str | None] = mapped_column(Text)
+    attribution_name: Mapped[str | None] = mapped_column(Text)
+    attribution_role: Mapped[str | None] = mapped_column(Text)
+    context_label: Mapped[str | None] = mapped_column(Text, default="Why I Built This")
+
+
+class CodeSnippet(ContentBlockBase, Base):
+    __tablename__ = "code_snippets"
+    label: Mapped[str | None] = mapped_column(Text)
+    language: Mapped[str | None] = mapped_column(Text)
+    code: Mapped[str | None] = mapped_column(Text)
+    is_copyable: Mapped[bool] = mapped_column(Boolean, default=True)
+    order_index: Mapped[int] = mapped_column(Integer, default=0)
+
+
+class Document(ContentBlockBase, Base):
+    __tablename__ = "documents"
+    title: Mapped[str | None] = mapped_column(Text)
+    url: Mapped[str | None] = mapped_column(Text)
+    icon: Mapped[str | None] = mapped_column(Text)
+    link_style: Mapped[str | None] = mapped_column(Text, default="secondary")
+    order_index: Mapped[int] = mapped_column(Integer, default=0)
+
+
+class Badge(ContentBlockBase, Base):
+    __tablename__ = "badges"
+    label: Mapped[str | None] = mapped_column(Text)
+    style: Mapped[str | None] = mapped_column(Text)
+    order_index: Mapped[int] = mapped_column(Integer, default=0)
+
+
 class Relationship(Base):
     __tablename__ = "relationships"
 

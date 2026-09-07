@@ -16,7 +16,7 @@ from datetime import date as date_value
 
 from .auth import require_service_key
 from .db import get_db
-from .models import BucketListItem, Certificate, CvVersion, Education, Entry, EntryAsset, EntryTechnology, Metric, Profile, ProfileLink, Repository, SiteAsset, SkillGroup, SiteSetting, Technology, TopologyStep
+from .models import ArchitectureDecision, Badge, BucketListItem, Certificate, CodeSnippet, CvVersion, Document, Education, Entry, EntryAsset, EntryTechnology, Highlight, Metric, Profile, ProfileLink, Quote, Repository, SiteAsset, SkillGroup, SiteSetting, Technology, TopologyStep
 from .schemas import AdminLinkMutation, BulkLinkMutation, EntryCreate, EntryRead, EntryUpdate, ProfileLinkCreate, ProfileLinkUpdate, ProfileUpdate
 
 app = FastAPI(title="Portfolio API", version="1.0.0")
@@ -597,9 +597,18 @@ def _project_json(project: Entry, repositories: list[Repository], technologies: 
 
 
 def _project_blocks(project_id, db: Session) -> dict:
+    def serialize(model, order_column):
+        rows = db.scalars(select(model).where(model.entry_id == project_id).order_by(order_column)).all()
+        return [{key: value for key, value in row.__dict__.items() if key != "_sa_instance_state" and value is not None} | {"id": str(row.id), "entry_id": str(row.entry_id)} for row in rows]
     return {
-        "topology": [item.__dict__ | {"id": str(item.id), "entry_id": str(item.entry_id), "_sa_instance_state": None} for item in db.scalars(select(TopologyStep).where(TopologyStep.entry_id == project_id).order_by(TopologyStep.order_index)).all()],
-        "metrics": [item.__dict__ | {"id": str(item.id), "entry_id": str(item.entry_id), "_sa_instance_state": None} for item in db.scalars(select(Metric).where(Metric.entry_id == project_id).order_by(Metric.order_index)).all()],
+        "topology": serialize(TopologyStep, TopologyStep.order_index),
+        "metrics": serialize(Metric, Metric.order_index),
+        "decisions": serialize(ArchitectureDecision, ArchitectureDecision.order_index),
+        "highlights": serialize(Highlight, Highlight.order_index),
+        "quotes": serialize(Quote, Quote.id),
+        "snippets": serialize(CodeSnippet, CodeSnippet.order_index),
+        "documents": serialize(Document, Document.order_index),
+        "badges": serialize(Badge, Badge.order_index),
     }
 
 
