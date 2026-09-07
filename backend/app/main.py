@@ -153,6 +153,9 @@ def manage_content(resource: str, action: str, payload: dict, db: Session = Depe
         duplicate = db.scalar(select(EntryTechnology).where(EntryTechnology.entry_id == payload["entry_id"], EntryTechnology.technology_id == payload["technology_id"]))
         if duplicate:
             return {"status": "upserted", "resource": resource}
+    elif resource in {"topology", "metrics", "decisions", "highlights", "quotes", "snippets", "documents", "badges"} and action == "create":
+        if not payload.get("entry_id"):
+            raise HTTPException(status_code=422, detail=f"{resource} requires an entry_id")
     elif resource == "links" and action == "update":
         identity = payload.get("id")
         if not identity:
