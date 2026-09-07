@@ -348,3 +348,319 @@ appropriate role and order.
 6. Review every preview.
 7. Confirm the operation.
 8. Verify the public API response before building or updating the independent frontend.
+
+## Extensive testing runbook
+
+Run this section after every bot/backend deployment. Use a test or staging database where possible.
+Record the result of each test as `PASS`, `FAIL`, or `BLOCKED`.
+
+### Test prerequisites
+
+Confirm the service is running:
+
+```bash
+curl http://127.0.0.1:8000/health
+cd backend
+alembic current
+alembic upgrade head
+```
+
+Confirm the bot is using the expected commits and restart it after code changes. Confirm that the
+administrator Telegram account matches `ADMIN_TELEGRAM_ID`.
+
+Seed the repeatable Vela fixture:
+
+```bash
+python -m backend.scripts.seed_vela_fixture
+```
+
+Verify the fixture through the public API:
+
+```bash
+curl http://127.0.0.1:8000/api/v1/projects/vela
+curl http://127.0.0.1:8000/api/v1/projects/vela/media
+curl http://127.0.0.1:8000/api/v1/projects/vela/relationships
+curl http://127.0.0.1:8000/api/v1/technologies
+```
+
+### Confirmation safety tests
+
+Test every mutation with this sequence:
+
+1. Send the `/admin` request.
+2. Confirm that the preview contains the expected resource and action.
+3. Confirm that update/delete previews contain an exact record ID.
+4. Send `/cancel`.
+5. Verify the database/API is unchanged.
+6. Repeat the request.
+7. Send `/confirm`.
+8. Verify the expected API/database change.
+
+Test that `/confirm` without a pending operation produces a harmless message and performs no write.
+Test that `/cancel` clears the pending operation and a second `/confirm` cannot apply it.
+Test that a non-admin Telegram account cannot enter the admin workflow.
+
+### Asset tests
+
+List assets:
+
+```text
+/admin list my assets
+```
+
+Expected behavior:
+
+- The bot calls the asset lookup tool.
+- The response is a compact human-readable list.
+- It includes asset ID, type, label, and URL.
+- PDFs are represented by metadata only; binary file contents are not sent to the LLM.
+
+Upload a project image:
+
+```text
+/upload project-image Vela gallery test
+```
+
+Then send a small image file. Verify that the response includes an asset label and that the asset
+appears in `/admin list my assets`.
+
+Attach it to Vela:
+
+```text
+/admin attach the Vela gallery test asset to Vela as a gallery image
+```
+
+Expected preview fields:
+
+- Resource: `entry-assets`
+- Action: `create`
+- Exact Vela `entry_id`
+- Exact asset `asset_id`
+- Role: `gallery`
+
+Confirm and verify:
+
+```text
+/admin show me gallery items for the Vela project
+```
+
+Repeat the same attach request. It should upsert rather than create a duplicate.
+
+### Project tests
+
+List project records:
+
+```text
+/admin list my projects
+```
+
+Update project metadata:
+
+```text
+/admin set Vela status to active and category to android
+```
+
+The preview must identify the Vela entry ID and only contain the requested fields.
+
+Test an ambiguous project request:
+
+```text
+/admin update the project status to production
+```
+
+Expected behavior: the bot asks for a specific project rather than selecting one arbitrarily.
+
+### Repository tests
+
+List repositories:
+
+```text
+/admin list my repositories
+```
+
+Create a repository:
+
+```text
+/admin add https://github.com/example/new-repo as a repository for Vela
+```
+
+The LLM must look up the project and repository URL before creating it. If the name is omitted,
+the backend may derive it from the URL.
+
+Repeat the same request. Expected behavior: the existing URL is detected and the operation becomes
+an update/upsert, not a duplicate create.
+
+Update repository metadata:
+
+```text
+/admin set the primary language of the Vela repository to Kotlin
+```
+
+The preview must contain the existing repository ID. Confirm and verify `/api/v1/projects/vela`.
+
+### Technology tests
+
+List technologies:
+
+```text
+/admin list my technologies
+```
+
+Attach technologies to Vela:
+
+```text
+/admin add Kotlin, Python, FastAPI, and MCP technologies to Vela
+```
+
+Expected behavior:
+
+- The LLM calls project and technology lookup tools.
+- It uses `entry-technologies`, never `topology`.
+- The preview includes exact project and technology IDs.
+- Repeating the request does not create duplicate junction rows.
+
+Update technology metadata:
+
+```text
+/admin set the Python technology icon to https://example.com/python.svg
+```
+
+Expected behavior: the existing technology is updated/upserted by name.
+
+### Content-block tests
+
+For every content-block type, verify that `entry_id` is present in the preview.
+
+Metric:
+
+```text
+/admin add a Vela metric: 150+ MCP tools, highlighted under capability
+```
+
+Architecture decision:
+
+```text
+/admin add a Vela architecture decision titled Separate client and backend with the explanation that the layers should evolve independently
+```
+
+Highlight:
+
+```text
+/admin add a Vela highlight titled Natural language control with the description Users control devices through plain-English intents
+```
+
+Topology:
+
+```text
+/admin add a Vela topology step for the backend titled Intent routing with description The backend translates user intent into a device operation
+```
+
+Quote:
+
+```text
+/admin add a Vela quote: "Remote control should feel immediate" attributed to Portfolio owner
+```
+
+Code snippet:
+
+```text
+/admin add a Vela Python code snippet labeled Intent handler
+```
+
+Document/demo link:
+
+```text
+/admin add https://example.com as Vela's primary demo document
+```
+
+Badge:
+
+```text
+/admin add a Vela badge labeled MCP compatible with style accent
+```
+
+For each type, test create, repeat, update, and delete. Missing `entry_id` must produce a clear
+validation response, never a database 500.
+
+### Contact-link tests
+
+Create multiple links:
+
+```text
+/admin my WhatsApp, Telegram, dev.to, and LabLab AI usernames are all mikesplore
+```
+
+Expected behavior: one preview containing multiple `links` create operations or an equivalent bulk
+operation. Confirm and verify `/profile/links`.
+
+Update by natural language:
+
+```text
+/admin update my dev.to profile link to be professional
+```
+
+The LLM must look up the full profile-link collection and return the exact link ID.
+
+Repeat the same request. It should update the existing record without creating a duplicate.
+
+Delete by natural language:
+
+```text
+/admin delete my old LabLab AI link
+```
+
+If multiple links match, the bot must ask for clarification.
+
+### Negative and malformed-input tests
+
+Test these requests and expect safe rejection:
+
+```text
+/admin update a link without identifying which link
+/admin delete record 00000000-0000-0000-0000-000000000000
+/admin add a profile field called telegram
+/admin attach an unknown asset to Vela
+/admin add a metric without naming a project
+/admin add a repository without a URL
+```
+
+Expected behavior:
+
+- No database 500 errors
+- No guessed IDs
+- No partial bulk writes
+- A clear correction or clarification message
+
+### Public API verification after mutations
+
+After confirming project changes, check:
+
+```bash
+curl http://127.0.0.1:8000/api/v1/projects/vela
+curl http://127.0.0.1:8000/api/v1/projects/vela/media
+curl http://127.0.0.1:8000/api/v1/projects/vela/relationships
+```
+
+Verify that:
+
+- Hidden projects do not appear publicly.
+- Child content is hidden when its parent project is hidden.
+- Technologies include IDs, categories, and icon URLs.
+- Media contains the expected role, caption, alt text, and order.
+- Relationships hydrate visible target entries, repositories, and technologies.
+- Pagination and `X-Total-Count` behave consistently.
+
+### Common failure diagnosis
+
+- `json mode cannot be combined with tool/function calling`: remove JSON response format from the
+  tool-enabled LLM call.
+- `Request too large`: reduce lookup result fields and result count before sending them to the LLM.
+- `Unterminated string`: the model output was truncated; use a structured final function tool rather
+  than free-form JSON.
+- `Content not found`: an update/delete operation lacks the exact existing record ID.
+- `null value violates not-null constraint`: the LLM omitted a required parent ID; add or fix the
+  relevant lookup tool and backend validation.
+- Recursive FastAPI JSON encoding: serialize ORM attributes using mapped attribute keys, not raw
+  database column names such as `metadata`.
+- Duplicate conflict: verify the resource's upsert identity and repeat the request after checking
+  the existing record.
