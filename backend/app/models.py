@@ -59,6 +59,7 @@ class Technology(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     name: Mapped[str] = mapped_column(Text, unique=True)
     category: Mapped[str | None] = mapped_column(Text)
+    icon_url: Mapped[str | None] = mapped_column(Text)
 
 
 class EntryTechnology(Base):
@@ -71,6 +72,17 @@ class RepositoryTechnology(Base):
     __tablename__ = "repository_technologies"
     repository_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
     technology_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+
+
+class EntryAsset(Base):
+    __tablename__ = "entry_assets"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    entry_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), index=True)
+    asset_id: Mapped[int] = mapped_column(Integer, index=True)
+    role: Mapped[str] = mapped_column(String(64))
+    alt_text: Mapped[str | None] = mapped_column(Text)
+    caption: Mapped[str | None] = mapped_column(Text)
+    custom_order: Mapped[int] = mapped_column(Integer, default=0)
 
 
 class ContentBlockBase:
