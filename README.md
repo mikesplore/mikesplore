@@ -18,8 +18,12 @@ LLM tool calling for verified answers, and deterministic PDF rendering for tailo
 ## GitHub Stats
 
 <p>
-  <img src="https://github-readme-stats.vercel.app/api?username=mikesplore&show_icons=true&hide_border=true&rank_icon=github" alt="Mikesplore GitHub stats" height="165">
-  <img src="https://github-readme-stats.vercel.app/api/top-langs/?username=mikesplore&layout=compact&hide_border=true" alt="Top languages" height="165">
+  <img src="https://img.shields.io/github/followers/mikesplore?label=Followers&style=for-the-badge" alt="GitHub followers">
+  <img src="https://img.shields.io/github/stars/mikesplore?affiliations=OWNER%2CCOLLABORATOR&label=Total%20stars&style=for-the-badge" alt="GitHub stars">
+  <img src="https://img.shields.io/github/repos/mikesplore?label=Public%20repositories&style=for-the-badge" alt="Public repositories">
+</p>
+<p>
+  <a href="https://github.com/mikesplore?tab=repositories">View all repositories and activity on GitHub</a>
 </p>
 
 ## Local Development
