@@ -238,6 +238,10 @@ async def extract_admin_operation(instruction: str) -> dict:
         raise ValueError("Admin lookup did not produce an operation")
     if result.get("action") is not None and (result.get("resource") not in allowed_resources or result.get("action") not in {"create", "update", "delete"}):
         raise ValueError("Unsupported admin operation")
+    if result.get("action") in {"update", "delete"} and result.get("resource") != "profile" and not result.get("id"):
+        raise ValueError("Admin updates and deletes require an exact record id from a lookup tool")
+    if result.get("action") in {"create", "update"} and not isinstance(result.get("payload"), dict):
+        raise ValueError("Admin mutations require an object payload")
     if result.get("resource") == "links" and result.get("action") == "create":
         links = (result.get("payload") or {}).get("links") if isinstance(result.get("payload"), dict) else None
         if links is not None and (not isinstance(links, list) or not all(isinstance(link, dict) and link.get("name") and link.get("url") for link in links)):
