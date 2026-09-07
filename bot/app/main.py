@@ -8,6 +8,7 @@ import httpx
 import logging
 import json
 import re
+import asyncio
 from .tools import list_certificates
 
 from .config import settings
@@ -536,7 +537,18 @@ async def question(message: types.Message):
             if content_type and any(word in normalized for word in ("show", "list", "what", "which")):
                 list_context[user_id] = (content_type, 1)
         history = conversation_history.setdefault(user_id, [])
-        response = await answer(question_text, history[-6:])
+        streamed_message = await message.answer("…")
+        last_edit = 0.0
+
+        async def update_stream(text: str):
+            nonlocal last_edit
+            now = asyncio.get_running_loop().time()
+            if now - last_edit < 0.7 and len(text) < 3900:
+                return
+            last_edit = now
+            await streamed_message.edit_text(html.escape(text[-4000:]))
+
+        response = await answer(question_text, history[-6:], on_text=update_stream)
         history.extend([
             {"role": "user", "content": question_text},
             {"role": "assistant", "content": response},
@@ -546,6 +558,7 @@ async def question(message: types.Message):
         logger.exception("Public portfolio lookup failed")
         response = "I couldn't reach the portfolio right now. Please try again shortly."
     if response.startswith("__BOT_ACTION__"):
+        await streamed_message.delete()
         action = __import__('json').loads(response.removeprefix("__BOT_ACTION__"))
         try:
             if action["action"] == "send_cv":
@@ -556,7 +569,7 @@ async def question(message: types.Message):
             logger.exception("Bot action failed")
             await message.answer("I couldn't complete that request right now. Please try again shortly.")
         return
-    await message.answer(telegram_html(response))
+    await streamed_message.edit_text(telegram_html(response))
 
 
 @dispatcher.message(lambda message: bool(message.document or message.photo))

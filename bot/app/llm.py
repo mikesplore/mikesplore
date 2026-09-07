@@ -69,7 +69,7 @@ CV_TAILOR_SYSTEM = (
 client_answer_kwargs = dict(temperature=0)  # factual/grounded task: keep deterministic
 
 
-async def answer(question: str, history: list[dict] | None = None) -> str:
+async def answer(question: str, history: list[dict] | None = None, on_text=None) -> str:
     messages = [{"role": "system", "content": SYSTEM}, *(history or []), {"role": "user", "content": question}]
     for _ in range(3):
         completion = await client.chat.completions.create(
@@ -82,7 +82,22 @@ async def answer(question: str, history: list[dict] | None = None) -> str:
         )
         message = completion.choices[0].message
         if not message.tool_calls:
-            return message.content or "I couldn't find an answer in the portfolio."
+            if on_text is None:
+                return message.content or "I couldn't find an answer in the portfolio."
+            stream = await client.chat.completions.create(
+                model=settings.groq_model,
+                messages=messages,
+                max_tokens=500,
+                stream=True,
+                **client_answer_kwargs,
+            )
+            parts = []
+            async for chunk in stream:
+                text = chunk.choices[0].delta.content or ""
+                if text:
+                    parts.append(text)
+                    await on_text("".join(parts))
+            return "".join(parts) or "I couldn't find an answer in the portfolio."
         messages.append(message)
         for call in message.tool_calls:
             result = await execute_tool(call.function.name, json.loads(call.function.arguments or "{}"))
