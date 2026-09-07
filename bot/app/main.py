@@ -295,7 +295,7 @@ async def admin_command(message: types.Message):
                 await message.answer("Use the public profile lookup for profile details; admin listing is available for managed collections.")
                 return
             items = await manage_content(resource, "list", {})
-            await message.answer(format_preview({"resource": resource, "items": items})[:3900])
+            await message.answer(f"{resource} ({len(items)}):\n\n" + html.escape(json.dumps(items, indent=2, default=str), quote=False)[:3800])
             return
         pending_mutation[message.from_user.id] = ("admin", operation["resource"] + ":" + operation["action"], operation)
         await message.answer("Admin preview (send /confirm to save, /cancel to discard):\n\n" + format_preview(operation))
