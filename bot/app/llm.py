@@ -217,13 +217,25 @@ async def extract_job_description_from_image(content: bytes, mime_type: str) -> 
 async def extract_admin_operation(instruction: str, candidates: list[dict] | None = None) -> dict:
     allowed_resources = {"entries", "certificates", "assets", "links", "skills", "education", "bucket-list", "settings", "profile"}
     system = "Extract one admin portfolio CRUD operation as JSON with resource, action (create/update/delete), id, and payload. Never invent IDs or values. Use profile only for profile text such as name, tagline, location, focus, experience, availability, or about. Contact and social details such as email, WhatsApp, Telegram, GitHub, dev.to, LinkedIn, X, Kaggle, Google Developers, or LabLab AI MUST use resource links with action create or update. If several new contact links are requested together, return one operation with resource links, action create, and payload {links:[{name,url,label,category,handle,is_visible},...]}. For a new contact link, payload must include name, url, label, category, and is_visible where known. If the admin gives only a username, construct the standard public URL when unambiguous: Telegram https://t.me/<username>, WhatsApp https://wa.me/<number> only when it is a phone number, dev.to https://dev.to/<username>, LabLab AI https://lablab.ai/u/<username>, GitHub https://github.com/<username>, LinkedIn https://linkedin.com/in/<username>, and X https://x.com/<username>. Preserve the username in handle. If candidates contain multiple plausible records, return action null.\nCandidates:\n" + json.dumps(candidates or [])
-    completion = await client.chat.completions.create(
-        model=settings.groq_model,
-        messages=[{"role": "system", "content": system}, {"role": "user", "content": instruction}],
-        response_format={"type": "json_object"},
-        temperature=0,
-    )
-    result = json.loads(completion.choices[0].message.content or "{}")
+    async def extract(system_prompt: str, user_prompt: str) -> dict:
+        completion = await client.chat.completions.create(
+            model=settings.groq_model,
+            messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
+            response_format={"type": "json_object"},
+            temperature=0,
+        )
+        return json.loads(completion.choices[0].message.content or "{}")
+
+    result = await extract(system, instruction)
+    payload = result.get("payload") if isinstance(result.get("payload"), dict) else {}
+    contact_fields = {"email", "whatsapp", "telegram", "github", "devto", "lablab_ai", "linkedin", "kaggle", "x"}
+    if result.get("resource") == "profile" and contact_fields.intersection(payload):
+        correction = system + "\nIMPORTANT CORRECTION: This request contains contact details. Do not use profile. Return resource links, action create, and payload {links:[one object per contact]}. Return only that JSON operation."
+        result = await extract(correction, instruction)
     if result.get("action") is not None and (result.get("resource") not in allowed_resources or result.get("action") not in {"create", "update", "delete"}):
         raise ValueError("Unsupported admin operation")
+    if result.get("resource") == "links" and result.get("action") == "create":
+        links = (result.get("payload") or {}).get("links") if isinstance(result.get("payload"), dict) else None
+        if links is not None and (not isinstance(links, list) or not all(isinstance(link, dict) and link.get("name") and link.get("url") for link in links)):
+            raise ValueError("Contact link operation must contain valid links")
     return result
