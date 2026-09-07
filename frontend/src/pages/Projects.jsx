@@ -10,7 +10,7 @@ const Projects = () => {
   useEffect(() => {
     const controller = new AbortController();
     fetchProjects(controller.signal).then((items) => {
-      setProjects(items.map((item) => ({ id: item.slug, title: item.title, summary: item.blurb, ...(item.details || {}), stack: item.tech_stack, tags: item.tags, links: item.links, ...(item.media || {}) })));
+      setProjects(items.map((item) => ({ id: item.slug, title: item.title, summary: item.blurb, ...(item.details || {}), stack: item.tech_stack, tags: item.tags, links: item.links?.repo ? item.links : { repo: item.repositories?.find((repo) => repo.is_primary)?.url || item.repositories?.[0]?.url }, ...(item.media || {}) })));
       setStatus('ready');
     }).catch((error) => { if (error.name !== 'AbortError') setStatus('error'); });
     return () => controller.abort();

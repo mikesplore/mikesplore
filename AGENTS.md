@@ -659,6 +659,14 @@ This phase was completed before the schema and backend work.
   Timeline additions should use the `article` content type, so GitHub repository sync does not add
   repositories to the Timeline.
 
+### Project and repository redesign (2026-09-07)
+
+- Added dedicated `projects` and `project_repositories` tables through migration `0006`. Existing
+  project entries are copied into the new project records, and GitHub-backed entries receive related
+  repository records. Added public `/projects` and `/projects/{slug}` endpoints; the frontend Projects
+  pages now use them, allowing multiple repositories to belong to one curated project.
+- Fixed project detail loading to fetch one project directly and safely handle optional metadata.
+
 ### Project detail rendering fix (2026-09-07)
 
 - Fixed the blank project detail page caused by rendering the JSONB `details` object as a React

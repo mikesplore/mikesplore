@@ -1,7 +1,7 @@
 import { useParams, Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { ExternalLink, Github, ArrowLeft } from 'lucide-react';
-import { fetchProjects } from '../lib/portfolioApi';
+import { fetchProject } from '../lib/portfolioApi';
 import SectionCard from '../components/SectionCard';
 
 const ProjectDetail = () => {
@@ -10,8 +10,7 @@ const ProjectDetail = () => {
   const [status, setStatus] = useState('loading');
   useEffect(() => {
     const controller = new AbortController();
-    fetchProjects(controller.signal).then((items) => {
-      const item = items.find((entry) => entry.slug === projectId);
+    fetchProject(projectId, controller.signal).then((item) => {
       setProject(item && {
         id: item.slug,
         title: item.title,
@@ -24,7 +23,7 @@ const ProjectDetail = () => {
         status: item.details?.status,
         stack: item.tech_stack,
         tags: item.tags,
-        links: item.links,
+        links: item.links?.repo ? item.links : { repo: item.repositories?.find((repo) => repo.is_primary)?.url || item.repositories?.[0]?.url },
         ...(item.media || {}),
       });
       setStatus('ready');

@@ -31,6 +31,35 @@ class Entry(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
 
+class Project(Base):
+    __tablename__ = "projects"
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    slug: Mapped[str] = mapped_column(String(160), unique=True, index=True)
+    title: Mapped[str] = mapped_column(String(255))
+    blurb: Mapped[str] = mapped_column(Text)
+    tech_stack: Mapped[list[str]] = mapped_column(ARRAY(String), default=list)
+    tags: Mapped[list[str]] = mapped_column(ARRAY(String), default=list)
+    details: Mapped[dict] = mapped_column(JSONB, default=dict)
+    links: Mapped[dict] = mapped_column(JSONB, default=dict)
+    media: Mapped[dict] = mapped_column(JSONB, default=dict)
+    is_visible: Mapped[bool] = mapped_column(Boolean, default=True)
+    is_featured: Mapped[bool] = mapped_column(Boolean, default=False)
+    custom_order: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class ProjectRepository(Base):
+    __tablename__ = "project_repositories"
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    project_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
+    name: Mapped[str] = mapped_column(String(255))
+    url: Mapped[str] = mapped_column(Text, unique=True)
+    is_primary: Mapped[bool] = mapped_column(Boolean, default=False)
+    custom_order: Mapped[int] = mapped_column(Integer, default=0)
+    repo_metadata: Mapped[dict] = mapped_column("metadata", JSONB, default=dict)
+
+
 class Profile(Base):
     __tablename__ = "profile"
 

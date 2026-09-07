@@ -38,7 +38,11 @@ export function fetchProfile(signal) {
 }
 
 export function fetchProjects(signal) {
-  return fetchJson('/entries?content_type=project&page_size=50', signal);
+  return fetchJson('/projects', signal);
+}
+
+export function fetchProject(slug, signal) {
+  return fetchJson(`/projects/${encodeURIComponent(slug)}`, signal);
 }
 
 export function fetchEntriesByType(type, signal) {
