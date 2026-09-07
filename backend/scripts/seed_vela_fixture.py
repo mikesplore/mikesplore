@@ -130,9 +130,9 @@ def run():
 
         for child_slug in ("vela-mcp", "velavps", "vela-android"):
             child = entries[child_slug]
-            existing = db.scalar(select(Relationship).where(Relationship.subject_type == "entry", Relationship.subject_id == child.id, Relationship.predicate == "related_to", Relationship.object_type == "entry", Relationship.object_id == vela.id))
+            existing = db.scalar(select(Relationship).where(Relationship.subject_type == "entry", Relationship.subject_id == vela.id, Relationship.predicate == "related_to", Relationship.object_type == "entry", Relationship.object_id == child.id))
             if not existing:
-                db.add(Relationship(subject_type="entry", subject_id=child.id, predicate="related_to", object_type="entry", object_id=vela.id, note="Part of the Vela project family"))
+                db.add(Relationship(subject_type="entry", subject_id=vela.id, predicate="related_to", object_type="entry", object_id=child.id, note="Part of the Vela project family"))
 
         db.commit()
         print("Seeded Vela project graph: " + ", ".join(PROJECTS))
