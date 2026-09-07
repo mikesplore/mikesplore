@@ -292,10 +292,11 @@ async def admin_command(message: types.Message):
             if not operation.get("id") and not payload.get("id"):
                 terms = {str(payload.get(key, "")).strip().lower() for key in ("name", "url", "handle", "label") if payload.get(key)}
                 link_candidates = await manage_content("links", "list", {})
+                instruction_text = instruction.lower()
                 matches = []
                 for record in link_candidates:
                     values = {str(record.get(key, "")).strip().lower() for key in ("name", "url", "handle", "label") if record.get(key)}
-                    if any(term == value or term in value or value in term for term in terms for value in values):
+                    if any(term == value or term in value or value in term for term in terms for value in values) or any(value and value in instruction_text for value in values):
                         matches.append(record)
                 if len(matches) == 1 and matches[0].get("id"):
                     operation["id"] = matches[0]["id"]
