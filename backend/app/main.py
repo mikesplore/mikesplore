@@ -104,7 +104,7 @@ def update_profile(payload: ProfileUpdate, db: Session = Depends(get_db)):
 
 @app.post("/admin/content", dependencies=[Depends(require_service_key)])
 def manage_content(resource: str, action: str, payload: dict, db: Session = Depends(get_db)):
-    models = {"entries": Entry, "certificates": Certificate, "assets": SiteAsset, "links": ProfileLink, "skills": SkillGroup, "education": Education, "bucket-list": BucketListItem, "settings": SiteSetting}
+    models = {"entries": Entry, "certificates": Certificate, "assets": SiteAsset, "links": ProfileLink, "skills": SkillGroup, "education": Education, "bucket-list": BucketListItem, "settings": SiteSetting, "entry-assets": EntryAsset, "repositories": Repository, "technologies": Technology, "topology": TopologyStep, "metrics": Metric, "decisions": ArchitectureDecision, "highlights": Highlight, "quotes": Quote, "snippets": CodeSnippet, "documents": Document, "badges": Badge}
     model = models.get(resource)
     if not model or action not in {"list", "create", "update", "delete"}:
         raise HTTPException(status_code=400, detail="Unsupported resource or action")
@@ -202,7 +202,7 @@ def bulk_manage_links(request: BulkLinkMutation, db: Session = Depends(get_db)):
 
 @app.get("/admin/search", dependencies=[Depends(require_service_key)])
 def admin_search(q: str = Query(min_length=1), db: Session = Depends(get_db)):
-    models = {"entries": Entry, "certificates": Certificate, "assets": SiteAsset, "links": ProfileLink, "skills": SkillGroup, "education": Education, "bucket-list": BucketListItem, "settings": SiteSetting}
+    models = {"entries": Entry, "certificates": Certificate, "assets": SiteAsset, "links": ProfileLink, "skills": SkillGroup, "education": Education, "bucket-list": BucketListItem, "settings": SiteSetting, "repositories": Repository, "technologies": Technology, "entry-assets": EntryAsset}
     terms = [term.lower() for term in re.findall(r"[a-z0-9]+", q.lower()) if len(term) > 2]
     results = []
     for resource, model in models.items():

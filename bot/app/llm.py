@@ -212,8 +212,8 @@ async def extract_job_description_from_image(content: bytes, mime_type: str) -> 
 
 
 async def extract_admin_operation(instruction: str) -> dict:
-    allowed_resources = {"entries", "certificates", "assets", "links", "skills", "education", "bucket-list", "settings", "profile"}
-    system = "Extract one admin portfolio CRUD operation as JSON with resource, action (create/update/delete), id, and payload. Use the lookup tools before updating or deleting an existing record; copy the exact returned id and never invent one. Use profile only for profile text. Contact and social details MUST use resource links. Use categories professional, social, or contact. Multiple new contacts use payload {links:[{name,url,label,category,handle,is_visible},...]}. If only a username is given, construct an unambiguous standard URL and preserve the username in handle. Return action null if lookup results are ambiguous."
+    allowed_resources = {"entries", "certificates", "assets", "links", "skills", "education", "bucket-list", "settings", "profile", "entry-assets", "repositories", "technologies", "topology", "metrics", "decisions", "highlights", "quotes", "snippets", "documents", "badges"}
+    system = "Extract one admin portfolio CRUD operation as JSON with resource, action (create/update/delete), id, and payload. Use lookup tools before updating or deleting an existing record; copy exact returned IDs and never invent them. Use profile only for profile text. Contact details use links. Project screenshots/assets use entry-assets with entry_id and asset_id. Project content uses topology, metrics, decisions, highlights, quotes, snippets, documents, or badges with entry_id. Repository metadata uses repositories. Project demo/live links use documents with entry_id, title, url, link_style, and order_index. Return action null if lookup results are ambiguous."
     async def extract(system_prompt: str, user_prompt: str) -> dict:
         completion = await client.chat.completions.create(
             model=settings.groq_model,
