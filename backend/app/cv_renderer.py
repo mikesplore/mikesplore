@@ -26,6 +26,17 @@ ACCENT = colors.HexColor("#1a1a1a")
 MUTED = colors.HexColor("#555555")
 
 
+def without_em_dashes(value):
+    """Normalize all CV text before it reaches the PDF layout."""
+    if isinstance(value, str):
+        return value.replace("—", "-").replace("–", "-")
+    if isinstance(value, list):
+        return [without_em_dashes(item) for item in value]
+    if isinstance(value, dict):
+        return {key: without_em_dashes(item) for key, item in value.items()}
+    return value
+
+
 def build_styles():
     styles = getSampleStyleSheet()
 
@@ -78,6 +89,7 @@ def bullets(items, styles):
 
 
 def render(data, out_path):
+    data = without_em_dashes(data)
     styles = build_styles()
     doc = SimpleDocTemplate(
         out_path, pagesize=letter,
@@ -110,7 +122,7 @@ def render(data, out_path):
     # Projects
     section_header("Key Projects", styles, story)
     for p in data["projects"]:
-        story.append(Paragraph(f"{p['name']}  <font color='#555555'>— {p['date']}</font>", styles["ProjectTitle"]))
+        story.append(Paragraph(f"{p['name']}  <font color='#555555'>- {p['date']}</font>", styles["ProjectTitle"]))
         story.append(Paragraph(p["stack"], styles["ProjectMeta"]))
         story.append(bullets(p["bullets"], styles))
 

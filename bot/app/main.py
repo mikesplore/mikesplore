@@ -7,6 +7,7 @@ import html
 import httpx
 import logging
 import json
+import re
 from .tools import list_certificates
 
 from .config import settings
@@ -217,7 +218,8 @@ async def prepare_cv_patch(message: types.Message, job_description: str, revisio
             await status.edit_text("I won't create a tailored CV for this job.\n\n" + html.escape(patch.get("reason", "There is not enough verified portfolio evidence for this role.")))
             return
         base = await get_cv_base()
-        pending_cv[message.from_user.id] = (patch, job_description, "Tailored CV", base["revision"])
+        cv_name = (base.get("data") or {}).get("name") or "Tailored CV"
+        pending_cv[message.from_user.id] = (patch, job_description, cv_name, base["revision"])
         await status.edit_text("Preparing proposed CV changes…")
         await status.edit_text("Proposed CV changes:\n\n" + format_cv_patch(patch) + "\n\nConfirm, or tell me what to change.")
     except Exception:
@@ -426,13 +428,14 @@ async def question(message: types.Message):
                 return
             tailored = pending_cv.pop(message.from_user.id, None)
             if tailored:
+                await message.answer("Confirmed. I’m now rendering the tailored PDF…")
                 try:
                     patch, job_description, label, base_revision = tailored
                     result = await render_cv(patch, base_revision, job_description, label)
                     async with httpx.AsyncClient(timeout=30) as client:
                         pdf_response = await client.get(result["pdf_url"])
                         pdf_response.raise_for_status()
-                    await message.answer_document(types.BufferedInputFile(pdf_response.content, filename=f"{label}.pdf"), caption=html.escape(label, quote=False))
+                    await message.answer_document(types.BufferedInputFile(pdf_response.content, filename=cv_filename(label)), caption="Tailored CV")
                 except httpx.HTTPStatusError as error:
                     pending_cv[message.from_user.id] = tailored
                     logger.exception("Tailored CV rejected by backend")
@@ -664,6 +667,11 @@ def format_cv_patch(patch: dict) -> str:
         f"Selected project IDs: {', '.join(html.escape(str(item)) for item in projects) or 'none'}\n"
         f"Selected skills:\n{html.escape(json.dumps(skills, indent=2))}"
     )
+
+
+def cv_filename(name: str) -> str:
+    cleaned = re.sub(r"[^A-Za-z0-9]+", "_", str(name).strip()).strip("_")
+    return f"{cleaned or 'CV'}.pdf"
 
 
 @app.get("/health")

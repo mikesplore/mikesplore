@@ -597,6 +597,23 @@ This phase was completed before the schema and backend work.
   For example, TypeScript/JavaScript is not rewritten as Node.js, CI is not rewritten as CI/CD, and a
   monolith is not rewritten as microservices.
 
+### CV filename update (2026-09-07)
+
+- Tailored CV deliveries now use the verified candidate name from `cv_data` as the sanitized PDF
+  filename, such as `MICHAEL_ODHIAMBO.pdf`, while keeping the Telegram caption descriptive.
+
+### CV renderer punctuation hardening (2026-09-07)
+
+- The PDF renderer now recursively replaces em dashes and en dashes in all CV data with regular
+  hyphens before layout, and its own project-date separator uses a regular hyphen. Generated PDFs
+  therefore cannot contain those dash characters from stored or LLM-generated content.
+
+### CV rendering progress update (2026-09-07)
+
+- The admin bot now immediately acknowledges confirmation with a rendering-progress message before
+  calling the backend renderer and downloading the tailored PDF. This applies to `/confirm` and
+  natural-language approvals interpreted by the tailoring LLM.
+
 ### CV tailoring batch-context and role-scope update (2026-09-07)
 
 - Replaced the CV tailoring search-tool loop with one protected backend batch request,
