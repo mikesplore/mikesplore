@@ -141,8 +141,7 @@ def manage_content(resource: str, action: str, payload: dict, db: Session = Depe
         query = select(model)
         if resource == "entry-assets" and payload.get("entry_id"):
             query = query.where(EntryAsset.entry_id == payload["entry_id"])
-        return [{column.name: getattr(item, column.name) for column in model.__table__.columns}
-                for item in db.scalars(query).all()]
+        return [_model_record(item) for item in db.scalars(query).all()]
     identity = payload.get("id") or payload.get("key")
     item = db.get(model, identity) if identity else None
     if action == "delete":
@@ -158,6 +157,10 @@ def manage_content(resource: str, action: str, payload: dict, db: Session = Depe
         db.add(model(**{key: value for key, value in payload.items() if hasattr(model, key)}))
     db.commit()
     return {"status": action, "resource": resource}
+
+
+def _model_record(item) -> dict:
+    return {attribute.key: getattr(item, attribute.key) for attribute in item.__mapper__.column_attrs}
 
 
 @app.post("/admin/content/bulk", dependencies=[Depends(require_service_key)])
@@ -217,7 +220,7 @@ def admin_search(q: str = Query(min_length=1), db: Session = Depends(get_db)):
     results = []
     for resource, model in models.items():
         for item in db.scalars(select(model)).all():
-            values = {column.name: getattr(item, column.name) for column in model.__table__.columns}
+            values = _model_record(item)
             haystack = " ".join(str(value).lower() for value in values.values())
             score = sum(term in haystack for term in terms)
             if score:
