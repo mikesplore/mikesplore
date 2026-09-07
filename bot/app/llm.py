@@ -73,6 +73,7 @@ ADMIN_TOOLS = [
     {"type": "function", "function": {"name": "list_assets", "description": "List uploaded portfolio assets with IDs, labels, and URLs.", "parameters": {"type": "object", "properties": {}, "required": []}}},
     {"type": "function", "function": {"name": "list_projects", "description": "List project entries with IDs, slugs, and titles.", "parameters": {"type": "object", "properties": {}, "required": []}}},
     {"type": "function", "function": {"name": "search_admin_content", "description": "Search existing admin-managed portfolio records when the requested record is not a contact link.", "parameters": {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]}}},
+    {"type": "function", "function": {"name": "create_admin_operation", "description": "Return the final structured admin operation after all required lookups. Do not explain it in text.", "parameters": {"type": "object", "properties": {"resource": {"type": "string"}, "action": {"type": "string", "enum": ["list", "create", "update", "delete"]}, "id": {"type": "string"}, "payload": {"type": "object", "additionalProperties": True}}, "required": ["resource", "action", "payload"]}}},
 ]
 
 async def execute_admin_tool(name: str, arguments: dict) -> list[dict]:
@@ -84,6 +85,8 @@ async def execute_admin_tool(name: str, arguments: dict) -> list[dict]:
         return await list_admin_resource("entries")
     if name == "search_admin_content":
         return await search_admin_content(arguments.get("query", ""))
+    if name == "create_admin_operation":
+        return arguments
     raise ValueError(f"Unsupported admin lookup tool: {name}")
 
 
@@ -234,12 +237,22 @@ async def extract_admin_operation(instruction: str) -> dict:
         completion = await client.chat.completions.create(model=settings.groq_model, messages=messages, tools=ADMIN_TOOLS, tool_choice="auto", max_tokens=300, temperature=0)
         message = completion.choices[0].message
         if not message.tool_calls:
-            result = json.loads(message.content or "{}")
-            break
+            try:
+                result = json.loads(message.content or "{}")
+                break
+            except json.JSONDecodeError as error:
+                raise ValueError("The LLM returned an incomplete admin operation") from error
         messages.append(message)
         for call in message.tool_calls:
-            tool_result = await execute_admin_tool(call.function.name, json.loads(call.function.arguments or "{}"))
+            arguments = json.loads(call.function.arguments or "{}")
+            if call.function.name == "create_admin_operation":
+                result = arguments
+                break
+            tool_result = await execute_admin_tool(call.function.name, arguments)
             messages.append({"role": "tool", "tool_call_id": call.id, "content": json.dumps(tool_result)})
+        else:
+            continue
+        break
     else:
         raise ValueError("Admin lookup did not produce an operation")
     if result.get("action") is not None and (result.get("resource") not in allowed_resources or result.get("action") not in {"list", "create", "update", "delete"}):
