@@ -1,7 +1,7 @@
 import uuid
 from datetime import date, datetime
 
-from sqlalchemy import Boolean, Date, DateTime, Integer, String, Text, func
+from sqlalchemy import BigInteger, Boolean, Date, DateTime, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -202,3 +202,29 @@ class SiteAsset(Base):
     asset_type: Mapped[str] = mapped_column(String(32))
     url: Mapped[str] = mapped_column(Text)
     label: Mapped[str | None] = mapped_column(String(255))
+
+
+class AdminOperation(Base):
+    __tablename__ = "admin_operations"
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    telegram_user_id: Mapped[int] = mapped_column(BigInteger, index=True)
+    instruction: Mapped[str] = mapped_column(Text)
+    operation: Mapped[dict] = mapped_column(JSONB)
+    status: Mapped[str] = mapped_column(String(16), default="pending")
+    error_detail: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class AdminAuditLog(Base):
+    __tablename__ = "admin_audit_log"
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    operation_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    telegram_user_id: Mapped[int] = mapped_column(BigInteger)
+    resource: Mapped[str] = mapped_column(String(64))
+    action: Mapped[str] = mapped_column(String(16))
+    record_id: Mapped[str | None] = mapped_column(String(160))
+    before_value: Mapped[dict | None] = mapped_column(JSONB)
+    after_value: Mapped[dict | None] = mapped_column(JSONB)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
