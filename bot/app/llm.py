@@ -81,14 +81,14 @@ async def execute_admin_tool(name: str, arguments: dict) -> list[dict]:
     if name == "list_profile_links":
         return await list_profile_links()
     if name == "list_assets":
-        return [{key: item.get(key) for key in ("id", "asset_type", "url", "label")} for item in (await list_admin_resource("assets"))[:50]]
+        return [{key: item.get(key) for key in ("id", "asset_type", "url", "label")} for item in (await list_admin_resource("assets"))[:10]]
     if name == "list_projects":
-        return [{key: item.get(key) for key in ("id", "slug", "title", "content_type")} for item in (await list_admin_resource("entries")) if item.get("content_type") == "project"][:50]
+        return [{key: item.get(key) for key in ("id", "slug", "title", "content_type")} for item in (await list_admin_resource("entries")) if item.get("content_type") == "project"][:10]
     if name == "list_repositories":
-        return [{key: item.get(key) for key in ("id", "entry_id", "name", "url", "is_primary", "role_label", "primary_language", "link_label")} for item in (await list_admin_resource("repositories"))[:50]]
+        return [{key: item.get(key) for key in ("id", "entry_id", "name", "url", "is_primary", "role_label", "primary_language", "link_label")} for item in (await list_admin_resource("repositories"))[:10]]
     if name == "search_admin_content":
         results = await search_admin_content(arguments.get("query", ""))
-        return [{"resource": item.get("resource"), "score": item.get("score"), "record": {key: value for key, value in (item.get("record") or {}).items() if key in {"id", "slug", "name", "title", "url", "label", "handle", "asset_type", "content_type"}}} for item in results[:20]]
+        return [{"resource": item.get("resource"), "score": item.get("score"), "record": {key: value for key, value in (item.get("record") or {}).items() if key in {"id", "slug", "name", "title", "url", "label", "handle", "asset_type", "content_type"}}} for item in results[:10]]
     if name == "create_admin_operation":
         return arguments
     raise ValueError(f"Unsupported admin lookup tool: {name}")
