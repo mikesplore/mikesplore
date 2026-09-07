@@ -1,4 +1,9 @@
 # AGENTS.md — Portfolio Backend + Telegram Bot Conversion
+
+### Project detail removal update (2026-09-07)
+
+- Removed the project-detail page and `/projects/:projectId` route. Project list cards now remain
+  on the projects page; only their explicit GitHub/live links open external destinations.
 This file tracks the phased conversion of mikesplore.me from a static, build-time-sourced
 portfolio into a database-driven system served by a FastAPI backend, consumed by both the
 existing frontend and a Telegram bot. Update this file as you go: log what you actually did,

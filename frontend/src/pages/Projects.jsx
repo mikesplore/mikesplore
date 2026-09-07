@@ -1,4 +1,3 @@
-import { Link } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { ExternalLink, Github } from 'lucide-react';
 import { fetchProjects } from '../lib/portfolioApi';
@@ -22,10 +21,7 @@ const Projects = () => {
     <ul className="divide-y divide-divider rounded-xl bg-elevated overflow-hidden">
       {projects.map((project) => (
         <li key={project.id}>
-          <Link
-            to={`/projects/${project.id}`}
-            className="group flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:gap-4 sm:p-5 transition-colors hover:bg-accent/5"
-          >
+          <div className="group flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:gap-4 sm:p-5 transition-colors hover:bg-accent/5">
             <div className="h-36 w-full shrink-0 overflow-hidden rounded-lg bg-elevated sm:h-24 sm:w-24">
               <img
                 src={
@@ -85,7 +81,7 @@ const Projects = () => {
                 </div>
               )}
             </div>
-          </Link>
+          </div>
         </li>
       ))}
     </ul>
