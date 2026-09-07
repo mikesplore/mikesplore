@@ -5,7 +5,7 @@ from groq import AsyncGroq
 
 from .config import settings
 from .tools import TOOLS, execute_tool
-from .admin import get_cv_tailoring_context, list_profile_links, search_admin_content
+from .admin import get_cv_tailoring_context, list_admin_resource, list_profile_links, search_admin_content
 
 client = AsyncGroq(api_key=settings.groq_api_key)
 
@@ -70,12 +70,18 @@ client_answer_kwargs = dict(temperature=0)  # factual/grounded task: keep determ
 
 ADMIN_TOOLS = [
     {"type": "function", "function": {"name": "list_profile_links", "description": "List all existing contact and social profile links before updating or deleting one.", "parameters": {"type": "object", "properties": {}, "required": []}}},
+    {"type": "function", "function": {"name": "list_assets", "description": "List uploaded portfolio assets with IDs, labels, and URLs.", "parameters": {"type": "object", "properties": {}, "required": []}}},
+    {"type": "function", "function": {"name": "list_projects", "description": "List project entries with IDs, slugs, and titles.", "parameters": {"type": "object", "properties": {}, "required": []}}},
     {"type": "function", "function": {"name": "search_admin_content", "description": "Search existing admin-managed portfolio records when the requested record is not a contact link.", "parameters": {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]}}},
 ]
 
 async def execute_admin_tool(name: str, arguments: dict) -> list[dict]:
     if name == "list_profile_links":
         return await list_profile_links()
+    if name == "list_assets":
+        return await list_admin_resource("assets")
+    if name == "list_projects":
+        return await list_admin_resource("entries")
     if name == "search_admin_content":
         return await search_admin_content(arguments.get("query", ""))
     raise ValueError(f"Unsupported admin lookup tool: {name}")
@@ -213,7 +219,7 @@ async def extract_job_description_from_image(content: bytes, mime_type: str) -> 
 
 async def extract_admin_operation(instruction: str) -> dict:
     allowed_resources = {"entries", "certificates", "assets", "links", "skills", "education", "bucket-list", "settings", "profile", "entry-assets", "repositories", "technologies", "topology", "metrics", "decisions", "highlights", "quotes", "snippets", "documents", "badges"}
-    system = "Extract one admin portfolio CRUD operation as JSON with resource, action (create/update/delete), id, and payload. Use lookup tools before updating or deleting an existing record; copy exact returned IDs and never invent them. Use profile only for profile text. Contact details use links. Project screenshots/assets use entry-assets with entry_id and asset_id. Project content uses topology, metrics, decisions, highlights, quotes, snippets, documents, or badges with entry_id. Repository metadata uses repositories. Project demo/live links use documents with entry_id, title, url, link_style, and order_index. Return action null if lookup results are ambiguous."
+    system = "Extract one admin portfolio CRUD operation as JSON with resource, action (create/update/delete), id, and payload. Use lookup tools before updating or deleting an existing record; copy exact returned IDs and never invent them. For attaching an asset, call list_assets and list_projects, then create resource entry-assets with payload containing the exact asset_id, entry_id, role, alt_text, caption, and custom_order. Use profile only for profile text. Contact details use links. Project content uses topology, metrics, decisions, highlights, quotes, snippets, documents, or badges with entry_id. Repository metadata uses repositories. Project demo/live links use documents with entry_id, title, url, link_style, and order_index. Return action null if lookup results are ambiguous."
     async def extract(system_prompt: str, user_prompt: str) -> dict:
         completion = await client.chat.completions.create(
             model=settings.groq_model,
