@@ -44,10 +44,11 @@ const Contact = () => {
   if (status === 'loading') return <p className="py-8 text-center text-base text-subtle">Loading contact details…</p>;
   if (status === 'error') return <p className="py-8 text-center text-base text-subtle">Contact details are temporarily unavailable.</p>;
 
-  const emailLink = links.find((link) => link.category === 'professional' && link.name.toLowerCase() === 'email')?.url;
+  const emailLink = links.find((link) => link.name.toLowerCase() === 'email')?.url;
   const professionalLinks = links.filter((link) => link.category === 'professional' && link.name !== 'Email');
-  const messagingLinks = links.filter((link) => link.category === 'social' && ['WhatsApp', 'Telegram'].includes(link.name));
-  const socialLinksList = links.filter((link) => link.category === 'social' && !['WhatsApp', 'Telegram'].includes(link.name));
+  const messagingNames = ['WhatsApp', 'Telegram'];
+  const messagingLinks = links.filter((link) => messagingNames.includes(link.name) && ['social', 'contact'].includes(link.category));
+  const socialLinksList = links.filter((link) => ['social', 'contact'].includes(link.category) && !messagingNames.includes(link.name) && link.name.toLowerCase() !== 'email');
 
   return (
     <div className="space-y-6">
