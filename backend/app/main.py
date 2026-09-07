@@ -115,6 +115,13 @@ def manage_content(resource: str, action: str, payload: dict, db: Session = Depe
         duplicate = db.scalar(select(ProfileLink).where(ProfileLink.normalized_name == payload["normalized_name"], ProfileLink.normalized_url == payload["normalized_url"]))
         if duplicate:
             raise HTTPException(status_code=409, detail=f"A profile link with this name and URL already exists: {duplicate.id}")
+    elif resource == "repositories" and action == "create":
+        if not payload.get("name") and payload.get("url"):
+            payload["name"] = payload["url"].rstrip("/").rsplit("/", 1)[-1].removesuffix(".git")
+        if not payload.get("name"):
+            raise HTTPException(status_code=422, detail="Repository name or URL is required")
+        if payload.get("url") and db.scalar(select(Repository).where(Repository.url == payload["url"])):
+            raise HTTPException(status_code=409, detail="A repository with this URL already exists")
     elif resource == "links" and action == "update":
         identity = payload.get("id")
         if not identity:
