@@ -171,6 +171,16 @@ def apply_sync(source: str, payload: dict, db: Session = Depends(get_db)):
             continue
         entry = db.scalar(select(Entry).where(cast(Entry.source, String).ilike(f"%{key}%")))
         if not entry:
+            # Keep the source URL as identity and avoid normalized-slug collisions.
+            slug = data.get("slug") or "github-entry"
+            if db.scalar(select(Entry).where(Entry.slug == slug)):
+                repo_name = (data.get("source") or {}).get("repo") or data.get("title") or "repo"
+                slug = slugify(f"{slug}-{repo_name}")[:160]
+                suffix = 2
+                while db.scalar(select(Entry).where(Entry.slug == slug)):
+                    slug = slugify(f"{slug}-{suffix}")[:160]
+                    suffix += 1
+            data = {**data, "slug": slug}
             entry = Entry(**data)
             db.add(entry)
         else:
