@@ -527,8 +527,87 @@ This phase was completed before the schema and backend work.
 - After `/apply` without inline text, administrators can send an image poster or text-based PDF. Image
   text is extracted as structured job-description JSON, then enters the same relevance and patch review
   flow. Scanned PDFs require an image upload because local OCR is not included.
+
+### Certificate management command fix (2026-09-05)
+
+- `/manage` now normalizes common aliases such as `certificate` and `lists`, so certificate listing
+  works with `/manage certificate lists`.
+- `/delete certificate <id-or-title>` now resolves a certificate by exact UUID or title and retains the
+  existing `/confirm` safety step. Entry deletion remains `/delete <entry-id-or-slug>`.
+
+### File upload routing hardening (2026-09-05)
+
+- Removed the generic fallback that treated every unrecognized admin photo/document as a certificate.
+  Certificates now require an explicit `/upload certificate <title>` command; job posters require an
+  active `/apply` flow. This prevents stale or unmatched file state from hijacking posters as uploads.
+
+### CV tool-loop reliability fix (2026-09-05)
+
+- Increased the CV search loop allowance and force the final non-tool response on the last attempt.
+  This prevents Groq from exhausting the search-call limit without returning the required validated
+  job patch.
+
+- Added final-response shape validation and JSON-only finalization when Groq returns prose or malformed
+  content after the search calls.
+- Reduced token usage by limiting CV project search results to five compact records, skill results to
+  ten groups, and public conversational history to the six most recent messages.
+- CV JSON finalization now uses a fresh compact prompt with summarized search evidence instead of
+  replaying the assistant tool-call transcript, preventing Groq JSON-mode validation failures caused
+  by attempted tool calls during finalization.
+- Shortened the CV tailoring and finalization system instructions to reduce fixed token usage while
+  keeping schema and grounding enforcement in both the model prompt and Python/backend validation.
+
+### Poster upload routing and empty-response fix (2026-09-05)
+
+- `/apply` now clears stale pending upload state, and active CV poster extraction takes priority over
+  certificate/asset upload routing. This prevents an earlier `/upload certificate` command from
+  hijacking a poster sent for CV tailoring.
+- Added a final JSON retry when Groq completes its CV search calls but returns an empty message, plus
+  fenced-JSON cleanup before patch parsing.
+
+### Tailored CV confirmation diagnostics (2026-09-05)
+
+- CV confirmation now reports backend HTTP rejection details to the administrator while retaining the
+  pending patch for retry. It also accepts affirmative revision replies such as “that is okay” as
+  confirmation when a CV patch is pending.
+- Added natural confirmation phrases including “I confirm”, “confirm it”, “go ahead”, and “approved”
+  so they render the pending patch instead of triggering another LLM revision.
+
+### LLM-managed CV replies (2026-09-05)
+
+- Removed hardcoded natural-language confirmation phrases and the separate reply classifier. The main
+  CV tailoring LLM now interprets a pending-patch reply itself and returns either `{"action":"confirm"}`
+  or a revised patch; only explicit `/confirm` and `/cancel` commands remain deterministic controls.
 - Added the backend-only `DEVTO_USERNAME`, `GITHUB_USERNAME`, and optional `GITHUB_TOKEN` entries to
   the root `.env.example` so source synchronization setup is discoverable for clones.
+
+### CV render migration deployment fix (2026-09-07)
+
+- Diagnosed tailored CV render failures caused by the connected database missing the `cv_versions`
+  table. The application code and migrations already define this table; the database was simply
+  not upgraded through `0005_cv_patch_columns`. Updated deployment documentation to require
+  `alembic -c backend/alembic.ini upgrade head` before starting the API, with Render guidance to
+  run it as a pre-deploy command against the service database.
+
+### CV tailoring evidence wording update (2026-09-07)
+
+- Clarified the tailoring prompt to distinguish role matching from factual claims. Adjacent job
+  terminology may guide project/skill selection, but unsupported stronger terms must be rewritten to
+  the closest verified wording rather than causing rejection of an otherwise relevant technical role.
+  For example, TypeScript/JavaScript is not rewritten as Node.js, CI is not rewritten as CI/CD, and a
+  monolith is not rewritten as microservices.
+
+### CV tailoring batch-context and role-scope update (2026-09-07)
+
+- Replaced the CV tailoring search-tool loop with one protected backend batch request,
+  `/admin/cv/tailoring-context`, which returns the compact verified profile, project IDs/details,
+  skills, and base revision needed for a patch. Tailoring now makes one context HTTP request and
+  one JSON LLM completion, with a single retry only for malformed output, avoiding Groq rate limits
+  caused by repeated function calls.
+- Broadened tailoring eligibility for the software-engineer candidate to include hands-on software,
+  ICT/IT, infrastructure, data, cloud, QA, security, support, and related technical roles. Executive
+  and primarily people-leadership roles such as CTO, CEO, CIO, VP Engineering, Head of Engineering,
+  and Engineering Manager remain excluded.
 
 ## Open items to resolve during the work, not before
 

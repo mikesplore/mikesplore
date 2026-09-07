@@ -5,7 +5,7 @@ from groq import AsyncGroq
 
 from .config import settings
 from .tools import TOOLS, execute_tool
-from .admin import get_cv_profile, search_cv_projects, search_cv_skills
+from .admin import get_cv_tailoring_context
 
 client = AsyncGroq(api_key=settings.groq_api_key)
 
@@ -55,33 +55,16 @@ EXTRACT_SYSTEM = (
 )
 
 CV_TAILOR_SYSTEM = (
-    "You tailor a CV using search tools. First inspect the job description, then search for relevant "
-    "projects and skills. Return ONLY this exact JSON shape: {\"summary\": {\"old\": \"...\", \"new\": \"...\"}, "
-    "\"selected_projects\": [\"stable-project-id\"], \"selected_skills\": {\"category\": [\"skill\"]}}. "
-    "Project IDs must come from search results. Selected projects and skills are inclusion lists. Never "
-    "invent projects, skills, dates, metrics, qualifications, or contact details. Do not return full "
-    "project objects, CV data, layout fields, or any extra keys. If the job is outside the verified "
-    "portfolio evidence, return exactly {\"status\": \"rejected\", \"reason\": \"...\"} instead "
-    "of a patch. Never force a match for unrelated roles such as sales or HR."
+    "Tailor the CV using only the supplied verified base-CV context. "
+    "The candidate is an individual software engineer and may credibly apply to software engineering, ICT, IT, development, infrastructure, data, cloud, QA, security, support, and other hands-on or technical roles. "
+    "Reject only roles outside technology or roles primarily requiring executive/people leadership, such as CTO, CEO, CIO, VP Engineering, Head of Engineering, or Engineering Manager. "
+    "Return exactly one JSON object: "
+    "{summary:{old,new},selected_projects:[stable_id],selected_skills:{category:[skill]}}. "
+    "IDs and selected skills must come from the supplied context. You may match adjacent job terminology to the closest verified skill or project, but do not turn it into a stronger or more specific claim: for example, do not change TypeScript/JavaScript to Node.js, CI to CI/CD, or a monolith to microservices unless the context explicitly says so. "
+    "Keep unsupported requirements out of the rewritten summary rather than rejecting an otherwise relevant technical job. Never invent facts or return full CV objects, layout, or extra keys. "
+    "If the role is outside technology or primarily executive/people leadership, return {status:rejected,reason}. With a pending patch, if wording is unsupported, revise it to the closest verified wording; return "
+    "{action:confirm} for approval or the revised patch for requested changes."
 )
-
-CV_TOOLS = [{
-    "type": "function", "function": {"name": "get_base_cv_profile", "description": "Get the base CV identity, contact, current summary, and revision.", "parameters": {"type": "object", "properties": {}, "required": []}}
-}, {
-    "type": "function", "function": {"name": "search_cv_projects", "description": "Search base CV projects by job-related keywords. Returns stable IDs and details.", "parameters": {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]}}
-}, {
-    "type": "function", "function": {"name": "search_cv_skills", "description": "Search base CV skills by job-related keywords.", "parameters": {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]}}
-}]
-
-
-async def execute_cv_tool(name: str, arguments: dict):
-    if name == "get_base_cv_profile":
-        return await get_cv_profile()
-    if name == "search_cv_projects":
-        return await search_cv_projects(arguments["query"])
-    if name == "search_cv_skills":
-        return await search_cv_skills(arguments["query"])
-    raise ValueError(f"Unknown CV tool: {name}")
 
 client_answer_kwargs = dict(temperature=0)  # factual/grounded task: keep deterministic
 
@@ -143,15 +126,46 @@ async def extract_profile_update(instruction: str) -> dict:
 
 
 async def tailor_cv(job_description: str, existing_patch: dict | None = None, revision: str | None = None) -> dict:
+    context = await get_cv_tailoring_context()
     instruction = "JOB DESCRIPTION:\n" + job_description
+    instruction += "\n\nVERIFIED BASE CV CONTEXT:\n" + json.dumps(context)
     if existing_patch:
         instruction += "\n\nPENDING PATCH:\n" + json.dumps(existing_patch) + "\n\nREVISION REQUEST:\n" + (revision or "")
     messages = [{"role": "system", "content": CV_TAILOR_SYSTEM}, {"role": "user", "content": instruction}]
-    for _ in range(4):
-        completion = await client.chat.completions.create(model=settings.groq_model, messages=messages, tools=CV_TOOLS, tool_choice="auto", max_tokens=1200, temperature=0)
+    for attempt in range(2):
+        completion = await client.chat.completions.create(
+            model=settings.groq_model,
+            messages=messages,
+            response_format={"type": "json_object"},
+            max_tokens=1200,
+            temperature=0,
+        )
         message = completion.choices[0].message
         if not message.tool_calls:
-            result = json.loads(message.content or "{}")
+            content = (message.content or "").strip()
+            try:
+                if content.startswith("```"):
+                    content = content.removeprefix("```").removeprefix("json").removesuffix("```").strip()
+                result = json.loads(content or "{}")
+            except (TypeError, json.JSONDecodeError):
+                result = None
+            if not isinstance(result, dict) or not (set(result) == {"summary", "selected_projects", "selected_skills"} or set(result) == {"status", "reason"} or set(result) == {"action"}):
+                final = await client.chat.completions.create(
+                    model=settings.groq_model,
+                    messages=[
+                        {"role": "system", "content": CV_TAILOR_SYSTEM + " Return JSON only. Tools are unavailable in this finalization step."},
+                        {"role": "user", "content": instruction + "\nReturn JSON only. No tools or commentary."},
+                    ],
+                    response_format={"type": "json_object"},
+                    temperature=0,
+                    max_tokens=1200,
+                )
+                content = (final.choices[0].message.content or "").strip()
+                if content.startswith("```"):
+                    content = content.removeprefix("```").removeprefix("json").removesuffix("```").strip()
+                result = json.loads(content or "{}")
+            if result.get("action") == "confirm" and set(result) == {"action"}:
+                return result
             if result.get("status") == "rejected" and set(result) == {"status", "reason"}:
                 return result
             if set(result) != {"summary", "selected_projects", "selected_skills"}:
@@ -159,11 +173,7 @@ async def tailor_cv(job_description: str, existing_patch: dict | None = None, re
             if not result["selected_projects"] or not any(result["selected_skills"].values()):
                 return {"status": "rejected", "reason": "There is not enough verified portfolio evidence for this job."}
             return result
-        messages.append(message)
-        for call in message.tool_calls:
-            result = await execute_cv_tool(call.function.name, json.loads(call.function.arguments or "{}"))
-            messages.append({"role": "tool", "tool_call_id": call.id, "content": json.dumps(result)})
-    raise ValueError("CV tailoring did not produce a patch")
+    raise ValueError("CV tailoring did not produce a final patch after searching")
 
 
 async def extract_job_description_from_image(content: bytes, mime_type: str) -> str:
@@ -182,6 +192,8 @@ async def extract_job_description_from_image(content: bytes, mime_type: str) -> 
     if not isinstance(text, str) or len(text.strip()) < 30:
         raise ValueError("The poster did not contain enough readable job description text")
     return text.strip()
+
+
 
 
 async def extract_admin_operation(instruction: str, candidates: list[dict] | None = None) -> dict:

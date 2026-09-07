@@ -7,11 +7,17 @@ intended database.
 
 ## Services
 
-Run the combined backend and Telegram webhook service from the repository root:
+Run the combined backend and Telegram webhook service from the repository root. Apply Alembic
+migrations before starting the app, including migration `0004_add_cv_versions` and its follow-up
+`0005_cv_patch_columns` required by CV rendering:
 
 ```bash
+alembic -c backend/alembic.ini upgrade head
 uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT
 ```
+
+On Render, put `alembic -c backend/alembic.ini upgrade head` in the deploy/pre-deploy command,
+not the start command, and run it against the same `DATABASE_URL` used by the web service.
 
 The backend also hosts the bot at `/telegram/webhook` and forwards the
 `X-Telegram-Bot-Api-Secret-Token` header. Configure Telegram with the public HTTPS webhook URL.

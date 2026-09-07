@@ -45,23 +45,9 @@ async def get_cv_base() -> dict:
         return response.json()
 
 
-async def get_cv_profile() -> dict:
-    async with httpx.AsyncClient(base_url=settings.backend_url, timeout=10) as client:
-        response = await client.get("/admin/cv/profile", headers={"X-Service-Api-Key": settings.service_api_key})
-        response.raise_for_status()
-        return response.json()
-
-
-async def search_cv_projects(query: str) -> list[dict]:
-    async with httpx.AsyncClient(base_url=settings.backend_url, timeout=10) as client:
-        response = await client.get("/admin/cv/projects", params={"q": query}, headers={"X-Service-Api-Key": settings.service_api_key})
-        response.raise_for_status()
-        return response.json()
-
-
-async def search_cv_skills(query: str) -> list[dict]:
-    async with httpx.AsyncClient(base_url=settings.backend_url, timeout=10) as client:
-        response = await client.get("/admin/cv/skills", params={"q": query}, headers={"X-Service-Api-Key": settings.service_api_key})
+async def get_cv_tailoring_context() -> dict:
+    async with httpx.AsyncClient(base_url=settings.backend_url, timeout=15) as client:
+        response = await client.get("/admin/cv/tailoring-context", headers={"X-Service-Api-Key": settings.service_api_key})
         response.raise_for_status()
         return response.json()
 
@@ -135,3 +121,10 @@ async def delete_certificate(certificate_id: str) -> None:
     async with httpx.AsyncClient(base_url=settings.backend_url, timeout=10) as client:
         response = await client.delete(f"/certificates/{certificate_id}", headers={"X-Service-Api-Key": settings.service_api_key})
         response.raise_for_status()
+
+
+async def list_certificates() -> list[dict]:
+    async with httpx.AsyncClient(base_url=settings.backend_url, timeout=10) as client:
+        response = await client.get("/certificates")
+        response.raise_for_status()
+        return response.json()

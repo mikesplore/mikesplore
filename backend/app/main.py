@@ -374,6 +374,21 @@ def get_cv_profile(db: Session = Depends(get_db)):
     return {"name": data.get("name"), "title": data.get("title"), "contact": data.get("contact"), "summary": data.get("summary"), "revision": _cv_base_hash(data)}
 
 
+@app.get("/admin/cv/tailoring-context", dependencies=[Depends(require_service_key)])
+def get_cv_tailoring_context(db: Session = Depends(get_db)):
+    """Return the single compact, verified context needed for CV tailoring."""
+    setting = db.get(SiteSetting, "cv_data")
+    if not setting:
+        raise HTTPException(status_code=404, detail="Base CV JSON has not been configured")
+    data = setting.value
+    return {
+        "profile": {"name": data.get("name"), "title": data.get("title"), "summary": data.get("summary")},
+        "projects": [{"id": _project_id(p), "name": p["name"], "date": p.get("date"), "stack": p.get("stack"), "bullets": p.get("bullets", [])} for p in data.get("projects", [])],
+        "skills": data.get("skills", []),
+        "revision": _cv_base_hash(data),
+    }
+
+
 @app.get("/admin/cv/projects", dependencies=[Depends(require_service_key)])
 def search_cv_projects(q: str = Query(default=""), db: Session = Depends(get_db)):
     setting = db.get(SiteSetting, "cv_data")
@@ -385,7 +400,7 @@ def search_cv_projects(q: str = Query(default=""), db: Session = Depends(get_db)
         haystack = json.dumps(project).lower()
         if not term or term in haystack:
             results.append({"id": _project_id(project), "name": project["name"], "date": project.get("date"), "stack": project.get("stack"), "bullets": project.get("bullets", [])})
-    return results
+    return results[:5]
 
 
 @app.get("/admin/cv/skills", dependencies=[Depends(require_service_key)])
@@ -395,7 +410,7 @@ def search_cv_skills(q: str = Query(default=""), db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Base CV JSON has not been configured")
     term = q.lower().strip()
     return [{"category": group["category"], "items": [item for item in group["items"] if not term or term in item.lower() or term in group["category"].lower()]}
-            for group in setting.value.get("skills", [])]
+            for group in setting.value.get("skills", []) if any(not term or term in item.lower() or term in group["category"].lower() for item in group["items"])]
 
 
 @app.post("/admin/cv/base", dependencies=[Depends(require_service_key)])

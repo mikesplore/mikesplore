@@ -12,7 +12,7 @@ from .tools import list_certificates
 from .config import settings
 from .llm import answer
 from .llm import extract_admin_operation, extract_entry, extract_job_description_from_image, extract_profile_update, extract_update, tailor_cv
-from .admin import apply_sync, create_entry, delete_asset, delete_certificate, delete_entry, get_cv_base, manage_content, preview_sync, render_cv, save_cv_base, search_admin_content, update_entry, update_profile, upload_asset, upload_certificate
+from .admin import apply_sync, create_entry, delete_asset, delete_certificate, delete_entry, get_cv_base, list_certificates as list_certificate_records, manage_content, preview_sync, render_cv, save_cv_base, search_admin_content, update_entry, update_profile, upload_asset, upload_certificate
 from .formatting import telegram_html
 
 bot = Bot(settings.telegram_bot_token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
@@ -89,6 +89,7 @@ async def help_command(message: types.Message):
         "/admin &lt;instruction&gt; — create, update, or delete content\n"
         "/edit &lt;entry&gt; &lt;changes&gt; — edit an entry\n"
         "/delete &lt;entry&gt; — delete an entry\n"
+        "/delete certificate &lt;id-or-title&gt; — delete a certificate\n"
         "/profile &lt;changes&gt; — update profile text\n"
         "/apply &lt;job description&gt; — propose a tailored CV patch\n"
         "/cv base — upload the source cv_data.json\n"
@@ -96,7 +97,7 @@ async def help_command(message: types.Message):
         "/sync github — preview GitHub repositories (hidden by default)\n"
         "/sync github 1,3 — select repositories to show\n"
         "/upload &lt;asset_type&gt; [label] — upload a file\n"
-        "/manage &lt;resource&gt; &lt;action&gt; [JSON] — manage other content\n"
+        "/manage &lt;resource&gt; &lt;action&gt; [JSON] — manage other content, including certificates\n"
         "/delete-asset &lt;id&gt; — delete an uploaded asset\n"
         "/delete-certificate &lt;id&gt; — delete a certificate\n"
         "/confirm — apply a pending change or sync\n"
@@ -229,6 +230,7 @@ async def apply_command(message: types.Message):
     if not is_admin(message):
         await message.answer("That command is restricted to the administrator.")
         return
+    pending_upload.pop(message.from_user.id, None)
     job_description = (message.text or "").partition(" ")[2].strip()
     if not job_description:
         awaiting_cv.add(message.from_user.id)
@@ -244,10 +246,12 @@ async def manage_command(message: types.Message):
         return
     parts = (message.text or "").split(maxsplit=3)
     if len(parts) < 3:
-        await message.answer('Usage: /manage &lt;links|skills|education|bucket-list|settings&gt; &lt;list|create|update|delete&gt; [JSON]')
+        await message.answer('Usage: /manage &lt;links|skills|education|bucket-list|certificates|settings&gt; &lt;list|create|update|delete&gt; [JSON]')
         return
     import json
     resource, action = parts[1], parts[2]
+    resource = {"certificate": "certificates", "asset": "assets", "link": "links"}.get(resource.lower(), resource.lower())
+    action = {"lists": "list", "ls": "list"}.get(action.lower(), action.lower())
     if action == "list":
         try:
             items = await manage_content(resource, action, {})
@@ -293,9 +297,26 @@ async def delete_command(message: types.Message):
     if not is_admin(message):
         await message.answer("That command is restricted to the administrator.")
         return
-    parts = (message.text or "").split(maxsplit=1)
+    parts = (message.text or "").split(maxsplit=2)
     if len(parts) < 2:
         await message.answer("Usage: /delete &lt;entry-id-or-slug&gt;")
+        return
+    if parts[1].lower() in {"certificate", "certificates"}:
+        if len(parts) < 3:
+            await message.answer("Usage: /delete certificate &lt;certificate-id-or-title&gt;")
+            return
+        query = parts[2].strip().lower()
+        try:
+            records = await list_certificate_records()
+            matches = [item for item in records if str(item.get("id", "")).lower() == query or item.get("title", "").lower() == query]
+            if len(matches) != 1:
+                await message.answer("I couldn't identify exactly one certificate. Use /manage certificates list to see the IDs.")
+                return
+            certificate = matches[0]
+            pending_mutation[message.from_user.id] = ("certificate-delete", str(certificate["id"]), None)
+            await message.answer(f"Delete certificate {html.escape(certificate['title'], quote=False)}? Send /confirm to delete or /cancel to abort.")
+        except Exception:
+            await message.answer("I couldn't retrieve the certificates right now.")
         return
     pending_mutation[message.from_user.id] = ("delete", parts[1], None)
     await message.answer(f"Delete entry {html.escape(parts[1], quote=False)}? Send /confirm to delete or /cancel to abort.")
@@ -365,7 +386,7 @@ async def send_cv(message: types.Message):
 @dispatcher.message(lambda message: not message.document and not message.photo)
 async def question(message: types.Message):
     if is_admin(message) and message.text:
-        if message.text.strip().lower() in {"/cancel", "cancel"}:
+        if message.text.strip().lower() == "/cancel":
             pending.pop(message.from_user.id, None)
             awaiting_entry.discard(message.from_user.id)
             pending_mutation.pop(message.from_user.id, None)
@@ -374,7 +395,25 @@ async def question(message: types.Message):
             pending_cv.pop(message.from_user.id, None)
             await message.answer("Cancelled.")
             return
-        if message.text.strip().lower() in {"/confirm", "confirm"}:
+        normalized_admin_text = message.text.strip().lower()
+        if message.from_user.id in pending_cv and normalized_admin_text != "/confirm":
+            try:
+                current_patch, job_description, label, base_revision = pending_cv[message.from_user.id]
+                decision = await tailor_cv(job_description, current_patch, message.text)
+                if decision.get("action") == "confirm":
+                    normalized_admin_text = "/confirm"
+                elif decision.get("status") == "rejected":
+                    await message.answer("I won't apply this CV revision: " + html.escape(decision.get("reason", "There is not enough verified evidence.")))
+                    return
+                else:
+                    pending_cv[message.from_user.id] = (decision, job_description, label, base_revision)
+                    await message.answer("Updated proposed CV changes:\n\n" + format_cv_patch(decision) + "\n\nConfirm, or tell me what to change.")
+                    return
+            except Exception:
+                logger.exception("CV revision handling failed")
+                await message.answer("I couldn't understand that CV change. Please describe the change or use /confirm.")
+                return
+        if normalized_admin_text == "/confirm":
             sync = pending_sync.pop(message.from_user.id, None)
             if sync:
                 try:
@@ -394,6 +433,10 @@ async def question(message: types.Message):
                         pdf_response = await client.get(result["pdf_url"])
                         pdf_response.raise_for_status()
                     await message.answer_document(types.BufferedInputFile(pdf_response.content, filename=f"{label}.pdf"), caption=html.escape(label, quote=False))
+                except httpx.HTTPStatusError as error:
+                    pending_cv[message.from_user.id] = tailored
+                    logger.exception("Tailored CV rejected by backend")
+                    await message.answer(f"The backend rejected the tailored CV: {error.response.text[:500]}")
                 except Exception:
                     pending_cv[message.from_user.id] = tailored
                     logger.exception("Tailored CV rendering failed")
@@ -488,12 +531,12 @@ async def question(message: types.Message):
             if content_type and any(word in normalized for word in ("show", "list", "what", "which")):
                 list_context[user_id] = (content_type, 1)
         history = conversation_history.setdefault(user_id, [])
-        response = await answer(question_text, history[-10:])
+        response = await answer(question_text, history[-6:])
         history.extend([
             {"role": "user", "content": question_text},
             {"role": "assistant", "content": response},
         ])
-        del history[:-10]
+        del history[:-6]
     except Exception:
         logger.exception("Public portfolio lookup failed")
         response = "I couldn't reach the portfolio right now. Please try again shortly."
@@ -516,7 +559,7 @@ async def document(message: types.Message):
     if not is_admin(message):
         await message.answer("Document ingestion is restricted to the administrator.")
         return
-    asset_type = "certificate"
+    asset_type = "file"
     try:
         if message.from_user.id not in awaiting_cv or pending_upload.get(message.from_user.id):
             await message.answer("File received. Uploading it now…")
@@ -531,7 +574,8 @@ async def document(message: types.Message):
         await bot.download_file(telegram_file.file_path, buffer)
         filename = message.document.file_name if message.document else "upload.jpg"
         mime_type = message.document.mime_type if message.document else "image/jpeg"
-        if message.from_user.id in awaiting_cv and not asset_request:
+        if message.from_user.id in awaiting_cv:
+            pending_upload.pop(message.from_user.id, None)
             if mime_type.startswith("image/"):
                 await message.answer("Reading the job poster…")
                 job_description = await extract_job_description_from_image(buffer.getvalue(), mime_type)
@@ -583,8 +627,7 @@ async def document(message: types.Message):
                     logger.exception("Telegram bot profile photo update failed")
                     await message.answer("The portfolio image was updated, but Telegram's bot profile image could not be changed.")
         else:
-            result = await upload_certificate(message.caption or filename, filename, buffer.getvalue(), mime_type)
-            await message.answer(f"Certificate uploaded: {html.escape(result['title'], quote=False)}")
+            await message.answer("I don't know what to do with that file. Use /upload certificate <title> for a certificate, or /apply before sending a job poster.")
     except httpx.HTTPStatusError as error:
         if error.response.status_code == 413:
             await message.answer("That file is too large. Please send a file no bigger than 10 MB.")
