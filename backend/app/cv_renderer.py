@@ -19,7 +19,8 @@ from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_CENTER
 from reportlab.platypus import (
-    SimpleDocTemplate, Paragraph, Spacer, HRFlowable, ListFlowable, ListItem
+    SimpleDocTemplate, Paragraph, Spacer, HRFlowable, ListFlowable, ListItem,
+    KeepTogether
 )
 
 ACCENT = colors.HexColor("#1a1a1a")
@@ -50,11 +51,11 @@ def build_styles():
     ))
     styles.add(ParagraphStyle(
         "CVContact", parent=styles["Normal"], fontSize=9, leading=12,
-        alignment=TA_CENTER, textColor=MUTED, spaceAfter=10,
+        alignment=TA_CENTER, textColor=MUTED, spaceAfter=8,
     ))
     styles.add(ParagraphStyle(
         "SectionHeader", parent=styles["Heading2"], fontSize=11.5,
-        leading=14, spaceBefore=12, spaceAfter=4, textColor=ACCENT,
+        leading=14, spaceBefore=9, spaceAfter=3, textColor=ACCENT,
         fontName="Helvetica-Bold",
     ))
     styles.add(ParagraphStyle(
@@ -67,7 +68,7 @@ def build_styles():
     ))
     styles.add(ParagraphStyle(
         "ProjectMeta", parent=styles["Normal"], fontSize=8.5, leading=11,
-        textColor=MUTED, spaceAfter=3,
+        textColor=MUTED, spaceAfter=2,
     ))
     styles.add(ParagraphStyle(
         "BulletText", parent=styles["Normal"], fontSize=9.3, leading=12.5,
@@ -76,15 +77,21 @@ def build_styles():
     return styles
 
 
-def section_header(text, styles, story):
-    story.append(Paragraph(text.upper(), styles["SectionHeader"]))
-    story.append(HRFlowable(width="100%", thickness=0.75, color=colors.HexColor("#cccccc"), spaceAfter=6))
+def section_header(text, styles, story, glue=None):
+    header = Paragraph(text.upper(), styles["SectionHeader"])
+    rule = HRFlowable(width="100%", thickness=0.75, color=colors.HexColor("#cccccc"), spaceAfter=6)
+    if glue is not None:
+        group = glue if isinstance(glue, list) else [glue]
+        story.append(KeepTogether([header, rule] + group))
+    else:
+        story.append(header)
+        story.append(rule)
 
 
 def bullets(items, styles):
     return ListFlowable(
         [ListItem(Paragraph(b, styles["BulletText"]), leftIndent=8, bulletIndent=0) for b in items],
-        bulletType="bullet", start="•", leftIndent=14, spaceAfter=6,
+        bulletType="bullet", start="•", leftIndent=14, spaceAfter=4,
     )
 
 
@@ -94,7 +101,7 @@ def render(data, out_path):
     doc = SimpleDocTemplate(
         out_path, pagesize=letter,
         leftMargin=0.65 * inch, rightMargin=0.65 * inch,
-        topMargin=0.55 * inch, bottomMargin=0.55 * inch,
+        topMargin=0.45 * inch, bottomMargin=0.45 * inch,
     )
     story = []
 
@@ -102,22 +109,31 @@ def render(data, out_path):
     story.append(Paragraph(data["name"], styles["CVName"]))
     story.append(Paragraph(data["title"], styles["CVTitle"]))
     c = data["contact"]
-    contact_line = " | ".join(filter(None, [
-        c.get("location"), c.get("email"), c.get("phone"),
-        c.get("website"), c.get("github"),
-    ]))
+    parts = [c.get("location"), c.get("email"), c.get("phone")]
+    if c.get("email"):
+        parts[1] = f'<link href="mailto:{c["email"]}" color="#555555">{c["email"]}</link>'
+    for key in ("website", "github"):
+        if c.get(key):
+            url = c[key] if c[key].startswith("http") else f'https://{c[key]}'
+            parts.append(f'<link href="{url}" color="#555555">{c[key]}</link>')
+    contact_line = " | ".join(filter(None, parts))
     story.append(Paragraph(contact_line, styles["CVContact"]))
 
+    ai = data.get("additional_info", {})
+    footnote = " &nbsp;|&nbsp; ".join(b for b in (ai.get("languages"), ai.get("work_style")) if b)
+    if footnote:
+        story.append(Paragraph(footnote, styles["CVContact"]))
+
     # Summary
-    section_header("Summary", styles, story)
-    story.append(Paragraph(data["summary"], styles["Body"]))
+    section_header("Summary", styles, story, Paragraph(data["summary"], styles["Body"]))
 
     # Skills
     section_header("Technical Skills", styles, story)
-    for group in data["skills"]:
-        line = f"<b>{group['category']}:</b> " + ", ".join(group["items"])
-        story.append(Paragraph(line, styles["Body"]))
+    skill_paras = [Paragraph(f"<b>{g['category']}:</b> " + ", ".join(g["items"]), styles["Body"]) for g in data["skills"]]
+    section_header("Technical Skills", styles, story, skill_paras[0] if skill_paras else None)
+    for para in skill_paras[1:]:
         story.append(Spacer(1, 2))
+        story.append(para)
 
     # Projects
     section_header("Key Projects", styles, story)

@@ -614,6 +614,13 @@ This phase was completed before the schema and backend work.
   calling the backend renderer and downloading the tailored PDF. This applies to `/confirm` and
   natural-language approvals interpreted by the tailoring LLM.
 
+### CV approval response hardening (2026-09-07)
+
+- Tightened pending-patch instructions so short affirmative replies return only the exact
+  `{"action":"confirm"}` JSON response. The model must not expose reasoning or debate the role-fit
+  policy; unsupported wording is revised only when necessary, while relevant technical roles remain
+  eligible.
+
 ### CV tailoring batch-context and role-scope update (2026-09-07)
 
 - Replaced the CV tailoring search-tool loop with one protected backend batch request,

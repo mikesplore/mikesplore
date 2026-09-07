@@ -62,8 +62,8 @@ CV_TAILOR_SYSTEM = (
     "{summary:{old,new},selected_projects:[stable_id],selected_skills:{category:[skill]}}. "
     "IDs and selected skills must come from the supplied context. You may match adjacent job terminology to the closest verified skill or project, but do not turn it into a stronger or more specific claim: for example, do not change TypeScript/JavaScript to Node.js, CI to CI/CD, or a monolith to microservices unless the context explicitly says so. "
     "Keep unsupported requirements out of the rewritten summary rather than rejecting an otherwise relevant technical job. Never invent facts or return full CV objects, layout, or extra keys. "
-    "If the role is outside technology or primarily executive/people leadership, return {status:rejected,reason}. With a pending patch, if wording is unsupported, revise it to the closest verified wording; return "
-    "{action:confirm} for approval or the revised patch for requested changes."
+    "If the role is outside technology or primarily executive/people leadership, return {status:rejected,reason}. With a pending patch, treat a short affirmative reply such as yes, okay, that's okay, looks good, approve, confirmed, or confirm as approval and return exactly {\"action\":\"confirm\"}. "
+    "If wording is unsupported, revise it to the closest verified wording; otherwise approve it. For any non-affirmative change request, return only the revised patch JSON. Never output analysis, reasoning, apologies, policy discussion, or commentary."
 )
 
 client_answer_kwargs = dict(temperature=0)  # factual/grounded task: keep deterministic
