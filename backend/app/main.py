@@ -16,7 +16,7 @@ from datetime import date as date_value
 
 from .auth import require_service_key
 from .db import get_db
-from .models import BucketListItem, Certificate, CvVersion, Education, Entry, Profile, ProfileLink, Project, ProjectRepository, SiteAsset, SkillGroup, SiteSetting
+from .models import BucketListItem, Certificate, CvVersion, Education, Entry, Profile, ProfileLink, Project, Repository, SiteAsset, SkillGroup, SiteSetting
 from .schemas import EntryCreate, EntryRead, EntryUpdate
 
 app = FastAPI(title="Portfolio API", version="1.0.0")
@@ -520,7 +520,7 @@ def search_portfolio(q: str = Query(min_length=1), page: int = Query(default=1, 
     return {"profile": profile_data, "entries": entries, "certificates": certificates, "skills": skills, "links": matching_links, "education": matching_education, "bucket_list": matching_bucket, "total": total + len(certificates) + len(skills) + len(matching_links) + len(matching_education) + len(matching_bucket), "page": page, "page_size": page_size}
 
 
-def _project_json(project: Project, repositories: list[ProjectRepository]) -> dict:
+def _project_json(project: Entry, repositories: list[Repository]) -> dict:
     return {"id": str(project.id), "slug": project.slug, "title": project.title, "blurb": project.blurb,
             "tech_stack": project.tech_stack or [], "tags": project.tags or [], "details": project.details or {},
             "links": project.links or {}, "media": project.media or {}, "is_featured": project.is_featured,
@@ -529,16 +529,16 @@ def _project_json(project: Project, repositories: list[ProjectRepository]) -> di
 
 @app.get("/projects")
 def list_projects(db: Session = Depends(get_db)):
-    projects = db.scalars(select(Project).where(Project.is_visible.is_(True)).order_by(Project.custom_order, Project.title)).all()
-    return [_project_json(project, db.scalars(select(ProjectRepository).where(ProjectRepository.project_id == project.id).order_by(ProjectRepository.custom_order)).all()) for project in projects]
+    projects = db.scalars(select(Entry).where(Entry.content_type == "project", Entry.is_visible.is_(True)).order_by(Entry.custom_order, Entry.title)).all()
+    return [_project_json(project, db.scalars(select(Repository).where(Repository.entry_id == project.id).order_by(Repository.custom_order)).all()) for project in projects]
 
 
 @app.get("/projects/{slug}")
 def get_project(slug: str, db: Session = Depends(get_db)):
-    project = db.scalar(select(Project).where(Project.slug == slug, Project.is_visible.is_(True)))
+    project = db.scalar(select(Entry).where(Entry.slug == slug, Entry.content_type == "project", Entry.is_visible.is_(True)))
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    repos = db.scalars(select(ProjectRepository).where(ProjectRepository.project_id == project.id).order_by(ProjectRepository.custom_order)).all()
+    repos = db.scalars(select(Repository).where(Repository.entry_id == project.id).order_by(Repository.custom_order)).all()
     return _project_json(project, repos)
 
 

@@ -60,15 +60,39 @@ class Project(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
 
-class ProjectRepository(Base):
-    __tablename__ = "project_repositories"
+class Repository(Base):
+    __tablename__ = "repositories"
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    project_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
+    entry_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
     name: Mapped[str] = mapped_column(String(255))
     url: Mapped[str] = mapped_column(Text, unique=True)
     is_primary: Mapped[bool] = mapped_column(Boolean, default=False)
     custom_order: Mapped[int] = mapped_column(Integer, default=0)
     repo_metadata: Mapped[dict] = mapped_column("metadata", JSONB, default=dict)
+    role_label: Mapped[str | None] = mapped_column(Text)
+    primary_language: Mapped[str | None] = mapped_column(Text)
+    link_label: Mapped[str | None] = mapped_column(Text)
+    synced_from_github: Mapped[bool] = mapped_column(Boolean, default=True)
+    last_synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class Technology(Base):
+    __tablename__ = "technologies"
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name: Mapped[str] = mapped_column(Text, unique=True)
+    category: Mapped[str | None] = mapped_column(Text)
+
+
+class EntryTechnology(Base):
+    __tablename__ = "entry_technologies"
+    entry_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    technology_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+
+
+class RepositoryTechnology(Base):
+    __tablename__ = "repository_technologies"
+    repository_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    technology_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
 
 
 class Technology(Base):
