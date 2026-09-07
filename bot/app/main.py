@@ -421,6 +421,10 @@ async def question(message: types.Message):
                 try:
                     result = await apply_sync(sync[0], sync[1], sync[2])
                     await message.answer(f"{sync[0].title()} sync complete: {result['updated']} entries upserted.")
+                except httpx.HTTPStatusError as error:
+                    pending_sync[message.from_user.id] = sync
+                    logger.exception("Sync apply failed with backend response")
+                    await message.answer(f"The sync was rejected by the backend: {error.response.text[:800]}\n\nThe preview is still pending; fix the issue and try /confirm again.")
                 except Exception:
                     pending_sync[message.from_user.id] = sync
                     logger.exception("Sync apply failed")

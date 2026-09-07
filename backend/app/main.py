@@ -182,7 +182,11 @@ def apply_sync(source: str, payload: dict, db: Session = Depends(get_db)):
         if source == "github" and key in selected:
             entry.is_visible = True
         changed.append({"title": data.get("title"), "key": key, "visible": entry.is_visible})
-    db.commit()
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="GitHub sync could not be saved. Check for duplicate repository slugs or invalid repository metadata.")
     return {"source": source, "updated": len(changed), "items": changed}
 
 
