@@ -481,8 +481,15 @@ async def question(message: types.Message):
                             })
                             if operation.get("id"):
                                 payload["id"] = operation["id"]
-                            if resource == "links" and isinstance(payload.get("links"), list):
-                                await bulk_manage_links([{"action": action, "payload": link} for link in payload["links"]])
+                            if resource in {"links", "entry-technologies"} and isinstance(payload.get("links") if resource == "links" else payload.get("technologies"), list):
+                                values = payload["links"] if resource == "links" else payload["technologies"]
+                                if resource == "entry-technologies":
+                                    values = [{"entry_id": payload.get("entry_id"), "technology_id": item.get("technology_id")} for item in values]
+                                if resource == "links":
+                                    await bulk_manage_links([{"action": action, "payload": link} for link in values])
+                                else:
+                                    for item in values:
+                                        await manage_content(resource, action, item)
                             else:
                                 await manage_content(resource, action, payload)
                     else: await update_entry(mutation[1], mutation[2] or {})
@@ -494,7 +501,8 @@ async def question(message: types.Message):
                         result_message = "Entry updated."
                     elif mutation[0] == "admin":
                         action = (mutation[2] or {}).get("action")
-                        result_message = {"create": "Entry created.", "update": "Entry updated.", "delete": "Entry deleted."}.get(action, "Change applied.")
+                        resource = (mutation[2] or {}).get("resource", "content")
+                        result_message = {"create": f"{resource.title()} created.", "update": f"{resource.title()} updated.", "delete": f"{resource.title()} deleted."}.get(action, "Change applied.")
                     else:
                         result_message = "Entry deleted."
                     await message.answer(result_message)
