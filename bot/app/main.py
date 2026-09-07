@@ -297,6 +297,7 @@ async def admin_command(message: types.Message):
         pending_mutation[message.from_user.id] = ("admin", operation["resource"] + ":" + operation["action"], operation)
         await message.answer("Admin preview (send /confirm to save, /cancel to discard):\n\n" + format_preview(operation))
     except Exception:
+        logger.exception("Admin operation extraction failed")
         await message.answer("I couldn't translate that into a safe database operation. Include the exact record ID for updates or deletes.")
 
 
