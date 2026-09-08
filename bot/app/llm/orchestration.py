@@ -1,13 +1,12 @@
 import json
 import base64
 
-from groq import AsyncGroq, APIStatusError
+from groq import APIStatusError
 
 from ..config import settings
 from ..tools import TOOLS, execute_tool
 from ..admin import get_cv_tailoring_context, list_admin_resource, list_profile_links, search_admin_content, sync_devto_articles
-
-client = AsyncGroq(api_key=settings.groq_api_key)
+from .client import client, client_answer_kwargs
 
 SYSTEM = (
     "You are the portfolio assistant. Use the trusted Telegram context supplied with each request "
@@ -71,7 +70,6 @@ CV_TAILOR_SYSTEM = (
     "If wording is unsupported, revise it to the closest verified wording; otherwise approve it. For any non-affirmative change request, return only the revised patch JSON. Never output analysis, reasoning, apologies, policy discussion, or commentary."
 )
 
-client_answer_kwargs = dict(temperature=0)  # factual/grounded task: keep deterministic
 
 ADMIN_TOOLS = [
     {"type": "function", "function": {"name": "list_profile_links", "description": "List all existing contact and social profile links before updating or deleting one.", "parameters": {"type": "object", "properties": {}, "required": []}}},
