@@ -1,4 +1,4 @@
 """Structured LLM integration modules."""
 
 from .orchestration import *
-from .errors import groq_error_message
+from .errors import friendly_error, groq_error_message

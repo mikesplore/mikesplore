@@ -35,9 +35,9 @@ def register_message_handlers(dispatcher, dependencies):
                             pending_cv[message.from_user.id] = (decision, job_description, label, base_revision)
                             await message.answer("Updated proposed CV changes:\n\n" + format_cv_patch(decision) + "\n\nConfirm, or tell me what to change.")
                             return
-                    except Exception:
+                    except Exception as error:
                         logger.exception("CV revision handling failed")
-                        await message.answer("I couldn't understand that CV change. Please describe what you want changed.")
+                        await message.answer(friendly_error(error, "I couldn't understand that CV change. Please describe what you want changed."))
                         return
                 if confirmation_text:
                     sync = pending_sync.pop(message.from_user.id, None)
@@ -139,8 +139,9 @@ def register_message_handlers(dispatcher, dependencies):
                         pending[message.from_user.id] = entry
                         awaiting_entry.discard(message.from_user.id)
                         await message.answer("Preview (send /confirm to save, /cancel to discard):\n\n" + format_preview(entry))
-                    except Exception:
-                        await message.answer("I couldn't extract a valid entry. Please provide a clearer instruction.")
+                    except Exception as error:
+                        logger.exception("Entry extraction failed")
+                        await message.answer(friendly_error(error, "I couldn't extract a valid entry. Please provide a clearer instruction."))
                     return
                 question_text = message.text or ""
                 user_id = message.from_user.id
@@ -170,26 +171,31 @@ def register_message_handlers(dispatcher, dependencies):
                     last_edit = now
                     await streamed_message.edit_text(html.escape(text[-4000:]))
         
-                response = await answer(
-                    question_text,
-                    history[-6:],
-                    on_text=update_stream,
-                    user_context={
-                        "first_name": message.from_user.first_name if message.from_user else None,
-                        "last_name": message.from_user.last_name if message.from_user else None,
-                        "is_admin": is_admin(message),
-                    },
-                )
-                if response.startswith("__ADMIN_OPERATION__"):
-                    await streamed_message.delete()
-                    operation = json.loads(response.removeprefix("__ADMIN_OPERATION__"))
-                    await handle_llm_admin_operation(message, operation)
+                try:
+                    response = await answer(
+                        question_text,
+                        history[-6:],
+                        on_text=update_stream,
+                        user_context={
+                            "first_name": message.from_user.first_name if message.from_user else None,
+                            "last_name": message.from_user.last_name if message.from_user else None,
+                            "is_admin": is_admin(message),
+                        },
+                    )
+                    if response.startswith("__ADMIN_OPERATION__"):
+                        await streamed_message.delete()
+                        operation = json.loads(response.removeprefix("__ADMIN_OPERATION__"))
+                        await handle_llm_admin_operation(message, operation)
+                        return
+                    history.extend([
+                        {"role": "user", "content": question_text},
+                        {"role": "assistant", "content": response},
+                    ])
+                    del history[:-6]
+                except Exception as error:
+                    logger.exception("LLM answer failed")
+                    await message.answer(friendly_error(error, "I couldn't complete that request right now. Please try again shortly."))
                     return
-                history.extend([
-                    {"role": "user", "content": question_text},
-                    {"role": "assistant", "content": response},
-                ])
-                del history[:-6]
             if response.startswith("__BOT_ACTION__"):
                 await streamed_message.delete()
                 action = __import__('json').loads(response.removeprefix("__BOT_ACTION__"))

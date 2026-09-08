@@ -188,7 +188,9 @@ approval, the PDF is delivered through Telegram, and the base CV remains unchang
 
 Groq errors are handled explicitly: `413` means the request is too large, `429` means wait and
 retry, `5xx` means the provider is temporarily unavailable, and `400` means the request format
-must be corrected.
+must be corrected. For `429`, the provider's full detail — model, daily token quota, used/requested
+tokens, and the exact retry window such as "Please try again in 9m32.4s" — is passed through to
+the administrator or questioner instead of a generic message.
 
 ## Vela verification
 
@@ -276,7 +278,7 @@ and response body. Common causes:
 - `409`: create used where an existing normalized record should be updated.
 - `422`: required data such as `entry_id` is missing.
 - `413`: upload or LLM request exceeded its limit.
-- `429`: Groq rate limiting.
+- `429`: Groq rate limiting; the bot now shows the provider's retry window and quota detail.
 - Telegram `query is too old`: callback acknowledgement happened too late; use the latest bot
   build, which acknowledges callbacks before slow operations.
 

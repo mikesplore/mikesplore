@@ -16,7 +16,7 @@ from .tools import list_certificates
 
 from .config import settings
 from .llm import answer
-from .llm import extract_entry, extract_job_description_from_image, extract_update, present_admin_result, request_cv_render, tailor_cv
+from .llm import extract_entry, extract_job_description_from_image, extract_update, friendly_error, present_admin_result, request_cv_render, tailor_cv
 from .admin import apply_sync, bulk_manage_links, create_entry, delete_asset, delete_certificate, delete_entry, get_cv_base, list_certificates as list_certificate_records, manage_content, preview_sync, render_cv, save_cv_base, update_entry, update_profile, upload_asset, upload_certificate
 from .formatting import telegram_html
 from .state import admin_result_context, awaiting_cv, awaiting_entry, conversation_history, last_cv_delivery, list_context, pending, pending_cv, pending_mutation, pending_sync, pending_upload, pending_upload_target
@@ -186,6 +186,7 @@ configure_cv_handlers({
     "httpx": httpx,
     "types": types,
     "settings": settings,
+    "friendly_error": friendly_error,
 })
 
 
@@ -231,6 +232,7 @@ register_message_handlers(dispatcher, {
     "types": types,
     "InlineKeyboardButton": InlineKeyboardButton,
     "InlineKeyboardMarkup": InlineKeyboardMarkup,
+    "friendly_error": friendly_error,
 })
 
 

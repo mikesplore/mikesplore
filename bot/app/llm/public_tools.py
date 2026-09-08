@@ -6,7 +6,7 @@ from ..admin import list_admin_resource, list_profile_links, search_admin_conten
 from ..config import settings
 from ..tools import TOOLS, execute_tool
 from .admin_tools import ADMIN_TOOLS, execute_admin_tool
-from .client import client, client_answer_kwargs
+from .client import client_answer_kwargs, complete
 from .prompts import SYSTEM
 
 async def answer(question: str, history: list[dict] | None = None, on_text=None, user_context: dict | None = None) -> str:
@@ -33,7 +33,7 @@ async def answer(question: str, history: list[dict] | None = None, on_text=None,
     available_tools = TOOLS + (admin_tools if context.get("is_admin") else [])
     used_tools = False
     for _ in range(3):
-        completion = await client.chat.completions.create(
+        completion = await complete(
             model=settings.groq_model,
             messages=messages,
             tools=available_tools,
@@ -75,7 +75,7 @@ async def answer(question: str, history: list[dict] | None = None, on_text=None,
 
 async def present_admin_result(request: str, resource: str, records: list[dict], user_context: dict | None = None) -> str:
     """Turn an authenticated admin tool result into a concise natural response."""
-    completion = await client.chat.completions.create(
+    completion = await complete(
         model=settings.groq_model,
         messages=[
             {"role": "system", "content": "Present the supplied administrator tool result in concise natural language. Use only the records provided. Do not claim any mutation occurred. If the request explicitly asks to view, show, send, or open a specific gallery/media image and exactly one record matches, return only __BOT_ACTION__ followed by JSON {\"action\":\"send_gallery_image\",\"url\":\"...\",\"label\":\"...\"}. Otherwise, for gallery/media lists, show a short bullet list with the item label, role, caption, and URL when available. Do not mention database IDs, entry IDs, ordering fields, normalized fields, or internal resource names unless the user explicitly asks for IDs or technical details. Do not output raw JSON or internal tool names."},

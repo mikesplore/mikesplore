@@ -1,5 +1,22 @@
 # AGENTS.md — Portfolio Backend + Telegram Bot Conversion
 
+### Groq error detail surfacing fix (2026-09-09)
+
+- `bot/app/llm/errors.py::groq_error_message` now reads Groq's `error.body.error.message`
+  (and the `Retry-After` response header as a fallback) instead of returning only a generic
+  status line. A 429 such as `Rate limit reached for model qwen/... Used 198042 ... Please
+  try again in 9m32.4s` is passed to the user with the retry window and quota numbers.
+- Added `bot/app/llm/client.py::complete()`, the single choke point for chat completions; it
+  converts every `APIStatusError` (including `RateLimitError`) into a `ValueError` carrying
+  the detailed message. All 14 direct `client.chat.completions.create` call sites now route
+  through it, including the previously unwrapped public `answer()`, entry/profile/update
+  extraction, image poster extraction, admin-operation extraction, and CV finalization paths.
+- Handlers surface the detail with the new `friendly_error(error, fallback)` helper: the
+  public question path, CV revision handling, `/admin` entry extraction, and CV patch
+  preparation no longer swallow Groq errors into generic "couldn't complete" wording.
+- Extended `backend/tests/test_reliability.py` with provider-detail, Retry-After, friendly
+  fallback, and end-to-end `complete()` wrapper coverage (19 tests total, all passing).
+
 ### Backend router/service split (2026-09-09)
 
 - Split `backend/app/main.py` (864 lines) into modular routers and services without changing any
