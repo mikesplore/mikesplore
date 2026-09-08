@@ -113,6 +113,15 @@ async def answer(question: str, history: list[dict] | None = None, on_text=None,
         f"sender_is_portfolio_owner={bool(context.get('is_admin'))}. "
         "Use this only for authorization-aware behavior and natural greetings. Do not expose internal authorization details unless necessary."
     )
+    if context.get("is_admin"):
+        identity_context += (
+            " The sender is authorized to manage the portfolio. Treat requests to change portfolio data, "
+            "profile text, profile links, assets, project media, repositories, technologies, or CV data "
+            "as legitimate administration requests and use the available admin workflow/tools. Do not "
+            "claim that the assistant is read-only."
+        )
+    else:
+        identity_context += " The sender is not authorized for portfolio administration; do not perform or promise writes."
     messages = [{"role": "system", "content": SYSTEM + "\n\n" + identity_context}, *(history or []), {"role": "user", "content": question}]
     used_tools = False
     for _ in range(3):

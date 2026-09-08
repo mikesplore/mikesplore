@@ -570,12 +570,13 @@ async def question(message: types.Message):
             return
         admin_words = ("add ", "set ", "update ", "change ", "remove ", "delete ", "attach ", "list ", "show ", "upload ")
         media_admin_intent = (
-            any(term in normalized_admin_text for term in ("upload", "attach", "add image", "add photo", "gallery item", "project media"))
-            and any(term in normalized_admin_text for term in ("vela", "project", "gallery", "asset", "image", "photo"))
+            any(term in normalized_admin_text for term in ("upload", "attach", "add image", "add photo", "gallery item", "project media", "profile picture", "profile photo"))
+            and any(term in normalized_admin_text for term in ("vela", "project", "gallery", "asset", "image", "photo", "picture"))
         )
         if is_admin(message) and (normalized_admin_text.startswith("/") or normalized_admin_text.startswith(admin_words) or media_admin_intent):
             if media_admin_intent and not message.text.startswith("/") and not message.document:
-                pending_upload[message.from_user.id] = ("project-image", "project media")
+                asset_request = ("profile-image", "profile") if "profile picture" in normalized_admin_text or "profile photo" in normalized_admin_text else ("project-image", "project media")
+                pending_upload[message.from_user.id] = asset_request
                 await message.answer("Send the image or document now and I’ll add it to the requested project media.")
                 return
             try:
