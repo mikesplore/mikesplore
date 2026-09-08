@@ -582,6 +582,21 @@ async def question(message: types.Message):
                     await update_profile(operation.get("payload") or {})
                     await message.answer("Profile updated.")
                     return
+                if operation.get("resource") == "links" and operation.get("action") in {"create", "update"}:
+                    payload = operation.get("payload") or {}
+                    values = payload.get("links") if isinstance(payload, dict) else None
+                    if isinstance(values, list):
+                        await bulk_manage_links([
+                            {"action": operation["action"], "id": link.get("id"), "payload": {key: value for key, value in link.items() if key != "id"}}
+                            for link in values
+                        ])
+                    else:
+                        single_payload = dict(payload)
+                        if operation.get("id"):
+                            single_payload["id"] = operation["id"]
+                        await manage_content("links", operation["action"], single_payload)
+                    await message.answer("Links updated." if operation["action"] == "update" else "Links saved.")
+                    return
                 pending_mutation[message.from_user.id] = ("admin", operation["resource"] + ":" + operation["action"], operation)
                 await message.answer("Admin preview (send /confirm to save, /cancel to discard):\n\n" + format_preview(operation))
             except ValueError as error:
