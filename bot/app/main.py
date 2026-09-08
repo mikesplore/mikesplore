@@ -121,7 +121,7 @@ async def upload_command(message: types.Message):
         await message.answer("Usage: /upload &lt;asset_type&gt; [label], then send a file.")
         return
     pending_upload[message.from_user.id] = (parts[1], parts[2] if len(parts) > 2 else parts[1])
-    await message.answer("Send the file now (maximum size: 10 MB). Use /cancel to discard it.")
+    await message.answer("Send the file now (maximum size: 5 MB). Use /cancel to discard it.")
 
 
 @dispatcher.message(lambda message: False)
@@ -713,8 +713,8 @@ async def document(message: types.Message):
         asset_request = pending_upload.get(message.from_user.id)
         telegram_file_id = message.document.file_id if message.document else message.photo[-1].file_id
         telegram_file = await bot.get_file(telegram_file_id)
-        if telegram_file.file_size and telegram_file.file_size > 10 * 1024 * 1024:
-            await message.answer("That file is too large. Please send a file no bigger than 10 MB.")
+        if telegram_file.file_size and telegram_file.file_size > 5 * 1024 * 1024:
+            await message.answer("That file is too large. Please send a file no bigger than 5 MB.")
             return
         buffer = __import__('io').BytesIO()
         await bot.download_file(telegram_file.file_path, buffer)
@@ -787,7 +787,7 @@ async def document(message: types.Message):
             await message.answer("I don't know what to do with that file. Use /upload certificate <title> for a certificate, or /apply before sending a job poster.")
     except httpx.HTTPStatusError as error:
         if error.response.status_code == 413:
-            await message.answer("That file is too large. Please send a file no bigger than 10 MB.")
+            await message.answer("That file is too large. Please send a file no bigger than 5 MB.")
         else:
             logger.exception("%s upload failed", asset_type)
             await message.answer(f"I couldn't upload that {asset_type}. Please check R2 configuration and try again.")

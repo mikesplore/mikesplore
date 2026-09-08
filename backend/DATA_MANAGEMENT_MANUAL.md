@@ -65,13 +65,6 @@ remove the old LabLab AI link (passed)
 Low-risk updates are applied directly. Destructive requests receive a confirmation request before
 the backend mutation is called.
 
-### `/confirm`
-
-Applies a pending high-risk operation. It remains available as a safety shortcut.
-
-```text
-/confirm
-```
 
 ### `/cancel`
 
@@ -161,7 +154,7 @@ Upload a Vela architecture diagram
 
 Then send the file as a Telegram document or image.
 
-The upload is stored in R2 and a `site_assets` record is created. The maximum upload size is 10 MB.
+The upload is stored in R2 and a `site_assets` record is created. The maximum upload size is 5 MB.
 
 To ask the administrator workflow to list uploaded assets, use:
 

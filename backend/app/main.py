@@ -23,7 +23,7 @@ app = FastAPI(title="Portfolio API", version="1.0.0")
 from .config import settings
 frontend_origins = [origin.strip().rstrip("/") for origin in settings.frontend_origin.split(",") if origin.strip()]
 app.add_middleware(CORSMiddleware, allow_origins=frontend_origins, allow_credentials=False, allow_methods=["GET", "POST", "PATCH", "DELETE"], allow_headers=["*"])
-MAX_UPLOAD_BYTES = 10 * 1024 * 1024
+MAX_UPLOAD_BYTES = 5 * 1024 * 1024
 PUBLIC_SETTING_KEYS = {"public_notice"}
 
 
@@ -342,7 +342,7 @@ def upload_certificate(title: str = Form(...), file: UploadFile = File(...), db:
     client = boto3.client("s3", endpoint_url=settings.r2_endpoint_url, aws_access_key_id=settings.r2_access_key_id, aws_secret_access_key=settings.r2_secret_access_key, region_name="auto")
     file_bytes = file.file.read(MAX_UPLOAD_BYTES + 1)
     if len(file_bytes) > MAX_UPLOAD_BYTES:
-        raise HTTPException(status_code=413, detail="Certificate file exceeds the 10 MB limit")
+        raise HTTPException(status_code=413, detail="Certificate file exceeds the 5 MB limit")
     client.upload_fileobj(BytesIO(file_bytes), settings.r2_bucket_name, object_key, ExtraArgs={"ContentType": file.content_type or "application/octet-stream"})
     item = Certificate(title=title, image_url=f"{settings.r2_public_base_url.rstrip('/')}/{object_key}", custom_order=0)
     db.add(item); db.commit(); db.refresh(item)
@@ -392,7 +392,7 @@ async def upload_asset(asset_type: str = Form(...), label: str = Form(""), file:
     client = boto3.client("s3", endpoint_url=settings.r2_endpoint_url, aws_access_key_id=settings.r2_access_key_id, aws_secret_access_key=settings.r2_secret_access_key, region_name="auto")
     file_bytes = await file.read(MAX_UPLOAD_BYTES + 1)
     if len(file_bytes) > MAX_UPLOAD_BYTES:
-        raise HTTPException(status_code=413, detail="Upload exceeds the 10 MB limit")
+        raise HTTPException(status_code=413, detail="Upload exceeds the 5 MB limit")
     cv_text = None
     if asset_type == "cv":
         try:
