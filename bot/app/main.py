@@ -11,12 +11,11 @@ import logging
 import json
 import re
 import asyncio
-import random
 from .tools import list_certificates
 
 from .config import settings
 from .llm import answer
-from .llm import extract_admin_operation, extract_entry, extract_job_description_from_image, extract_update, present_admin_result, request_cv_render, tailor_cv
+from .llm import extract_entry, extract_job_description_from_image, extract_update, present_admin_result, request_cv_render, tailor_cv
 from .admin import apply_sync, bulk_manage_links, create_entry, delete_asset, delete_certificate, delete_entry, get_cv_base, list_certificates as list_certificate_records, manage_content, preview_sync, render_cv, save_cv_base, update_entry, update_profile, upload_asset, upload_certificate
 from .formatting import telegram_html
 
@@ -36,15 +35,6 @@ last_cv_delivery: dict[int, tuple[str, str]] = {}
 list_context: dict[int, tuple[str, int]] = {}
 admin_result_context: dict[int, dict] = {}
 conversation_history: dict[int, list[dict[str, str]]] = {}
-
-PREFLIGHT_MESSAGES = (
-    "I’ll take a look…",
-    "One moment…",
-    "Checking that now…",
-    "Got it, I’m on it…",
-    "Let me handle that…",
-)
-
 
 async def show_typing(message: types.Message) -> None:
     await bot.send_chat_action(chat_id=message.chat.id, action="typing")
