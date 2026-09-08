@@ -20,6 +20,7 @@ from .admin import apply_sync, bulk_manage_links, create_entry, delete_asset, de
 from .formatting import telegram_html
 from .state import admin_result_context, awaiting_cv, awaiting_entry, conversation_history, last_cv_delivery, list_context, pending, pending_cv, pending_mutation, pending_sync, pending_upload, pending_upload_target
 from .admin_operations import execute_admin_operation as run_admin_operation
+from .callbacks import acknowledge, is_protected_action
 
 bot = Bot(settings.telegram_bot_token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 dispatcher = Dispatcher()
@@ -166,8 +167,8 @@ async def handle_llm_admin_operation(message: types.Message, operation: dict) ->
 async def action_callback(callback: types.CallbackQuery):
     user_id = callback.from_user.id
     data = callback.data or ""
-    if user_id != settings.admin_telegram_id and data.startswith(("admin:", "cv:", "upload:", "gallery:", "adminlist:")):
-        await callback.answer("This action is restricted to the portfolio owner.", show_alert=True)
+    if user_id != settings.admin_telegram_id and is_protected_action(data):
+        await acknowledge(callback, "This action is restricted to the portfolio owner.", show_alert=True, logger=logger)
         return
     if data == "admin:cancel":
         pending_mutation.pop(user_id, None)
@@ -195,10 +196,7 @@ async def action_callback(callback: types.CallbackQuery):
         if not mutation or mutation[0] != "admin":
             await callback.answer("No pending operation", show_alert=True)
             return
-        try:
-            await callback.answer("Working…")
-        except TelegramBadRequest:
-            logger.info("Callback acknowledgement expired before admin operation started")
+        await acknowledge(callback, "Working…", logger=logger)
         try:
             result = await run_admin_operation(mutation[2] or {}, update_profile=update_profile, manage_content=manage_content, bulk_manage_links=bulk_manage_links)
             if callback.message:
