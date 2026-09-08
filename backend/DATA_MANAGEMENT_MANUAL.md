@@ -1,358 +1,266 @@
-# Backend Data Management Manual
+# Portfolio Data Management Manual
 
-This manual describes how to manage portfolio data through the Telegram bot and backend API.
+This is the authoritative guide for managing portfolio data through Telegram.
 
-The recommended workflow is to use natural-language requests. The LLM interprets the request and
-uses the appropriate public or administrator tools. The bot authenticates the administrator and
-maintains the conversation; it does not interpret portfolio fields itself.
+The interface is LLM-first: write requests in ordinary language. The LLM selects a public or
+administrator function, looks up existing records when needed, and sends validated operations to
+the backend. The bot handles Telegram identity, files, confirmations, and presentation; it does
+not guess database IDs or classify requests with regular expressions.
 
-## Requirements
+## Interface and authorization
 
-- The bot must be running.
-- Your Telegram ID must match `ADMIN_TELEGRAM_ID`.
-- The backend must be reachable from the bot.
-- The database must be migrated to the current Alembic head.
-- `SERVICE_API_KEY` must be configured for protected backend writes.
+Only these slash commands are supported:
 
-Apply migrations before using new data-management features:
+- `/start` starts the assistant.
+- `/cancel` cancels a pending destructive or high-impact action.
+
+Do not use retired commands such as `/admin`, `/profile`, `/manage`, `/upload`, `/edit`, `/delete`,
+`/cv`, `/apply`, `/confirm`, or `/help`. Send requests as normal language.
+
+Visitors receive public read tools only. The configured portfolio owner receives administrator
+tools. Administrator tools verify authorization before writes, and all writes go through the
+backend service API. The bot never connects directly to PostgreSQL.
+
+The normal flow is:
+
+```text
+Natural-language request → LLM function call → lookup if needed → backend validation → result
+```
+
+Profile edits and ordinary metadata updates apply immediately. Deletions, CV rendering, and other
+high-impact operations request confirmation through an inline Telegram button. Use `/cancel` to
+discard a pending action.
+
+## Local requirements
+
+- Bot and backend running.
+- `ADMIN_TELEGRAM_ID` set to the owner's Telegram ID.
+- `SERVICE_API_KEY` configured for protected backend calls.
+- PostgreSQL reachable and migrations current.
+- R2 configured for uploads.
 
 ```bash
 cd backend
 alembic upgrade head
 ```
 
-## Safety model
+Run tests with the repository virtual environment:
 
-The workflow is:
-
-```text
-Natural-language request
-        ↓
-LLM interprets request and calls the appropriate tools
-        ↓
-Low-risk change: applied immediately
-        ↓
-Destructive/high-impact change: confirmation requested
-        ↓
-Backend validates and writes to PostgreSQL
+```bash
+.venv/bin/python -m pytest -q backend/tests
 ```
-
-The LLM must not invent record IDs. For updates and deletes, it must look up the existing record
-and return its exact ID. Administrator tools reject callers who are not the configured owner.
-
-Profile edits and ordinary metadata updates do not require confirmation. Deletions, CV tailoring or
-rendering, destructive asset operations, and other high-impact changes remain confirmation-protected.
-
-## Core commands
-
-### Natural-language administration
-
-Send the request in ordinary language. Management commands are no longer the primary interface; the
-LLM determines the target resource and operation.
-
-```text
-add my GitHub profile as a professional contact link (passed)
-```
-
-```text
-update my dev.to profile link to use the professional category (passed)
-```
-
-```text
-remove the old LabLab AI link (passed)
-```
-
-Low-risk updates are applied directly. Destructive requests receive a confirmation request before
-the backend mutation is called.
-
-
-### `/cancel`
-
-Discards the current preview.
-
-```text
-/cancel
-```
-
-Deployments or bot restarts may clear in-memory pending previews. If that happens, resend the
-original request.
 
 ## Profile details
 
-Ask naturally for profile changes:
+Profile text belongs in the profile record:
 
 ```text
 Change my tagline to Backend engineer and set my location to Nairobi
 ```
 
-Profile fields include:
-
-- Name
-- Tagline
-- Location
-- Focus
-- Experience
-- Availability status
-- Availability detail
-- About text
-
-Profile text is stored in the profile record and is applied immediately. Contact details do not
-belong in the profile record; the LLM stores them as profile links.
+Supported fields include name, tagline, location, focus, experience, availability status,
+availability detail, and about text. Updates are partial: changing two fields must preserve every
+other field. Contact methods and social profiles belong in profile links, not profile text.
 
 ## Contact and social links
 
-Use natural language:
-
 ```text
 Set my WhatsApp, Telegram, dev.to, and LabLab AI usernames to mikesplore
 ```
 
-The LLM should create or update one link per named platform. WhatsApp and Telegram default to
-`contact`; dev.to and LabLab AI default to `social`. Explicit categories override these defaults.
-
-Supported link categories:
-
-- `professional` — work, code, writing, and professional profiles
-- `social` — public social profiles
-- `contact` — direct contact and messaging methods
-
-Link records contain:
-
-- Name
-- URL
-- Label
-- Handle
-- Category
-- Visibility
-- Display order
-
-The backend normalizes link names and URLs. Repeating an existing create request upserts the link
-instead of creating a duplicate.
-
-To update a link:
+The LLM should resolve one complete link per named platform. Default categories are WhatsApp and
+Telegram as `contact`, and dev.to and LabLab AI as `social`. An explicit category overrides the
+default:
 
 ```text
-Update my dev.to profile link to be professional
+Add my GitHub profile as a professional contact link
 ```
 
-To delete a link:
+Links contain name, URL, label, handle, category, visibility, and display order. Repeating an
+existing create request upserts the normalized link instead of duplicating it.
 
 ```text
+Update my dev.to profile link to professional
 Delete my old Telegram contact link
 ```
 
-If more than one record matches, make the request more specific.
+Updates and deletes must use an exact ID returned by a lookup. If multiple records match, the
+assistant must ask for clarification.
 
-## Uploading assets
+## Projects, repositories, and technologies
 
-File transfer is handled directly because Telegram must provide the binary file, but the resulting
-asset record and project attachment are managed through administrator tools.
-
-```text
-Upload a Vela architecture diagram
-```
-
-Then send the file as a Telegram document or image.
-
-The upload is stored in R2 and a `site_assets` record is created. The maximum upload size is 5 MB.
-
-To ask the administrator workflow to list uploaded assets, use:
+Projects are unified `entries` with `content_type=project`:
 
 ```text
-List my uploaded assets
+Set the Vela project status to active and category to android
 ```
 
-After uploading, link the asset to a project:
+Repositories are normalized records connected to entries:
 
 ```text
-Attach the uploaded Vela architecture diagram to the Vela project as a gallery image
+Add https://github.com/mikesplore/vela as the primary repository for Vela
+Set the primary language of the Vela repository to Kotlin
 ```
 
-The LLM should create an `entry-assets` relationship containing the Vela entry ID and asset ID.
+Repository URLs are idempotent: an existing URL must be updated, never duplicated.
 
-## Project metadata
-
-Ask the LLM to update project metadata:
+Technologies are normalized and reused:
 
 ```text
-set Vela status to active and category to android (passed)
+Add Kotlin, Python, FastAPI, and MCP technologies to Vela
+Set the Python technology icon to https://cdn.simpleicons.org/python
 ```
 
-```text
-set the Vela project origin to portfolio and author role to creator (passed)
-```
-
-Project records are unified `entries` with `content_type=project`.
-
-## Repositories
-
-Add a repository:
-
-```text
-add https://github.com/mikesplore/vela as the primary repository for Vela (passed)
-```
-
-Update repository metadata:
-
-```text
-set the primary language of the Vela repository to Kotlin
-```
-
-Repository records can include:
-
-- Name
-- URL
-- Primary flag
-- Role label
-- Primary language
-- Link label
-- GitHub sync state
-- Display order
-
-## Technologies
-
-Attach technologies to projects through the normalized technology relationships. For example:
-
-```text
-add Kotlin, Python, FastAPI, and MCP technologies to Vela
-```
-
-Set technology metadata:
-
-```text
-set the Python technology icon to https://example.com/python.svg
-```
+The LLM must resolve project and technology IDs and use `entry-technologies` for relationships,
+not `topology`.
 
 ## Project content blocks
 
-The supported content-block resources are:
-
-- `topology`
-- `metrics`
-- `decisions`
-- `highlights`
-- `quotes`
-- `snippets`
-- `documents`
-- `badges`
-
-## Regression testing checklist
-
-Run these checks after a bot or backend deployment. Each request should be sent as ordinary
-language; the examples intentionally omit management command prefixes.
-
-### Profile safety
+Supported normalized content-block resources are `topology`, `metrics`, `decisions`, `highlights`,
+`quotes`, `snippets`, `documents`, and `badges`. Every block requires the exact project
+`entry_id`; the LLM must list projects before creating or updating one.
 
 ```text
-Change my tagline to Backend engineer and set my location to Nairobi
+Add a Vela metric: 150+ MCP tools, highlighted under capability
+Add a Vela architecture decision titled Separate client and backend, explaining that the layers should evolve independently
+Add a Vela highlight titled Natural language control, describing users controlling devices through plain-English intents
+Add this URL as Vela's primary demo document: https://vela.example.com
 ```
 
-Expected: the two requested fields change immediately. Existing `name`, `focus`, `experience`,
-availability fields, and `about` remain unchanged.
+## Assets and uploads
 
-### Contact-link classification and upsert
+Request uploads naturally:
 
 ```text
-Set my WhatsApp, Telegram, dev.to, and LabLab AI usernames to mikesplore
+I need to change my profile picture
+I want to upload a gallery image for the Vela project
+Upload a certificate for my Backend Engineering course
 ```
 
-Expected: four separate links are created or updated. WhatsApp and Telegram are `contact`; dev.to
-and LabLab AI are `social`. Repeating the request must not create duplicates or return a conflict.
+The LLM calls an upload-request function with the asset type and, for project media, the target
+project and role. The assistant briefly asks for the file. Attach the image, PDF, or document in
+the next Telegram message. The binary bypasses the LLM and is uploaded directly to R2.
 
-### Exact-record updates
+The upload limit is 5 MB. Asset types include profile images, CVs, certificates, project images,
+and project media. PDFs are not sent to the LLM merely because they appear in an asset listing.
 
-```text
-Set the primary language of the Vela repository to Kotlin
-Set the Python technology icon to https://cdn.simpleicons.org/python
-Set Vela status to active and category to android
-```
-
-Expected: the LLM looks up the repository, technology, and project, then updates the exact records.
-No request should be converted into a create operation.
-
-### Assets and normalized project content
-
-Upload an image, then send:
+Attach an existing asset to a project with:
 
 ```text
-List my uploaded assets
 Attach the Vela sample asset to the Vela project as a gallery image
+List my uploaded assets
 Show me gallery items for the Vela project
+Show me the next gallery image
 ```
 
-Expected: the asset list includes IDs and URLs; attachment uses the `entry_assets` junction; the
-gallery lookup returns the attached asset and `gallery` role.
+Attachments use the `entry_assets` junction pointing to an existing `site_assets` record. Results
+should emphasize labels, roles, captions, and view buttons; internal IDs are for tool operations.
 
-### Confirmation boundaries
+## Dynamic role policies
 
-Expected behavior:
-
-- profile edits and ordinary metadata updates apply immediately;
-- deletions ask for confirmation and `/cancel` leaves the record intact;
-- `/confirm` applies the pending high-impact operation;
-- repeating a completed deletion is reported as an already-missing record, not a traceback;
-- failed writes retain enough context to retry safely.
-
-### Failure diagnostics
-
-If an admin request fails, the Telegram response should expose the validation reason. Check the bot
-logs for the full traceback, then verify the LLM tool lookup, exact ID, selected resource, and backend
-response independently. Never repair a failed update by manually guessing an ID.
-
-Examples:
+Role policies are stored in `role_policies` and are derived from verified CV and portfolio data,
+not hardcoded role assumptions.
 
 ```text
-add a Vela metric: 150+ MCP tools, highlighted under capability
+Analyze my current CV and portfolio data and propose supported role policies
+List my role policies
+Activate the backend engineering and mobile development policies
 ```
+
+New proposals are saved as `pending` with `is_active=false`. The LLM must not invent evidence or
+activate policies automatically. Activation uses exact IDs returned by a role-policy lookup.
+Repeated analysis upserts by role family instead of creating duplicates.
+
+## CV tailoring
+
+Paste a job description directly, without a command prefix:
 
 ```text
-add a Vela architecture decision titled Separate client and backend with the explanation that the layers should evolve independently
+[paste the complete job description]
 ```
 
-```text
-add a Vela highlight titled Natural language control with the description Users control devices through plain-English intents
-```
+The LLM recognizes a bare JD, compares it with verified CV context and active role policies, and
+proposes a patch containing a professional summary, selected projects, selected skills, and any
+limitations. Respond naturally to revise it, for example `emphasize backend reliability` or `that
+looks good`.
 
-```text
-add this URL as Vela's primary demo document: https://vela.example.com
-```
+High-impact rendering requires an inline confirmation button. Rendering is deterministic after
+approval, the PDF is delivered through Telegram, and the base CV remains unchanged.
 
-Documents are the extensible curated link section. Repository links are returned separately as
-repository data; they are not stored in the removed legacy `entries.links` JSONB column.
+Groq errors are handled explicitly: `413` means the request is too large, `429` means wait and
+retry, `5xx` means the provider is temporarily unavailable, and `400` means the request format
+must be corrected.
 
-## Vela example workflow
+## Vela verification
 
-The repository includes a repeatable Vela fixture:
+Vela is the reference project for testing relationships and rich content. Seed locally with:
 
 ```bash
-python -m backend.scripts.seed_vela_fixture
+.venv/bin/python -m backend.scripts.seed_vela_fixture
 ```
 
-It creates or updates:
+Then test:
 
-- `vela`
-- `vela-mcp`
-- `velavps`
-- `vela-android`
-- Their technologies and repositories
-- Vela topology and metrics
-- A Vela architecture decision
-- A Vela highlight
-- Related-project relationships
-
-Verify the result through:
-
-```http
-GET /api/v1/projects/vela
-GET /api/v1/projects/vela/media
-GET /api/v1/projects/vela/relationships
+```text
+Show me the Vela project
+List Vela's repositories
+List Vela's technologies
+Show me gallery items for Vela
+Show me the next gallery image
 ```
 
-## Direct API usage
+The fixture covers Vela, vela-mcp, velavps, vela-android, technologies, repositories, content
+blocks, and asset relationships.
 
-The public project API requires no service key:
+## End-to-end testing checklist
 
-```http
+### Authorization
+
+- A visitor can read public portfolio data but cannot write.
+- The owner receives administrator tools.
+- Authorization comes from trusted Telegram context, not message wording.
+
+### Profile and links
+
+- Update two profile fields and verify all other fields survive.
+- Create the four-platform link request twice and verify no duplicates.
+- Update a link and verify the exact row changes.
+- Delete a link with the inline confirmation button.
+- Repeat the deletion and verify a clear not-found response, not a traceback.
+
+### Normalized content
+
+- Update Vela metadata and verify update rather than create.
+- Add technologies and verify normalized rows are reused.
+- Add a repository by URL twice and verify upsert behavior.
+- Add metrics, decisions, highlights, and documents with Vela's exact entry ID.
+
+### Assets
+
+- Upload a profile image under 5 MB.
+- Try a file over 5 MB and verify a clear size error.
+- Upload project media, attach it to Vela, list the gallery, and view an image.
+- Confirm PDFs are not included in LLM context unless a specific extraction flow requires them.
+
+### CV and policies
+
+- Paste a bare technical JD and verify tailoring starts without a command.
+- Generate policies and verify they are pending and inactive.
+- Activate selected policies and verify exact rows become active.
+- Approve rendering and verify PDF delivery without changing the base CV.
+
+### Telegram reliability
+
+- Click a confirmation button after a slow request and verify no webhook 500 occurs.
+- Verify callback buttons are acknowledged before slow backend work.
+- Verify failed mutations remain retryable.
+- Verify next/previous pagination performs a direct backend query and no new LLM request.
+
+## Direct API and troubleshooting
+
+Public project endpoints require no service key:
+
+```text
 GET /api/v1/projects
 GET /api/v1/projects/{slug}
 GET /api/v1/projects/{slug}/media
@@ -362,71 +270,16 @@ GET /api/v1/technologies
 
 Protected writes require `X-Service-Api-Key` and should normally be performed by the bot.
 
-## Troubleshooting
+When a request fails, inspect: the LLM function selected, lookup IDs returned, and backend status
+and response body. Common causes:
 
-### The bot says it cannot find a record
+- `Content not found`: stale or missing record ID.
+- `409`: create used where an existing normalized record should be updated.
+- `422`: required data such as `entry_id` is missing.
+- `413`: upload or LLM request exceeded its limit.
+- `429`: Groq rate limiting.
+- Telegram `query is too old`: callback acknowledgement happened too late; use the latest bot
+  build, which acknowledges callbacks before slow operations.
 
-Make the target explicit:
-
-```text
-update the dev.to profile link with URL https://dev.to/mikesplore
-```
-
-For updates and deletes, the LLM must identify one existing record and return its exact ID.
-
-### The backend says `Content not found`
-
-The operation used an invalid or missing record ID. Ensure the bot has been restarted after the
-latest code deployment and retry the natural-language request.
-
-### The backend says `duplicate`
-
-A normalized link with the same name and URL already exists. Update the existing record instead of
-creating another one.
-
-### The backend says a column does not exist
-
-The database is behind the application code:
-
-```bash
-cd backend
-alembic upgrade head
-```
-
-### A project has no media
-
-Upload the file first, then ask the LLM to attach the resulting asset to the project with the
-appropriate role and order.
-
-## Recommended workflow
-
-1. Seed or create the project.
-2. Add technologies and repositories.
-3. Upload project assets.
-4. Attach assets to the project.
-5. Add content blocks one at a time or in a small batch.
-6. Review the LLM's explanation for high-impact operations.
-7. Confirm only when the LLM requests confirmation.
-8. Verify the public API response before building or updating the independent frontend.
-
-## Current LLM and upload behavior
-
-Every text request carries trusted Telegram context to the LLM: the sender's first name, last name,
-and whether the sender is the configured portfolio owner. Visitors receive only public tool
-definitions. The owner receives public and administrator tools. Administrator tools also enforce the
-owner check when executed.
-
-The LLM can call `request_upload` when a file is needed. The function selects the upload type and
-may include a project entry ID and media role. The next Telegram image or document is then uploaded
-using those arguments. Supported types include `profile-image`, `certificate`, `cv`, `project-image`,
-and `project-media`.
-
-Uploads are limited to 5 MB in both the Telegram bot and backend. Profile-image uploads update the
-profile asset; project-media requests can attach the resulting asset through the `entry_assets`
-junction.
-
-The bot sends a short preflight acknowledgement while the LLM performs lookups. It must not claim
-success until the backend responds successfully. Gallery and other admin list results are returned
-to the LLM for concise presentation; internal IDs are omitted unless the administrator asks for
-technical details. Direct delivery of a selected gallery image in response to a follow-up request
-is not yet implemented.
+Do not repair failures by guessing IDs or editing PostgreSQL manually. Fix the lookup, function
+schema, validation, or backend handler so the same natural-language request works reliably.
