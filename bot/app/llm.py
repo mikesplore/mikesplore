@@ -282,8 +282,11 @@ async def extract_admin_operation(instruction: str, admin_authorized: bool = Fal
         messages.append(message)
         for call in message.tool_calls:
             arguments = json.loads(call.function.arguments or "{}")
-            if call.function.name == "create_admin_operation":
-                result = arguments
+            if call.function.name in {"create_admin_operation", "request_upload"}:
+                if call.function.name == "request_upload":
+                    result = {"resource": "uploads", "action": "request", "payload": arguments}
+                else:
+                    result = arguments
                 break
             tool_result = await execute_admin_tool(call.function.name, arguments, admin_authorized)
             messages.append({"role": "tool", "tool_call_id": call.id, "content": json.dumps(tool_result)})
