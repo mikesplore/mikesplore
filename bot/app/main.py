@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 pending: dict[int, dict] = {}
 awaiting_entry: set[int] = set()
 pending_upload: dict[int, tuple[str, str]] = {}
+pending_upload_target: dict[int, dict] = {}
 pending_mutation: dict[int, tuple[str, str, dict | None]] = {}
 pending_sync: dict[int, tuple[str, list[dict], list[str]]] = {}
 awaiting_cv: set[int] = set()
@@ -422,6 +423,7 @@ async def question(message: types.Message):
             pending.pop(message.from_user.id, None)
             awaiting_entry.discard(message.from_user.id)
             pending_mutation.pop(message.from_user.id, None)
+            pending_upload_target.pop(message.from_user.id, None)
             pending_sync.pop(message.from_user.id, None)
             awaiting_cv.discard(message.from_user.id)
             pending_cv.pop(message.from_user.id, None)
@@ -583,6 +585,16 @@ async def question(message: types.Message):
                         operation["target"] = target
                 if not operation.get("action"):
                     raise ValueError("No administrative operation was identified")
+                if operation.get("resource") == "uploads" and operation.get("action") == "request":
+                    upload = operation.get("payload") or {}
+                    asset_type = upload.get("asset_type")
+                    if not asset_type:
+                        raise ValueError("Upload request is missing an asset type")
+                    pending_upload[message.from_user.id] = (asset_type, upload.get("label") or asset_type)
+                    if upload.get("entry_id"):
+                        pending_upload_target[message.from_user.id] = {"entry_id": upload["entry_id"], "role": upload.get("role", "gallery")}
+                    await message.answer(f"Send the {asset_type} file now.")
+                    return
                 if operation.get("resource") == "profile" and operation.get("action") in {"create", "update"}:
                     await update_profile(operation.get("payload") or {})
                     await message.answer("Profile updated.")
@@ -749,6 +761,17 @@ async def document(message: types.Message):
             result = await upload_asset(asset_type, label, filename, buffer.getvalue(), mime_type)
             pending_upload.pop(message.from_user.id, None)
             await message.answer(f"Asset uploaded: {html.escape(result['label'], quote=False)}")
+            target = pending_upload_target.pop(message.from_user.id, None)
+            if target:
+                await manage_content("entry-assets", "create", {
+                    "entry_id": target["entry_id"],
+                    "asset_id": result["id"],
+                    "role": target.get("role", "gallery"),
+                    "alt_text": label,
+                    "caption": label,
+                    "custom_order": 0,
+                })
+                await message.answer("The uploaded asset was attached to the project.")
             if asset_type == "profile-image":
                 try:
                     await bot.set_my_profile_photo(
