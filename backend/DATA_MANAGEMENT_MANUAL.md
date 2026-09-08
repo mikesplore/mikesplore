@@ -243,6 +243,69 @@ The supported content-block resources are:
 - `documents`
 - `badges`
 
+## Regression testing checklist
+
+Run these checks after a bot or backend deployment. Each request should be sent as ordinary
+language; the examples intentionally omit management command prefixes.
+
+### Profile safety
+
+```text
+Change my tagline to Backend engineer and set my location to Nairobi
+```
+
+Expected: the two requested fields change immediately. Existing `name`, `focus`, `experience`,
+availability fields, and `about` remain unchanged.
+
+### Contact-link classification and upsert
+
+```text
+Set my WhatsApp, Telegram, dev.to, and LabLab AI usernames to mikesplore
+```
+
+Expected: four separate links are created or updated. WhatsApp and Telegram are `contact`; dev.to
+and LabLab AI are `social`. Repeating the request must not create duplicates or return a conflict.
+
+### Exact-record updates
+
+```text
+Set the primary language of the Vela repository to Kotlin
+Set the Python technology icon to https://cdn.simpleicons.org/python
+Set Vela status to active and category to android
+```
+
+Expected: the LLM looks up the repository, technology, and project, then updates the exact records.
+No request should be converted into a create operation.
+
+### Assets and normalized project content
+
+Upload an image, then send:
+
+```text
+List my uploaded assets
+Attach the Vela sample asset to the Vela project as a gallery image
+Show me gallery items for the Vela project
+```
+
+Expected: the asset list includes IDs and URLs; attachment uses the `entry_assets` junction; the
+gallery lookup returns the attached asset and `gallery` role.
+
+### Confirmation boundaries
+
+Expected behavior:
+
+- profile edits and ordinary metadata updates apply immediately;
+- deletions ask for confirmation and `/cancel` leaves the record intact;
+- `/confirm` applies the pending high-impact operation;
+- repeating a completed deletion is reported as an already-missing record, not a traceback;
+- failed writes retain enough context to retry safely.
+
+### Failure diagnostics
+
+If an admin request fails, the Telegram response should expose the validation reason. Check the bot
+logs for the full traceback, then verify the LLM tool lookup, exact ID, selected resource, and backend
+response independently. Never repair a failed update by manually guessing an ID.
+
 Examples:
 
 ```text
