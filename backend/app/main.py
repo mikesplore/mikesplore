@@ -1,5 +1,8 @@
 from fastapi import Depends, FastAPI, File, Form, HTTPException, Query, Response, UploadFile, status
-import boto3
+try:
+    import boto3
+except ImportError:  # R2 support is optional for read-only and test usage.
+    boto3 = None
 from io import BytesIO
 from pathlib import Path
 import tempfile
@@ -336,6 +339,8 @@ def delete_certificate(certificate_id: UUID, db: Session = Depends(get_db)):
 @app.post("/certificates", response_model=dict, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_service_key)])
 def upload_certificate(title: str = Form(...), file: UploadFile = File(...), db: Session = Depends(get_db)):
     from .config import settings
+    if boto3 is None:
+        raise HTTPException(status_code=503, detail="Object storage support is not installed")
     if not all((settings.r2_endpoint_url, settings.r2_access_key_id, settings.r2_secret_access_key, settings.r2_bucket_name, settings.r2_public_base_url)):
         raise HTTPException(status_code=503, detail="R2 storage is not configured")
     object_key = f"certificates/{slugify(title)}-{uuid4().hex}-{file.filename}"
@@ -831,5 +836,9 @@ def delete_entry(entry_id: UUID, db: Session = Depends(get_db)):
 
 # Host the Telegram webhook in the same Render service as the portfolio API.
 # This keeps one always-on instance while preserving /telegram/webhook.
-from bot.app.main import app as telegram_app
-app.mount("/", telegram_app)
+try:
+    from bot.app.main import app as telegram_app
+except ModuleNotFoundError:
+    telegram_app = None
+if telegram_app is not None:
+    app.mount("/", telegram_app)
