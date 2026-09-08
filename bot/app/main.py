@@ -30,6 +30,7 @@ pending_mutation: dict[int, tuple[str, str, dict | None]] = {}
 pending_sync: dict[int, tuple[str, list[dict], list[str]]] = {}
 awaiting_cv: set[int] = set()
 pending_cv: dict[int, tuple[dict, str, str, str]] = {}
+last_cv_delivery: dict[int, tuple[str, str]] = {}
 list_context: dict[int, tuple[str, int]] = {}
 admin_result_context: dict[int, dict] = {}
 conversation_history: dict[int, list[dict[str, str]]] = {}
@@ -156,6 +157,14 @@ async def action_callback(callback: types.CallbackQuery):
         if callback.message:
             await callback.message.edit_text("Upload cancelled.")
         return
+    if data == "upload:retry":
+        if user_id not in pending_upload:
+            await callback.answer("The upload request has expired", show_alert=True)
+            return
+        await callback.answer("Ready for another file")
+        if callback.message:
+            await callback.message.answer("Please attach the file again.")
+        return
     if data == "admin:confirm":
         mutation = pending_mutation.pop(user_id, None)
         if not mutation or mutation[0] != "admin":
@@ -199,10 +208,30 @@ async def action_callback(callback: types.CallbackQuery):
             pending_cv.pop(user_id, None)
             if callback.message:
                 await callback.message.answer_document(types.BufferedInputFile(pdf_response.content, filename=cv_filename(label)), caption="Tailored CV")
+                last_cv_delivery[user_id] = (result["pdf_url"], label)
         except Exception as error:
             logger.exception("Inline CV rendering failed")
             if callback.message:
-                await callback.message.edit_text(f"The tailored CV could not be generated: {str(error)[:500]}")
+                await callback.message.edit_text(f"The tailored CV could not be generated: {str(error)[:500]}", reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
+                    InlineKeyboardButton(text="Retry", callback_data="cv:generate"),
+                    InlineKeyboardButton(text="Request changes", callback_data="cv:revise"),
+                ]]))
+        return
+    if data == "cv:download-again":
+        delivery = last_cv_delivery.get(user_id)
+        if not delivery:
+            await callback.answer("No generated CV is available", show_alert=True)
+            return
+        try:
+            async with httpx.AsyncClient(timeout=30) as client:
+                response = await client.get(delivery[0])
+                response.raise_for_status()
+            await callback.answer("Sending CV")
+            if callback.message:
+                await callback.message.answer_document(types.BufferedInputFile(response.content, filename=cv_filename(delivery[1])), caption="Tailored CV")
+        except Exception:
+            logger.exception("CV redelivery failed")
+            await callback.answer("The CV could not be downloaded", show_alert=True)
         return
     if data.startswith("gallery:"):
         try:
@@ -323,7 +352,10 @@ async def question(message: types.Message):
                     async with httpx.AsyncClient(timeout=30) as client:
                         pdf_response = await client.get(result["pdf_url"])
                         pdf_response.raise_for_status()
-                    await message.answer_document(types.BufferedInputFile(pdf_response.content, filename=cv_filename(label)), caption="Tailored CV")
+                    last_cv_delivery[message.from_user.id] = (result["pdf_url"], label)
+                    await message.answer_document(types.BufferedInputFile(pdf_response.content, filename=cv_filename(label)), caption="Tailored CV", reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
+                        InlineKeyboardButton(text="Download again", callback_data="cv:download-again"),
+                    ]]))
                 except httpx.HTTPStatusError as error:
                     pending_cv[message.from_user.id] = tailored
                     logger.exception("Tailored CV rejected by backend")
@@ -679,10 +711,16 @@ async def document(message: types.Message):
             await message.answer("That file is too large. Please send a file no bigger than 5 MB.")
         else:
             logger.exception("%s upload failed", asset_type)
-            await message.answer(f"I couldn't upload that {asset_type}. Please check R2 configuration and try again.")
+            await message.answer(f"I couldn't upload that {asset_type}. Please check R2 configuration and try again.", reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
+                InlineKeyboardButton(text="Retry upload", callback_data="upload:retry"),
+                InlineKeyboardButton(text="Cancel", callback_data="upload:cancel"),
+            ]]))
     except Exception:
         logger.exception("%s upload failed", asset_type)
-        await message.answer(f"I couldn't upload that {asset_type}. Please check R2 configuration and try again.")
+        await message.answer(f"I couldn't upload that {asset_type}. Please check R2 configuration and try again.", reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
+            InlineKeyboardButton(text="Retry upload", callback_data="upload:retry"),
+            InlineKeyboardButton(text="Cancel", callback_data="upload:cancel"),
+        ]]))
 
 
 def format_preview(entry: dict) -> str:
