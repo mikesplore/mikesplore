@@ -142,6 +142,9 @@ async def question(message: types.Message):
             pending_cv.pop(message.from_user.id, None)
             await message.answer("Cancelled.")
             return
+        if message.text.strip().startswith("/"):
+            await message.answer("Only /start and /cancel are available. Please describe what you need in ordinary language.")
+            return
         normalized_admin_text = message.text.strip().lower()
         confirmation_text = normalized_admin_text in {"yes", "confirm", "go ahead", "proceed", "do it"}
         if message.from_user.id in pending_cv and not confirmation_text:
@@ -287,7 +290,7 @@ async def question(message: types.Message):
         if is_admin(message):
             try:
                 await message.answer("Sure, I’m checking that now…")
-                instruction = message.text.partition(" ")[2].strip() if message.text.startswith("/") else message.text
+                instruction = message.text
                 operation = await extract_admin_operation(instruction, admin_authorized=is_admin(message))
                 if operation.get("action") == "list":
                     items = await manage_content(operation["resource"], "list", {})
