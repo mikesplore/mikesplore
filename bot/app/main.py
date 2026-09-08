@@ -23,7 +23,7 @@ from .admin_operations import execute_admin_operation as run_admin_operation
 from .callbacks import acknowledge, is_protected_action
 from .callback_handlers import register_callbacks
 from .uploads import register_upload_handler
-from .cv_handlers import configure as configure_cv_handlers, prepare_cv_patch as prepare_cv_patch_handler
+from .cv_handlers import configure as configure_cv_handlers, deliver_certificates as deliver_certificates_handler, format_cv_patch as format_cv_patch_handler, prepare_cv_patch as prepare_cv_patch_handler, send_cv as send_cv_handler
 
 bot = Bot(settings.telegram_bot_token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 dispatcher = Dispatcher()
@@ -76,19 +76,7 @@ async def prepare_cv_patch(message: types.Message, job_description: str, revisio
     return await prepare_cv_patch_handler(message, job_description, revision)
 
 async def deliver_certificates(message: types.Message, query: str = ""):
-    items = await list_certificates()
-    query = query.lower()
-    selected = [item for item in items if query and (query in item["title"].lower() or any(word in item["title"].lower().split() for word in query.split() if len(word) > 2))] if query else items
-    selected = selected or items
-    await message.answer(f"I found {len(selected)} certificate(s). Sending them directly:")
-    for item in selected:
-        image_url = item.get("image_url")
-        if image_url:
-            async with httpx.AsyncClient(timeout=20) as client:
-                file_response = await client.get(image_url)
-                file_response.raise_for_status()
-            filename = image_url.rstrip("/").rsplit("/", 1)[-1] or "certificate"
-            await message.answer_document(types.BufferedInputFile(file_response.content, filename=filename), caption=html.escape(item["title"], quote=False))
+    return await deliver_certificates_handler(message, query)
 
 
 async def handle_llm_admin_operation(message: types.Message, operation: dict) -> bool:
@@ -147,22 +135,7 @@ async def handle_llm_admin_operation(message: types.Message, operation: dict) ->
 
 
 async def send_cv(message: types.Message):
-    async with httpx.AsyncClient(base_url=settings.backend_url, timeout=20) as client:
-        response = await client.get("/assets")
-        response.raise_for_status()
-        cv = next((asset for asset in response.json() if asset.get("asset_type") == "cv"), None)
-        if not cv:
-            await message.answer("The base CV is not available right now.")
-            return
-        file_response = await client.get(cv["url"])
-        file_response.raise_for_status()
-    if not file_response.content.startswith(b"%PDF-"):
-        await message.answer("The stored CV file is invalid or unavailable.")
-        return
-    filename = cv.get("label") or "CV.pdf"
-    if not filename.lower().endswith(".pdf"):
-        filename += ".pdf"
-    await message.answer_document(types.BufferedInputFile(file_response.content, filename=filename), caption="CV")
+    return await send_cv_handler(message)
 
 
 @dispatcher.message(lambda message: not message.document and not message.photo)
@@ -404,26 +377,7 @@ def format_admin_list(resource: str, items: list[dict]) -> str:
 
 
 def format_cv_patch(patch: dict) -> str:
-    summary = patch.get("summary") or {}
-    projects = patch.get("selected_projects") or []
-    skills = patch.get("selected_skills") or {}
-    project_lines = []
-    for project in projects:
-        label = re.sub(r"[-_]+", " ", str(project)).strip().title()
-        project_lines.append(f"• {html.escape(label, quote=False)}")
-    skill_lines = []
-    for category, items in skills.items():
-        skill_lines.append(f"{html.escape(str(category), quote=False)}: " + ", ".join(html.escape(str(item), quote=False) for item in items))
-    return (
-        "Proposed CV update\n\n"
-        "New professional summary:\n"
-        f"{html.escape(str(summary.get('new', '')), quote=False)}\n\n"
-        "Projects to highlight:\n"
-        f"{chr(10).join(project_lines) or '• None selected'}\n\n"
-        "Skills to emphasize:\n"
-        f"{chr(10).join(skill_lines) or 'None selected'}\n\n"
-        "Reply with changes, or say yes to generate the tailored CV."
-    )
+    return format_cv_patch_handler(patch)
 
 
 def cv_filename(name: str) -> str:
@@ -489,6 +443,10 @@ configure_cv_handlers({
     "html": html,
     "InlineKeyboardButton": InlineKeyboardButton,
     "InlineKeyboardMarkup": InlineKeyboardMarkup,
+    "list_certificates": list_certificates,
+    "httpx": httpx,
+    "types": types,
+    "settings": settings,
 })
 
 
