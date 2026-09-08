@@ -69,7 +69,7 @@ async def start(message: types.Message):
     first_name = message.from_user.first_name if message.from_user else None
     last_name = message.from_user.last_name if message.from_user else None
     response = await answer(
-        "Welcome this user to the portfolio assistant. Briefly explain what they can ask about and identify the portfolio owner by name from verified profile data.",
+        "Create a concise first-contact welcome using only current tool results. Look up the verified profile and available public portfolio collections first. Address the sender by their Telegram first name when available, identify the portfolio owner using the verified profile, and describe only the content categories that actually exist in the returned data. Do not use a hardcoded greeting, topic list, tagline, location, or portfolio fact.",
         user_context={"first_name": first_name, "last_name": last_name, "is_admin": is_admin(message)},
     )
     await message.answer(telegram_html(response))
