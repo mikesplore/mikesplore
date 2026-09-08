@@ -309,10 +309,11 @@ async def admin_command(message: types.Message):
             await message.answer("I couldn't find a matching existing record. It may already have been deleted.")
         else:
             logger.exception("Admin operation validation failed")
-            await message.answer("I couldn't validate that admin operation. Please make the target more specific.")
+            detail = str(error).strip() or "unknown validation error"
+            await message.answer(f"Admin operation validation failed: {detail[:500]}")
     except Exception:
         logger.exception("Admin operation extraction failed")
-        await message.answer("I couldn't translate that into a safe database operation. Include the exact record ID for updates or deletes.")
+        await message.answer("Admin operation extraction failed. Check the bot logs for the traceback.")
 
 
 @dispatcher.message(Command("delete"))
