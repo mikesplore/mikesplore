@@ -173,6 +173,12 @@ async def answer(question: str, history: list[dict] | None = None, on_text=None,
                     result = await execute_admin_tool(call.function.name, arguments, admin_authorized=True)
             else:
                 result = await execute_tool(call.function.name, arguments)
+            if context.get("is_admin") and call.function.name in {"create_admin_operation", "request_upload", "request_cv_tailoring", "propose_role_policies", "sync_devto_articles"}:
+                if call.function.name == "create_admin_operation":
+                    operation = result
+                else:
+                    operation = result
+                return "__ADMIN_OPERATION__" + json.dumps(operation)
             # Most tools return lists or structured dictionaries. Only delivery
             # tools return an action dictionary, so do not assume every result
             # supports mapping methods.
