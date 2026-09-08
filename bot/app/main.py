@@ -110,6 +110,27 @@ async def deliver_certificates(message: types.Message, query: str = ""):
             await message.answer_document(types.BufferedInputFile(file_response.content, filename=filename), caption=html.escape(item["title"], quote=False))
 
 
+async def execute_admin_operation(operation: dict) -> str:
+    """Execute one already-authorized admin operation for text or button flows."""
+    resource, action = operation["resource"], operation["action"]
+    if resource == "profile":
+        await update_profile(operation.get("payload", {}))
+    else:
+        payload = dict(operation.get("payload") or {key: value for key, value in operation.items() if key not in {"resource", "action", "id", "candidates", "payload"}})
+        if operation.get("id"):
+            payload["id"] = operation["id"]
+        values = payload.get("links") if resource == "links" else payload.get("technologies") if resource == "entry-technologies" else None
+        if isinstance(values, list):
+            if resource == "links":
+                await bulk_manage_links([{"action": action, "id": item.get("id"), "payload": {key: value for key, value in item.items() if key != "id"}} for item in values])
+            else:
+                for item in values:
+                    await manage_content(resource, action, {"entry_id": payload.get("entry_id"), **item})
+        else:
+            await manage_content(resource, action, payload)
+    return {"create": f"{resource.title()} created.", "update": f"{resource.title()} updated.", "delete": f"{resource.title()} deleted."}.get(action, "Change applied.")
+
+
 async def send_cv(message: types.Message):
     async with httpx.AsyncClient(base_url=settings.backend_url, timeout=20) as client:
         response = await client.get("/assets")
@@ -211,30 +232,7 @@ async def question(message: types.Message):
                         await manage_content(resource, action, mutation[2] or {})
                     elif mutation[0] == "admin":
                         operation = mutation[2] or {}
-                        resource, action = operation["resource"], operation["action"]
-                        if resource == "profile":
-                            await update_profile(operation.get("payload", {}))
-                        else:
-                            payload = dict(operation.get("payload") or {
-                                key: value for key, value in operation.items()
-                                if key not in {"resource", "action", "id", "candidates", "payload"}
-                            })
-                            if operation.get("id"):
-                                payload["id"] = operation["id"]
-                            if resource in {"links", "entry-technologies"} and isinstance(payload.get("links") if resource == "links" else payload.get("technologies"), list):
-                                values = payload["links"] if resource == "links" else payload["technologies"]
-                                if resource == "entry-technologies":
-                                    values = [{"entry_id": payload.get("entry_id"), "technology_id": item.get("technology_id")} for item in values]
-                                if resource == "links":
-                                    await bulk_manage_links([
-                                        {"action": action, "id": link.get("id"), "payload": {key: value for key, value in link.items() if key != "id"}}
-                                        for link in values
-                                    ])
-                                else:
-                                    for item in values:
-                                        await manage_content(resource, action, item)
-                            else:
-                                await manage_content(resource, action, payload)
+                        result_message = await execute_admin_operation(operation)
                     else: await update_entry(mutation[1], mutation[2] or {})
                     if mutation[0] == "profile":
                         result_message = "Profile updated."
