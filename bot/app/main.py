@@ -598,6 +598,19 @@ async def question(message: types.Message):
                         await manage_content("links", operation["action"], single_payload)
                     await message.answer("Links updated." if operation["action"] == "update" else "Links saved.")
                     return
+                if operation.get("action") in {"create", "update"}:
+                    resource = operation["resource"]
+                    payload = dict(operation.get("payload") or {})
+                    if operation.get("id"):
+                        payload["id"] = operation["id"]
+                    values = payload.get("technologies") if resource == "entry-technologies" else None
+                    if resource == "entry-technologies" and isinstance(values, list):
+                        for item in values:
+                            await manage_content(resource, operation["action"], {"entry_id": payload.get("entry_id"), **item})
+                    else:
+                        await manage_content(resource, operation["action"], payload)
+                    await message.answer(f"{resource.replace('-', ' ').title()} {'updated' if operation['action'] == 'update' else 'created'}.")
+                    return
                 pending_mutation[message.from_user.id] = ("admin", operation["resource"] + ":" + operation["action"], operation)
                 if operation.get("action") == "delete":
                     target = operation.get("target") or {}
