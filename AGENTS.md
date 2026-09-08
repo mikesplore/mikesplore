@@ -1,5 +1,30 @@
 # AGENTS.md — Portfolio Backend + Telegram Bot Conversion
 
+### Backend router/service split (2026-09-09)
+
+- Split `backend/app/main.py` (864 lines) into modular routers and services without changing any
+  route path, method, auth guard, response shape, or status code. The published OpenAPI route
+  table is byte-identical in coverage (47 routes) before and after.
+- Added `backend/app/routers/`: `public_projects.py` (projects, technologies, media, relationships,
+  content blocks), `admin_content.py` (`/admin/content`, `/admin/content/bulk`, `/admin/search`,
+  protected entry CRUD by id and slug), `admin_sync.py` (Dev.to/GitHub preview and apply),
+  `cv.py` (admin CV endpoints plus public `/cv/search`), `assets.py` (R2-backed assets and
+  certificates, including `MAX_UPLOAD_BYTES`).
+- Added `backend/app/services/`: `sync.py` (`slugify`, `source_entry`, `fetch_source`,
+  `apply_sync`), `search.py` (`search_portfolio`, `admin_search`, `search_cv`, `model_record`),
+  `cv.py` (`validate_cv_data`, `cv_base_hash`, `project_id`, `validate_cv_patch`, `apply_cv_patch`,
+  `render_cv`).
+- `backend/app/main.py` now holds only the app factory, CORS, health/counts/profile/links/
+  education/skills/bucket-list/settings, the public entries read routes, `/search`, router
+  inclusion, the Telegram webhook mount, and backward-compatible re-exports (`MAX_UPLOAD_BYTES`,
+  `_apply_cv_patch`, `_validate_cv_patch`) so existing tests keep importing from `app.main`
+  unchanged.
+- Verified from the repository `.venv`: `compileall`, the full test suite (15 tests), a route
+  table comparison against the previous `app.main`, and a live `uvicorn` smoke test covering
+  public routes, the service-key guard, and protected admin/CV routes.
+- Minor hardening: `upload_asset` now returns a clear 503 when object storage is unavailable,
+  matching the certificate upload path; previously that edge case crashed with `AttributeError`.
+
 ### Project detail removal update (2026-09-07)
 
 - Removed the project-detail page and `/projects/:projectId` route. Project list cards now remain
