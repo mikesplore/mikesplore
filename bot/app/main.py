@@ -86,7 +86,7 @@ async def help_command(message: types.Message):
         "/manage &lt;resource&gt; &lt;action&gt; [JSON] — manage other content, including certificates\n"
         "/delete-asset &lt;id&gt; — delete an uploaded asset\n"
         "/delete-certificate &lt;id&gt; — delete a certificate\n"
-        "/confirm — apply a pending change or sync\n"
+        "Say yes to approve a pending high-impact change; say /cancel to discard it.\n"
         "/cancel — discard a pending change or sync"
         if is_admin(message) else ""
     )
@@ -422,12 +422,13 @@ async def question(message: types.Message):
             await message.answer("Cancelled.")
             return
         normalized_admin_text = message.text.strip().lower()
-        if message.from_user.id in pending_cv and normalized_admin_text != "/confirm":
+        confirmation_text = normalized_admin_text in {"yes", "confirm", "go ahead", "proceed", "do it"}
+        if message.from_user.id in pending_cv and not confirmation_text:
             try:
                 current_patch, job_description, label, base_revision = pending_cv[message.from_user.id]
                 decision = await tailor_cv(job_description, current_patch, message.text)
                 if decision.get("action") == "confirm":
-                    normalized_admin_text = "/confirm"
+                    confirmation_text = True
                 elif decision.get("status") == "rejected":
                     await message.answer("I won't apply this CV revision: " + html.escape(decision.get("reason", "There is not enough verified evidence.")))
                     return
@@ -439,7 +440,7 @@ async def question(message: types.Message):
                 logger.exception("CV revision handling failed")
                 await message.answer("I couldn't understand that CV change. Please describe the change or use /confirm.")
                 return
-        if normalized_admin_text == "/confirm":
+        if confirmation_text:
             sync = pending_sync.pop(message.from_user.id, None)
             if sync:
                 try:
