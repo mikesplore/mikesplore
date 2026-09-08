@@ -577,6 +577,13 @@ async def question(message: types.Message):
                 operation = await extract_admin_operation(instruction, admin_authorized=is_admin(message))
                 if operation.get("action") == "list":
                     items = await manage_content(operation["resource"], "list", {})
+                    if operation["resource"] == "entry-assets":
+                        assets = await manage_content("assets", "list", {})
+                        by_id = {str(asset.get("id")): asset for asset in assets}
+                        items = [
+                            {**item, "asset_label": by_id.get(str(item.get("asset_id")), {}).get("label"), "asset_url": by_id.get(str(item.get("asset_id")), {}).get("url")}
+                            for item in items
+                        ]
                     response = await present_admin_result(
                         message.text or "",
                         operation["resource"],

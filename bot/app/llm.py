@@ -166,7 +166,7 @@ async def present_admin_result(request: str, resource: str, records: list[dict],
     completion = await client.chat.completions.create(
         model=settings.groq_model,
         messages=[
-            {"role": "system", "content": "Present the supplied administrator tool result in concise natural language. Use only the records provided. Do not claim any mutation occurred. Mention useful names, IDs, URLs, categories, roles, and counts when present. Do not output raw JSON or internal tool names."},
+            {"role": "system", "content": "Present the supplied administrator tool result in concise natural language. Use only the records provided. Do not claim any mutation occurred. For gallery/media lists, show a short bullet list with the item label, role, caption, and URL when available. Do not mention database IDs, entry IDs, ordering fields, normalized fields, or internal resource names unless the user explicitly asks for IDs or technical details. Do not output raw JSON or internal tool names."},
             {"role": "user", "content": f"REQUEST: {request}\nRESOURCE: {resource}\nTOOL RESULT: {json.dumps(records, default=str)}"},
         ],
         max_tokens=400,
