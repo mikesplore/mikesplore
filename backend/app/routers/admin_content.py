@@ -2,7 +2,7 @@
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -38,7 +38,7 @@ router = APIRouter(tags=["admin"])
 
 
 @router.post("/admin/content", dependencies=[Depends(require_service_key)])
-def manage_content(resource: str, action: str, payload: dict, db: Session = Depends(get_db)):
+def manage_content(resource: str, action: str, payload: dict, response: Response, db: Session = Depends(get_db)):
     models = {"entries": Entry, "certificates": Certificate, "assets": SiteAsset, "links": ProfileLink, "skills": SkillGroup, "education": Education, "bucket-list": BucketListItem, "settings": SiteSetting, "role-policies": RolePolicy, "entry-assets": EntryAsset, "entry-technologies": EntryTechnology, "repositories": Repository, "technologies": Technology, "topology": TopologyStep, "metrics": Metric, "decisions": ArchitectureDecision, "highlights": Highlight, "quotes": Quote, "snippets": CodeSnippet, "documents": Document, "badges": Badge}
     model = models.get(resource)
     if not model or action not in {"list", "create", "update", "delete"}:
@@ -126,7 +126,15 @@ def manage_content(resource: str, action: str, payload: dict, db: Session = Depe
         query = select(model)
         if resource == "entry-assets" and payload.get("entry_id"):
             query = query.where(EntryAsset.entry_id == payload["entry_id"])
-        return [model_record(item) for item in db.scalars(query).all()]
+        total = db.scalar(select(func.count()).select_from(query.subquery())) or 0
+        page = max(int(payload.get("page", 1)), 1)
+        page_size = max(min(int(payload.get("page_size", 100)), 500), 1)
+        records = db.scalars(query.offset((page - 1) * page_size).limit(page_size)).all()
+        response.headers["X-Total-Count"] = str(total)
+        response.headers["X-Returned-Count"] = str(len(records))
+        response.headers["X-Page"] = str(page)
+        response.headers["X-Page-Size"] = str(page_size)
+        return [model_record(item) for item in records]
     identity = payload.get("id") or payload.get("key")
     item = db.get(model, identity) if identity else None
     if action == "delete":

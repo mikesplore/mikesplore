@@ -41,7 +41,21 @@ async def handle_llm_admin_operation(message: types.Message, operation: dict) ->
     if not resource or not action:
         return False
     if action == "list":
-        items = await manage_content(resource, "list", {})
+        list_resource = "entries" if resource == "project" else resource
+        items = await manage_content(list_resource, "list", {})
+        if resource in {"project", "entries"}:
+            items = [item for item in items if item.get("content_type") == "project"]
+        # Collection listings must be rendered from the verified backend rows.
+        # Sending them through an LLM allows plausible records to be invented.
+        if resource in {"project", "entries"}:
+            lines = ["Here are your current projects:"]
+            for index, item in enumerate(items, 1):
+                title = item.get("title") or item.get("slug") or "Untitled"
+                slug = item.get("slug")
+                lines.append(f"{index}. {title}" + (f" – {slug}" if slug else ""))
+            lines.append(f"\nTotal: {len(items)} project{'s' if len(items) != 1 else ''}")
+            await message.answer("\n".join(lines))
+            return True
         response = await present_admin_result(message.text or "", resource, items[:5], {"is_admin": True})
         await message.answer(telegram_html(response))
         return True
