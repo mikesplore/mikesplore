@@ -38,7 +38,7 @@ def _source_entry(source: str, item: dict, visible: bool) -> dict:
                 "blurb": item.get("description") or item.get("description_markdown") or "",
                 "date": (item.get("published_at") or item.get("created_at", ""))[:10] or None,
                 "is_visible": True, "tags": item.get("tag_list", []),
-                "source": {"provider": "dev.to", "key": url}}
+                "source": {"provider": "dev.to", "key": url, "body_markdown": item.get("body_markdown") or item.get("body_html") or ""}}
     url = item.get("html_url")
     title = item.get("name", "Untitled repository")
     return {"slug": slugify(title), "content_type": "project", "title": title,

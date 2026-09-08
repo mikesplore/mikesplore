@@ -60,7 +60,9 @@ async def get_entry_by_slug(slug: str) -> dict:
             return {"found": False, "slug": slug}
         response.raise_for_status()
         entry = response.json()
-        return {"found": True, **{key: entry.get(key) for key in ("slug", "content_type", "title", "blurb", "date", "year", "tags", "tech_stack", "details", "links")}}
+        source = entry.get("source") or {}
+        body = source.get("body_markdown") or source.get("body_html") or ""
+        return {"found": True, **{key: entry.get(key) for key in ("slug", "content_type", "title", "blurb", "date", "year", "tags", "tech_stack", "details", "links")}, "article_body": body[:12000]}
 
 
 async def request_cv_delivery() -> dict:

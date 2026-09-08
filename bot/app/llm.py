@@ -5,7 +5,7 @@ from groq import AsyncGroq, APIStatusError
 
 from .config import settings
 from .tools import TOOLS, execute_tool
-from .admin import get_cv_tailoring_context, list_admin_resource, list_profile_links, search_admin_content
+from .admin import get_cv_tailoring_context, list_admin_resource, list_profile_links, search_admin_content, sync_devto_articles
 
 client = AsyncGroq(api_key=settings.groq_api_key)
 
@@ -83,6 +83,7 @@ ADMIN_TOOLS = [
     {"type": "function", "function": {"name": "request_cv_tailoring", "description": "Recognize a bare job description from the portfolio owner and start CV tailoring. Pass the complete job description exactly as provided. Do not use this for ordinary portfolio questions.", "parameters": {"type": "object", "properties": {"job_description": {"type": "string"}}, "required": ["job_description"]}}},
     {"type": "function", "function": {"name": "propose_role_policies", "description": "Analyze the verified CV context and propose pending role-family policies for CV tailoring. Never activate policies and never invent evidence.", "parameters": {"type": "object", "properties": {}, "required": []}}},
     {"type": "function", "function": {"name": "list_role_policies", "description": "List role policies with exact IDs and activation status before activating or revising them.", "parameters": {"type": "object", "properties": {}, "required": []}}},
+    {"type": "function", "function": {"name": "sync_devto_articles", "description": "Sync the owner's published Dev.to articles into the portfolio, including their full public body for grounded article explanations.", "parameters": {"type": "object", "properties": {}, "required": []}}},
     {"type": "function", "function": {"name": "create_admin_operation", "description": "Return only the final structured admin operation after lookups. For action=list, payload MUST be {} and must never contain lookup results. Do not explain it in text.", "parameters": {"type": "object", "properties": {"resource": {"type": "string"}, "action": {"type": "string", "enum": ["list", "create", "update", "delete", "propose"]}, "id": {"type": "string"}, "payload": {"type": "object"}}, "required": ["resource", "action", "payload"]}}},
 ]
 
@@ -116,6 +117,8 @@ async def execute_admin_tool(name: str, arguments: dict, admin_authorized: bool 
         return {"resource": "role-policies", "action": "propose", "payload": {"policies": await propose_role_policies()}}
     if name == "list_role_policies":
         return [{key: item.get(key) for key in ("id", "role_family", "titles", "status", "is_active", "confidence")} for item in await list_admin_resource("role-policies")]
+    if name == "sync_devto_articles":
+        return {"resource": "devto-sync", "action": "request", "payload": await sync_devto_articles()}
     raise ValueError(f"Unsupported admin lookup tool: {name}")
 
 
@@ -345,7 +348,7 @@ async def extract_job_description_from_image(content: bytes, mime_type: str) -> 
 
 
 async def extract_admin_operation(instruction: str, admin_authorized: bool = False) -> dict:
-    allowed_resources = {"entries", "certificates", "assets", "links", "skills", "education", "bucket-list", "settings", "profile", "entry-assets", "entry-technologies", "repositories", "technologies", "topology", "metrics", "decisions", "highlights", "quotes", "snippets", "documents", "badges", "uploads", "cv-tailoring", "role-policies"}
+    allowed_resources = {"entries", "certificates", "assets", "links", "skills", "education", "bucket-list", "settings", "profile", "entry-assets", "entry-technologies", "repositories", "technologies", "topology", "metrics", "decisions", "highlights", "quotes", "snippets", "documents", "badges", "uploads", "cv-tailoring", "role-policies", "devto-sync"}
     system = "Extract one admin portfolio operation as JSON with resource, action (list/create/update/delete), id, and payload. For a read request such as 'list my assets', call the relevant lookup tool, then call create_admin_operation with action=list and payload {}. Never copy lookup records into the payload. For 'activate them' or similar role-policy requests, call list_role_policies, then return resource role-policies, action update, and payload.policies containing each exact policy id with is_active true and status active. Use role-policies updates only after listing exact policies. Do not return a conversational answer. To derive dynamic role policies from the verified CV, call propose_role_policies; it returns resource role-policies and action propose. Use lookup tools before updating or deleting an existing record; copy exact returned IDs and never invent them. Project metadata requests such as changing a project's status or category are entries updates: call list_projects first, select the exact matching project ID, use resource entries and action update, and put only the requested fields in payload. Do not use resource project. Repository metadata requests such as changing a repository's visibility, primary language, label, role, or primary flag are repositories updates: call list_repositories or find_repository first, select the exact matching repository ID, use resource repositories and action update, and put only the requested fields in payload. Map 'show/hide' to is_visible true/false. For any repository URL request, call find_repository with the exact URL first; if it returns a record, action MUST be update with that record's exact ID and never create a duplicate URL. Only use create when find_repository returns no record. To add technologies or any content block to a project, ALWAYS call list_projects first and copy the exact project entry ID into entry_id. For technologies also call list_technologies and use resource entry-technologies. Never use topology for technology relationships. For attaching an asset, call list_assets and list_projects, then create resource entry-assets with payload containing the exact asset_id, entry_id, role, alt_text, caption, and custom_order. Use profile only for profile text. Contact details use links. When one request names multiple contact/social platforms or usernames, create one bulk links operation with payload.links containing one complete link object per named platform; never collapse them into one link. For bulk link updates or deletes, call list_profile_links first and include the exact id in each link object. Infer categories per platform only when the user does not specify one: WhatsApp and Telegram are contact, while dev.to and LabLab AI are social. If the user explicitly says professional, social, or contact, apply that exact category to every named link unless the request assigns categories individually. Project content uses topology, metrics, decisions, highlights, quotes, snippets, documents, or badges with entry_id. Repository metadata uses repositories. Return action null only when a mutation target is genuinely ambiguous."
     async def extract(system_prompt: str, user_prompt: str) -> dict:
         completion = await client.chat.completions.create(
@@ -369,12 +372,14 @@ async def extract_admin_operation(instruction: str, admin_authorized: bool = Fal
         messages.append(message)
         for call in message.tool_calls:
             arguments = json.loads(call.function.arguments or "{}")
-            if call.function.name in {"create_admin_operation", "request_upload", "request_cv_tailoring", "propose_role_policies"}:
+            if call.function.name in {"create_admin_operation", "request_upload", "request_cv_tailoring", "propose_role_policies", "sync_devto_articles"}:
                 if call.function.name == "request_upload":
                     result = {"resource": "uploads", "action": "request", "payload": arguments}
                 elif call.function.name == "request_cv_tailoring":
                     result = {"resource": "cv-tailoring", "action": "request", "payload": arguments}
                 elif call.function.name == "propose_role_policies":
+                    result = await execute_admin_tool(call.function.name, arguments, admin_authorized)
+                elif call.function.name == "sync_devto_articles":
                     result = await execute_admin_tool(call.function.name, arguments, admin_authorized)
                 else:
                     result = arguments

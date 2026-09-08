@@ -17,6 +17,13 @@ async def apply_sync(source: str, items: list[dict], selected: list[str]) -> dic
         return response.json()
 
 
+async def sync_devto_articles() -> dict:
+    preview = await preview_sync("devto")
+    items = preview.get("items", [])
+    selected = [item.get("source", {}).get("key") for item in items if item.get("source", {}).get("key")]
+    return await apply_sync("devto", items, selected)
+
+
 async def create_entry(entry: dict) -> dict:
     async with httpx.AsyncClient(base_url=settings.backend_url, timeout=10) as client:
         response = await client.post("/entries", json=entry, headers={"X-Service-Api-Key": settings.service_api_key})
