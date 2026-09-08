@@ -18,24 +18,12 @@ from .llm import answer
 from .llm import extract_entry, extract_job_description_from_image, extract_update, present_admin_result, request_cv_render, tailor_cv
 from .admin import apply_sync, bulk_manage_links, create_entry, delete_asset, delete_certificate, delete_entry, get_cv_base, list_certificates as list_certificate_records, manage_content, preview_sync, render_cv, save_cv_base, update_entry, update_profile, upload_asset, upload_certificate
 from .formatting import telegram_html
+from .state import admin_result_context, awaiting_cv, awaiting_entry, conversation_history, last_cv_delivery, list_context, pending, pending_cv, pending_mutation, pending_sync, pending_upload, pending_upload_target
 
 bot = Bot(settings.telegram_bot_token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 dispatcher = Dispatcher()
 app = FastAPI(title="Portfolio Telegram bot")
 logger = logging.getLogger(__name__)
-pending: dict[int, dict] = {}
-awaiting_entry: set[int] = set()
-pending_upload: dict[int, tuple[str, str]] = {}
-pending_upload_target: dict[int, dict] = {}
-pending_mutation: dict[int, tuple[str, str, dict | None]] = {}
-pending_sync: dict[int, tuple[str, list[dict], list[str]]] = {}
-awaiting_cv: set[int] = set()
-pending_cv: dict[int, tuple[dict, str, str, str]] = {}
-last_cv_delivery: dict[int, tuple[str, str]] = {}
-list_context: dict[int, tuple[str, int]] = {}
-admin_result_context: dict[int, dict] = {}
-conversation_history: dict[int, list[dict[str, str]]] = {}
-
 async def show_typing(message: types.Message) -> None:
     await bot.send_chat_action(chat_id=message.chat.id, action="typing")
 
