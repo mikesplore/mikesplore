@@ -223,6 +223,24 @@ class CvVersion(Base):
     patch: Mapped[dict] = mapped_column(JSONB, default=dict)
     base_snapshot: Mapped[dict] = mapped_column(JSONB, default=dict)
     pdf_url: Mapped[str] = mapped_column(Text)
+
+
+class RolePolicy(Base):
+    __tablename__ = "role_policies"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    role_family: Mapped[str] = mapped_column(String(128), unique=True)
+    titles: Mapped[list] = mapped_column(JSONB, default=list)
+    related_skills: Mapped[list] = mapped_column(JSONB, default=list)
+    related_projects: Mapped[list] = mapped_column(JSONB, default=list)
+    evidence_requirements: Mapped[list] = mapped_column(JSONB, default=list)
+    excluded_claims: Mapped[list] = mapped_column(JSONB, default=list)
+    status: Mapped[str] = mapped_column(String(32), default="pending")
+    confidence: Mapped[str | None] = mapped_column(String(32))
+    source: Mapped[str | None] = mapped_column(String(64))
+    is_active: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 

@@ -19,7 +19,7 @@ from datetime import date as date_value
 
 from .auth import require_service_key
 from .db import get_db
-from .models import ArchitectureDecision, Badge, BucketListItem, Certificate, CodeSnippet, CvVersion, Document, Education, Entry, EntryAsset, EntryTechnology, Highlight, Metric, Profile, ProfileLink, Quote, Relationship, Repository, SiteAsset, SkillGroup, SiteSetting, Technology, TopologyStep
+from .models import ArchitectureDecision, Badge, BucketListItem, Certificate, CodeSnippet, CvVersion, Document, Education, Entry, EntryAsset, EntryTechnology, Highlight, Metric, Profile, ProfileLink, Quote, Relationship, Repository, RolePolicy, SiteAsset, SkillGroup, SiteSetting, Technology, TopologyStep
 from .schemas import AdminLinkMutation, BulkLinkMutation, EntryCreate, EntryRead, EntryUpdate, ProfileLinkCreate, ProfileLinkUpdate, ProfileUpdate
 
 app = FastAPI(title="Portfolio API", version="1.0.0")
@@ -107,7 +107,7 @@ def update_profile(payload: ProfileUpdate, db: Session = Depends(get_db)):
 
 @app.post("/admin/content", dependencies=[Depends(require_service_key)])
 def manage_content(resource: str, action: str, payload: dict, db: Session = Depends(get_db)):
-    models = {"entries": Entry, "certificates": Certificate, "assets": SiteAsset, "links": ProfileLink, "skills": SkillGroup, "education": Education, "bucket-list": BucketListItem, "settings": SiteSetting, "entry-assets": EntryAsset, "entry-technologies": EntryTechnology, "repositories": Repository, "technologies": Technology, "topology": TopologyStep, "metrics": Metric, "decisions": ArchitectureDecision, "highlights": Highlight, "quotes": Quote, "snippets": CodeSnippet, "documents": Document, "badges": Badge}
+    models = {"entries": Entry, "certificates": Certificate, "assets": SiteAsset, "links": ProfileLink, "skills": SkillGroup, "education": Education, "bucket-list": BucketListItem, "settings": SiteSetting, "role-policies": RolePolicy, "entry-assets": EntryAsset, "entry-technologies": EntryTechnology, "repositories": Repository, "technologies": Technology, "topology": TopologyStep, "metrics": Metric, "decisions": ArchitectureDecision, "highlights": Highlight, "quotes": Quote, "snippets": CodeSnippet, "documents": Document, "badges": Badge}
     model = models.get(resource)
     if not model or action not in {"list", "create", "update", "delete"}:
         raise HTTPException(status_code=400, detail="Unsupported resource or action")
