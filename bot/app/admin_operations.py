@@ -4,10 +4,21 @@
 async def execute_admin_operation(operation: dict, *, update_profile, manage_content, bulk_manage_links) -> str:
     """Apply one operation after authorization and any confirmation have completed."""
     resource, action = operation["resource"], operation["action"]
+    # Projects are entries with content_type=project in the backend.  Keep this
+    # compatibility guard because older/occasionally non-compliant model output
+    # can still use the natural-language resource name "project".
+    if resource == "project":
+        resource = "entries"
     if resource == "profile":
         await update_profile(operation.get("payload", {}))
     else:
         payload = dict(operation.get("payload") or {key: value for key, value in operation.items() if key not in {"resource", "action", "id", "candidates", "payload"}})
+        if operation.get("resource") == "project":
+            payload.setdefault("content_type", "project")
+            # "description" is the natural project-facing name; Entry uses
+            # the API field "blurb" for the required short/long description.
+            if "blurb" not in payload and "description" in payload:
+                payload["blurb"] = payload.pop("description")
         if operation.get("id"):
             payload["id"] = operation["id"]
         values = payload.get("links") if resource == "links" else payload.get("technologies") if resource == "entry-technologies" else None
