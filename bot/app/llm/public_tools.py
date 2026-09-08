@@ -42,6 +42,11 @@ async def answer(question: str, history: list[dict] | None = None, on_text=None,
             **client_answer_kwargs,
         )
         message = completion.choices[0].message
+        # Groq may return a short natural-language preflight together with its
+        # tool calls. Surface it immediately so the user knows what the model
+        # is about to do while the lookup or mutation is running.
+        if message.content and on_text:
+            await on_text(message.content)
         if not message.tool_calls:
             content = message.content or "I couldn't find an answer in the portfolio."
             return content

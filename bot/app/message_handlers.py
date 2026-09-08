@@ -183,7 +183,6 @@ def register_message_handlers(dispatcher, dependencies):
                         },
                     )
                     if response.startswith("__ADMIN_OPERATION__"):
-                        await streamed_message.delete()
                         operation = json.loads(response.removeprefix("__ADMIN_OPERATION__"))
                         await handle_llm_admin_operation(message, operation)
                         return
@@ -211,5 +210,3 @@ def register_message_handlers(dispatcher, dependencies):
             await streamed_message.edit_text(telegram_html(response))
         
         
-
-

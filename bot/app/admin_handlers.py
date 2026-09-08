@@ -57,4 +57,3 @@ async def handle_llm_admin_operation(message: types.Message, operation: dict) ->
     await run_admin_operation(operation, update_profile=update_profile, manage_content=manage_content, bulk_manage_links=bulk_manage_links)
     await message.answer(f"{resource.replace('-', ' ').title()} {'updated' if action == 'update' else 'created' }.")
     return True
-
