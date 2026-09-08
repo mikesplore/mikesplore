@@ -1,7 +1,7 @@
 import json
 import base64
 
-from groq import AsyncGroq
+from groq import AsyncGroq, APIStatusError
 
 from .config import settings
 from .tools import TOOLS, execute_tool
@@ -219,13 +219,16 @@ async def tailor_cv(job_description: str, existing_patch: dict | None = None, re
         instruction += "\n\nPENDING PATCH:\n" + json.dumps(existing_patch) + "\n\nREVISION REQUEST:\n" + (revision or "")
     messages = [{"role": "system", "content": CV_TAILOR_SYSTEM}, {"role": "user", "content": instruction}]
     for attempt in range(2):
-        completion = await client.chat.completions.create(
-            model=settings.groq_model,
-            messages=messages,
-            response_format={"type": "json_object"},
-            max_tokens=700,
-            temperature=0,
-        )
+        try:
+            completion = await client.chat.completions.create(
+                model=settings.groq_model,
+                messages=messages,
+                response_format={"type": "json_object"},
+                max_tokens=700,
+                temperature=0,
+            )
+        except APIStatusError as error:
+            raise ValueError(groq_error_message(error)) from error
         message = completion.choices[0].message
         if not message.tool_calls:
             content = (message.content or "").strip()
@@ -260,6 +263,19 @@ async def tailor_cv(job_description: str, existing_patch: dict | None = None, re
                 return {"status": "rejected", "reason": "There is not enough verified portfolio evidence for this job."}
             return result
     raise ValueError("CV tailoring did not produce a final patch after searching")
+
+
+def groq_error_message(error: APIStatusError) -> str:
+    status = getattr(error, "status_code", None)
+    if status == 400:
+        return "Groq rejected the request format. Please retry with a shorter job description."
+    if status == 413:
+        return "The request was too large for Groq. The CV context or job description must be shortened."
+    if status == 429:
+        return "Groq rate-limited this request. Please wait a moment and try again."
+    if status and status >= 500:
+        return "Groq is temporarily unavailable. Please try again shortly."
+    return f"Groq returned an unexpected API error{f' ({status})' if status else ''}."
 
 
 async def extract_job_description_from_image(content: bytes, mime_type: str) -> str:
