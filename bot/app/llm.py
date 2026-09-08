@@ -276,6 +276,12 @@ async def extract_admin_operation(instruction: str) -> dict:
         forced = completion.choices[0].message
         if forced.tool_calls:
             result = json.loads(forced.tool_calls[0].function.arguments or "{}")
+    elif not result.get("action"):
+        messages.append({"role": "user", "content": "Return the final structured admin operation now. Use the exact record ID from the lookup result, choose the correct resource and action, and call create_admin_operation. Do not perform another lookup."})
+        completion = await client.chat.completions.create(model=settings.groq_model, messages=messages, tools=ADMIN_TOOLS, tool_choice={"type": "function", "function": {"name": "create_admin_operation"}}, max_tokens=180, temperature=0)
+        forced = completion.choices[0].message
+        if forced.tool_calls:
+            result = json.loads(forced.tool_calls[0].function.arguments or "{}")
     if not result.get("action") and result.get("resource") and instruction.lower().lstrip().startswith(("list ", "show ")):
         result["action"] = "list"
         result["payload"] = result.get("payload") if isinstance(result.get("payload"), dict) else {}
