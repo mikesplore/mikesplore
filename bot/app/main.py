@@ -13,7 +13,7 @@ from .tools import list_certificates
 
 from .config import settings
 from .llm import answer
-from .llm import extract_admin_operation, extract_entry, extract_job_description_from_image, extract_profile_update, extract_update, tailor_cv
+from .llm import extract_admin_operation, extract_entry, extract_job_description_from_image, extract_update, tailor_cv
 from .admin import apply_sync, bulk_manage_links, create_entry, delete_asset, delete_certificate, delete_entry, get_cv_base, list_certificates as list_certificate_records, manage_content, preview_sync, render_cv, save_cv_base, update_entry, update_profile, upload_asset, upload_certificate
 from .formatting import telegram_html
 
@@ -187,11 +187,27 @@ async def profile_command(message: types.Message):
         return
     try:
         await show_typing(message)
-        changes = await extract_profile_update(instruction)
-        pending_mutation[message.from_user.id] = ("profile", "profile", changes)
-        await message.answer("Profile preview (send /confirm to save, /cancel to discard):\n\n" + format_profile_preview(changes))
+        operation = await extract_admin_operation(instruction)
+        if operation.get("action") == "list":
+            resource = operation.get("resource")
+            items = await manage_content(resource, "list", {})
+            await message.answer(format_admin_list(resource, items))
+            return
+        if operation.get("action") in {"update", "delete"} and operation.get("id"):
+            records = await manage_content(operation["resource"], "list", {})
+            target = next((record for record in records if str(record.get("id")) == str(operation["id"])), None)
+            if target:
+                operation["target"] = target
+        if not operation.get("action"):
+            await message.answer("I found multiple possible records. Please make the instruction more specific.")
+            return
+        pending_mutation[message.from_user.id] = ("admin", operation["resource"] + ":" + operation["action"], operation)
+        await message.answer("Admin preview (send /confirm to save, /cancel to discard):\n\n" + format_preview(operation))
+    except ValueError as error:
+        await message.answer(f"Admin operation validation failed: {str(error)[:500]}")
     except Exception:
-        await message.answer("I couldn't understand those profile changes.")
+        logger.exception("Profile admin operation extraction failed")
+        await message.answer("Admin operation extraction failed. Check the bot logs for the traceback.")
 
 
 @dispatcher.message(Command("cv"))
