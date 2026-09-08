@@ -562,7 +562,7 @@ async def question(message: types.Message):
         if is_admin(message) and (normalized_admin_text.startswith("/") or normalized_admin_text.startswith(admin_words)):
             try:
                 instruction = message.text.partition(" ")[2].strip() if message.text.startswith("/") else message.text
-                operation = await extract_admin_operation(instruction)
+                operation = await extract_admin_operation(instruction, admin_authorized=is_admin(message))
                 if operation.get("action") == "list":
                     items = await manage_content(operation["resource"], "list", {})
                     await message.answer(format_admin_list(operation["resource"], items))
