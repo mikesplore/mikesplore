@@ -31,7 +31,7 @@ pending_sync: dict[int, tuple[str, list[dict], list[str]]] = {}
 awaiting_cv: set[int] = set()
 pending_cv: dict[int, tuple[dict, str, str, str]] = {}
 list_context: dict[int, tuple[str, int]] = {}
-admin_result_context: dict[int, list[dict]] = {}
+admin_result_context: dict[int, dict] = {}
 conversation_history: dict[int, list[dict[str, str]]] = {}
 
 
@@ -179,6 +179,26 @@ async def action_callback(callback: types.CallbackQuery):
         except Exception:
             logger.exception("Gallery image delivery failed")
             await callback.answer("Image unavailable", show_alert=True)
+        return
+    if data in {"adminlist:next", "adminlist:prev"}:
+        context = admin_result_context.get(user_id)
+        if not context:
+            await callback.answer("This list has expired", show_alert=True)
+            return
+        page_size = 5
+        pages = max(1, (len(context["items"]) + page_size - 1) // page_size)
+        context["page"] = max(0, min(pages - 1, context["page"] + (1 if data.endswith("next") else -1)))
+        start = context["page"] * page_size
+        page_items = context["items"][start:start + page_size]
+        response = await present_admin_result(context["request"], context["resource"], page_items, {"is_admin": True})
+        buttons = []
+        if context["page"] > 0:
+            buttons.append(InlineKeyboardButton(text="Previous", callback_data="adminlist:prev"))
+        if context["page"] < pages - 1:
+            buttons.append(InlineKeyboardButton(text="Next", callback_data="adminlist:next"))
+        await callback.answer()
+        if callback.message:
+            await callback.message.edit_text(telegram_html(response), reply_markup=InlineKeyboardMarkup(inline_keyboard=[buttons]) if buttons else None)
         return
     await callback.answer("Unknown action", show_alert=True)
 
@@ -351,11 +371,13 @@ async def question(message: types.Message):
                             {**item, "asset_label": by_id.get(str(item.get("asset_id")), {}).get("label"), "asset_url": by_id.get(str(item.get("asset_id")), {}).get("url")}
                             for item in items
                         ]
-                    admin_result_context[message.from_user.id] = items
+                    page_size = 5
+                    admin_result_context[message.from_user.id] = {"resource": operation["resource"], "items": items, "page": 0, "request": message.text or ""}
+                    page_items = items[:page_size]
                     response = await present_admin_result(
                         message.text or "",
                         operation["resource"],
-                        items,
+                        page_items,
                         {"first_name": message.from_user.first_name if message.from_user else None, "last_name": message.from_user.last_name if message.from_user else None, "is_admin": True},
                     )
                     if response.startswith("__BOT_ACTION__"):
@@ -370,10 +392,15 @@ async def question(message: types.Message):
                     if operation["resource"] == "entry-assets":
                         buttons = [
                             InlineKeyboardButton(text=f"View {index + 1}", callback_data=f"gallery:{index}")
-                            for index, item in enumerate(items[:10]) if item.get("asset_url")
+                            for index, item in enumerate(page_items) if item.get("asset_url")
                         ]
                         if buttons:
                             keyboard = InlineKeyboardMarkup(inline_keyboard=[buttons[index:index + 3] for index in range(0, len(buttons), 3)])
+                    page_buttons = []
+                    if len(items) > page_size:
+                        page_buttons.append(InlineKeyboardButton(text="Next", callback_data="adminlist:next"))
+                    if page_buttons:
+                        keyboard = InlineKeyboardMarkup(inline_keyboard=(keyboard.inline_keyboard if keyboard else []) + [page_buttons])
                     await message.answer(telegram_html(response), reply_markup=keyboard)
                     return
                 if operation.get("action") in {"update", "delete"} and operation.get("id"):
