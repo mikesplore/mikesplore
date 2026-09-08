@@ -605,6 +605,10 @@ async def question(message: types.Message):
             content_type, current_page = list_context[user_id]
             question_text = f"Show page {current_page + 1} of {content_type}s from the portfolio."
             list_context[user_id] = (content_type, current_page + 1)
+        elif is_next and conversation_history.get(user_id):
+            # A detail follow-up such as "next" should stay with the previous
+            # subject instead of becoming a fresh search for the literal word.
+            question_text = "Continue with the same subject as my previous request and provide the next useful detail."
         else:
             content_type = next((value for value in ("project", "article", "hackathon", "event") if value in normalized), None)
             if content_type and any(word in normalized for word in ("show", "list", "what", "which")):
