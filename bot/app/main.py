@@ -599,7 +599,14 @@ async def question(message: types.Message):
                     await message.answer("Links updated." if operation["action"] == "update" else "Links saved.")
                     return
                 pending_mutation[message.from_user.id] = ("admin", operation["resource"] + ":" + operation["action"], operation)
-                await message.answer("Admin preview (send /confirm to save, /cancel to discard):\n\n" + format_preview(operation))
+                if operation.get("action") == "delete":
+                    target = operation.get("target") or {}
+                    target_name = target.get("name") or target.get("title") or target.get("label") or target.get("id") or operation.get("id")
+                    target_url = target.get("url")
+                    description = f"{target_name} ({target_url})" if target_url else str(target_name)
+                    await message.answer(f"I found {description}. Do you want me to delete it? Reply yes to confirm or /cancel to abort.")
+                else:
+                    await message.answer("I’ve prepared this change:\n\n" + format_preview(operation) + "\n\nReply yes to apply it or /cancel to abort.")
             except ValueError as error:
                 await message.answer(f"Admin operation validation failed: {str(error)[:500]}")
             except Exception:
