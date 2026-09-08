@@ -2,6 +2,7 @@ from aiogram import Bot, Dispatcher, types
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command
 from fastapi import FastAPI, Header, HTTPException, Request
 import html
@@ -183,19 +184,22 @@ async def action_callback(callback: types.CallbackQuery):
             await callback.answer("No pending operation", show_alert=True)
             return
         try:
+            await callback.answer("Working…")
+        except TelegramBadRequest:
+            logger.info("Callback acknowledgement expired before admin operation started")
+        try:
             result = await execute_admin_operation(mutation[2] or {})
-            await callback.answer("Completed")
             if callback.message:
                 await callback.message.edit_text(result)
         except httpx.HTTPStatusError as error:
             pending_mutation[user_id] = mutation
-            await callback.answer("Backend rejected the operation", show_alert=True)
             if callback.message:
                 await callback.message.edit_text(f"The backend rejected that change: {error.response.text[:500]}")
         except Exception:
             pending_mutation[user_id] = mutation
             logger.exception("Inline admin mutation failed")
-            await callback.answer("Operation failed", show_alert=True)
+            if callback.message:
+                await callback.message.edit_text("The operation failed. The pending change was kept so you can retry.")
         return
     if data in {"cv:generate", "cv:revise"}:
         tailored = pending_cv.get(user_id)
