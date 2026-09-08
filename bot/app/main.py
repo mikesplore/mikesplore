@@ -500,7 +500,10 @@ async def question(message: types.Message):
                                 if resource == "entry-technologies":
                                     values = [{"entry_id": payload.get("entry_id"), "technology_id": item.get("technology_id")} for item in values]
                                 if resource == "links":
-                                    await bulk_manage_links([{"action": action, "payload": link} for link in values])
+                                    await bulk_manage_links([
+                                        {"action": action, "id": link.get("id"), "payload": {key: value for key, value in link.items() if key != "id"}}
+                                        for link in values
+                                    ])
                                 else:
                                     for item in values:
                                         await manage_content(resource, action, item)
