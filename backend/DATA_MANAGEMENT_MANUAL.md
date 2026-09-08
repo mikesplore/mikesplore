@@ -2,9 +2,9 @@
 
 This manual describes how to manage portfolio data through the Telegram bot and backend API.
 
-The recommended workflow is to use natural-language `/admin` requests. The LLM interprets the
-request and uses backend lookup tools to find existing records. The bot then shows a preview and
-requires explicit confirmation before writing anything.
+The recommended workflow is to use natural-language requests. The LLM interprets the request and
+uses the appropriate public or administrator tools. The bot authenticates the administrator and
+maintains the conversation; it does not interpret portfolio fields itself.
 
 ## Requirements
 
@@ -28,41 +28,46 @@ The workflow is:
 ```text
 Natural-language request
         ↓
-LLM interprets request and looks up records
+LLM interprets request and calls the appropriate tools
         ↓
-Preview shown in Telegram
+Low-risk change: applied immediately
         ↓
-/confirm or /cancel
+Destructive/high-impact change: confirmation requested
         ↓
 Backend validates and writes to PostgreSQL
 ```
 
-The LLM should not invent record IDs. For updates and deletes, it must look up the existing record
-and return its exact ID.
+The LLM must not invent record IDs. For updates and deletes, it must look up the existing record
+and return its exact ID. Administrator tools reject callers who are not the configured owner.
+
+Profile edits and ordinary metadata updates do not require confirmation. Deletions, CV tailoring or
+rendering, destructive asset operations, and other high-impact changes remain confirmation-protected.
 
 ## Core commands
 
-### `/admin`
+### Natural-language administration
 
-Use `/admin` for natural-language create, update, and delete requests.
+Send the request in ordinary language. Management commands are no longer the primary interface; the
+LLM determines the target resource and operation.
 
 ```text
-/admin add my GitHub profile as a professional contact link
+/admin add my GitHub profile as a professional contact link (passed)
 ```
 
 ```text
-/admin update my dev.to profile link to use the professional category
+/admin update my dev.to profile link to use the professional category (passed)
 ```
 
 ```text
-/admin remove the old LabLab AI link
+/admin remove the old LabLab AI link (passed)
 ```
 
-The bot shows a preview. Nothing is written until `/confirm` is sent.
+Low-risk updates are applied directly. Destructive requests receive a confirmation request before
+the backend mutation is called.
 
 ### `/confirm`
 
-Applies the current preview.
+Applies a pending high-risk operation. It remains available as a safety shortcut.
 
 ```text
 /confirm
@@ -79,16 +84,12 @@ Discards the current preview.
 Deployments or bot restarts may clear in-memory pending previews. If that happens, resend the
 original request.
 
-### `/help`
-
-Displays the currently available public and administrator commands.
-
 ## Profile details
 
-Use `/profile` for profile text only:
+Ask naturally for profile changes:
 
 ```text
-/profile Change my tagline to Backend engineer and set my location to Nairobi
+Change my tagline to Backend engineer and set my location to Nairobi
 ```
 
 Profile fields include:
@@ -102,18 +103,19 @@ Profile fields include:
 - Availability detail
 - About text
 
-Contact details do not belong in the profile record. Use `/admin` so they are stored as profile
-links.
+Profile text is stored in the profile record and is applied immediately. Contact details do not
+belong in the profile record; the LLM stores them as profile links.
 
 ## Contact and social links
 
 Use natural language:
 
 ```text
-/admin add my WhatsApp, Telegram, dev.to, and LabLab AI usernames as mikesplore
+Set my WhatsApp, Telegram, dev.to, and LabLab AI usernames to mikesplore
 ```
 
-The LLM should create multiple link records in one operation. Review the preview and confirm.
+The LLM should create or update one link per named platform. WhatsApp and Telegram default to
+`contact`; dev.to and LabLab AI default to `social`. Explicit categories override these defaults.
 
 Supported link categories:
 
@@ -131,28 +133,30 @@ Link records contain:
 - Visibility
 - Display order
 
-The backend normalizes link names and URLs and rejects duplicate identities.
+The backend normalizes link names and URLs. Repeating an existing create request upserts the link
+instead of creating a duplicate.
 
 To update a link:
 
 ```text
-/admin update my dev.to profile link to be professional
+Update my dev.to profile link to be professional
 ```
 
 To delete a link:
 
 ```text
-/admin delete my old Telegram contact link
+Delete my old Telegram contact link
 ```
 
 If more than one record matches, make the request more specific.
 
 ## Uploading assets
 
-Uploads are handled directly and do not go through the LLM.
+File transfer is handled directly because Telegram must provide the binary file, but the resulting
+asset record and project attachment are managed through administrator tools.
 
 ```text
-/upload project-image Vela architecture diagram
+/upload project-image Vela architecture diagram (passed)
 ```
 
 Then send the file as a Telegram document or image.
@@ -162,13 +166,13 @@ The upload is stored in R2 and a `site_assets` record is created. The maximum up
 To ask the administrator workflow to list uploaded assets, use:
 
 ```text
-/admin list my uploaded assets
+List my uploaded assets
 ```
 
 After uploading, link the asset to a project:
 
 ```text
-/admin attach the uploaded Vela architecture diagram to the Vela project as a gallery image
+Attach the uploaded Vela architecture diagram to the Vela project as a gallery image
 ```
 
 The LLM should create an `entry-assets` relationship containing the Vela entry ID and asset ID.
@@ -178,11 +182,11 @@ The LLM should create an `entry-assets` relationship containing the Vela entry I
 Use `/admin` to update project metadata:
 
 ```text
-/admin set Vela status to active and category to android
+/admin set Vela status to active and category to android (passed)
 ```
 
 ```text
-/admin set the Vela project origin to portfolio and author role to creator
+/admin set the Vela project origin to portfolio and author role to creator (passed)
 ```
 
 Project records are unified `entries` with `content_type=project`.
@@ -192,7 +196,7 @@ Project records are unified `entries` with `content_type=project`.
 Add a repository:
 
 ```text
-/admin add https://github.com/mikesplore/vela as the primary repository for Vela
+/admin add https://github.com/mikesplore/vela as the primary repository for Vela (passed)
 ```
 
 Update repository metadata:
