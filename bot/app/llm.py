@@ -278,6 +278,18 @@ def groq_error_message(error: APIStatusError) -> str:
     return f"Groq returned an unexpected API error{f' ({status})' if status else ''}."
 
 
+async def request_cv_render(patch: dict, job_description: str, base_revision: str, label: str) -> dict:
+    tool = {"type": "function", "function": {"name": "render_tailored_cv", "description": "Render the approved tailored CV using the supplied verified patch.", "parameters": {"type": "object", "properties": {"patch": {"type": "object"}, "job_description": {"type": "string"}, "base_revision": {"type": "string"}, "label": {"type": "string"}}, "required": ["patch", "job_description", "base_revision", "label"]}}}
+    try:
+        completion = await client.chat.completions.create(model=settings.groq_model, messages=[{"role": "system", "content": "The administrator approved the CV patch. Call render_tailored_cv exactly once with the supplied arguments. Do not modify the patch."}, {"role": "user", "content": json.dumps({"patch": patch, "job_description": job_description, "base_revision": base_revision, "label": label})}], tools=[tool], tool_choice={"type": "function", "function": {"name": "render_tailored_cv"}}, max_tokens=300, temperature=0)
+    except APIStatusError as error:
+        raise ValueError(groq_error_message(error)) from error
+    calls = completion.choices[0].message.tool_calls or []
+    if not calls:
+        raise ValueError("Groq did not produce the CV render function call.")
+    return json.loads(calls[0].function.arguments or "{}")
+
+
 async def extract_job_description_from_image(content: bytes, mime_type: str) -> str:
     encoded = base64.b64encode(content).decode("ascii")
     completion = await client.chat.completions.create(

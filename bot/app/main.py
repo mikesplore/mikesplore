@@ -13,7 +13,7 @@ from .tools import list_certificates
 
 from .config import settings
 from .llm import answer
-from .llm import extract_admin_operation, extract_entry, extract_job_description_from_image, extract_update, present_admin_result, tailor_cv
+from .llm import extract_admin_operation, extract_entry, extract_job_description_from_image, extract_update, present_admin_result, request_cv_render, tailor_cv
 from .admin import apply_sync, bulk_manage_links, create_entry, delete_asset, delete_certificate, delete_entry, get_cv_base, list_certificates as list_certificate_records, manage_content, preview_sync, render_cv, save_cv_base, update_entry, update_profile, upload_asset, upload_certificate
 from .formatting import telegram_html
 
@@ -468,7 +468,8 @@ async def question(message: types.Message):
                 await message.answer("Confirmed. I’m now rendering the tailored PDF…")
                 try:
                     patch, job_description, label, base_revision = tailored
-                    result = await render_cv(patch, base_revision, job_description, label)
+                    render_args = await request_cv_render(patch, job_description, base_revision, label)
+                    result = await render_cv(**render_args)
                     async with httpx.AsyncClient(timeout=30) as client:
                         pdf_response = await client.get(result["pdf_url"])
                         pdf_response.raise_for_status()
