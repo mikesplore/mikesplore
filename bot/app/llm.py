@@ -161,6 +161,20 @@ async def answer(question: str, history: list[dict] | None = None, on_text=None,
     return "I couldn't complete that lookup. Please try again."
 
 
+async def present_admin_result(request: str, resource: str, records: list[dict], user_context: dict | None = None) -> str:
+    """Turn an authenticated admin tool result into a concise natural response."""
+    completion = await client.chat.completions.create(
+        model=settings.groq_model,
+        messages=[
+            {"role": "system", "content": "Present the supplied administrator tool result in concise natural language. Use only the records provided. Do not claim any mutation occurred. Mention useful names, IDs, URLs, categories, roles, and counts when present. Do not output raw JSON or internal tool names."},
+            {"role": "user", "content": f"REQUEST: {request}\nRESOURCE: {resource}\nTOOL RESULT: {json.dumps(records, default=str)}"},
+        ],
+        max_tokens=400,
+        temperature=0,
+    )
+    return completion.choices[0].message.content or "I found no matching records."
+
+
 async def extract_entry(instruction: str) -> dict:
     completion = await client.chat.completions.create(
         model=settings.groq_model,

@@ -13,7 +13,7 @@ from .tools import list_certificates
 
 from .config import settings
 from .llm import answer
-from .llm import extract_admin_operation, extract_entry, extract_job_description_from_image, extract_update, tailor_cv
+from .llm import extract_admin_operation, extract_entry, extract_job_description_from_image, extract_update, present_admin_result, tailor_cv
 from .admin import apply_sync, bulk_manage_links, create_entry, delete_asset, delete_certificate, delete_entry, get_cv_base, list_certificates as list_certificate_records, manage_content, preview_sync, render_cv, save_cv_base, update_entry, update_profile, upload_asset, upload_certificate
 from .formatting import telegram_html
 
@@ -577,7 +577,13 @@ async def question(message: types.Message):
                 operation = await extract_admin_operation(instruction, admin_authorized=is_admin(message))
                 if operation.get("action") == "list":
                     items = await manage_content(operation["resource"], "list", {})
-                    await message.answer(format_admin_list(operation["resource"], items))
+                    response = await present_admin_result(
+                        message.text or "",
+                        operation["resource"],
+                        items,
+                        {"first_name": message.from_user.first_name if message.from_user else None, "last_name": message.from_user.last_name if message.from_user else None, "is_admin": True},
+                    )
+                    await message.answer(telegram_html(response))
                     return
                 if operation.get("action") in {"update", "delete"} and operation.get("id"):
                     records = await manage_content(operation["resource"], "list", {})
