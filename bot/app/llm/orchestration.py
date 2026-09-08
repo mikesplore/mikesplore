@@ -3,9 +3,9 @@ import base64
 
 from groq import AsyncGroq, APIStatusError
 
-from .config import settings
-from .tools import TOOLS, execute_tool
-from .admin import get_cv_tailoring_context, list_admin_resource, list_profile_links, search_admin_content, sync_devto_articles
+from ..config import settings
+from ..tools import TOOLS, execute_tool
+from ..admin import get_cv_tailoring_context, list_admin_resource, list_profile_links, search_admin_content, sync_devto_articles
 
 client = AsyncGroq(api_key=settings.groq_api_key)
 
