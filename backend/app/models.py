@@ -44,6 +44,7 @@ class Repository(Base):
     entry_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False, index=True)
     name: Mapped[str] = mapped_column(String(255))
     url: Mapped[str] = mapped_column(Text, unique=True)
+    is_visible: Mapped[bool] = mapped_column(Boolean, default=True)
     is_primary: Mapped[bool] = mapped_column(Boolean, default=False)
     custom_order: Mapped[int] = mapped_column(Integer, default=0)
     repo_metadata: Mapped[dict] = mapped_column("metadata", JSONB, default=dict)

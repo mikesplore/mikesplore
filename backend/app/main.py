@@ -665,7 +665,7 @@ def _project_json(project: Entry, repositories: list[Repository], technologies: 
     return {"id": str(project.id), "slug": project.slug, "title": project.title, "blurb": project.blurb,
             "summary": project.blurb, "tags": project.tags or [], "technologies": [technology.name for technology in technologies],
             "links": {"repo": next((repo.url for repo in repositories if repo.is_primary), repositories[0].url if repositories else None)},
-            "repositories": [{"name": repo.name, "url": repo.url, "is_primary": repo.is_primary, "role_label": repo.role_label, "primary_language": repo.primary_language, "link_label": repo.link_label} for repo in repositories],
+            "repositories": [{"name": repo.name, "url": repo.url, "is_primary": repo.is_primary, "role_label": repo.role_label, "primary_language": repo.primary_language, "link_label": repo.link_label} for repo in repositories if repo.is_visible],
             "content_blocks": blocks, "media": [{"id": asset.id, "role": link.role, "url": asset.url, "label": asset.label, "alt_text": link.alt_text, "caption": link.caption, "custom_order": link.custom_order} for link, asset in assets], "is_featured": project.is_featured, "icon_label": project.icon_label, "icon_url": project.icon_url, "status": project.status, "version": project.version, "license": project.license, "category": project.category, "author_role": project.author_role, "origin": project.origin, "started_at": project.started_at, "ended_at": project.ended_at, "template": project.template}
 
 
@@ -707,7 +707,7 @@ def list_projects(
     total = db.scalar(select(func.count()).select_from(query.subquery())) or 0
     response.headers["X-Total-Count"] = str(total)
     projects = db.scalars(query.offset((page - 1) * page_size).limit(page_size)).all()
-    return [_project_json(project, db.scalars(select(Repository).where(Repository.entry_id == project.id).order_by(Repository.custom_order)).all(), db.scalars(select(Technology).join(EntryTechnology, EntryTechnology.technology_id == Technology.id).where(EntryTechnology.entry_id == project.id)).all(), _project_blocks(project.id, db), db.execute(select(EntryAsset, SiteAsset).join(SiteAsset, EntryAsset.asset_id == SiteAsset.id).where(EntryAsset.entry_id == project.id).order_by(EntryAsset.custom_order)).all()) for project in projects]
+    return [_project_json(project, db.scalars(select(Repository).where(Repository.entry_id == project.id, Repository.is_visible.is_(True)).order_by(Repository.custom_order)).all(), db.scalars(select(Technology).join(EntryTechnology, EntryTechnology.technology_id == Technology.id).where(EntryTechnology.entry_id == project.id)).all(), _project_blocks(project.id, db), db.execute(select(EntryAsset, SiteAsset).join(SiteAsset, EntryAsset.asset_id == SiteAsset.id).where(EntryAsset.entry_id == project.id).order_by(EntryAsset.custom_order)).all()) for project in projects]
 
 
 @app.get("/projects/{slug}")
@@ -716,7 +716,7 @@ def get_project(slug: str, db: Session = Depends(get_db)):
     project = db.scalar(select(Entry).where(Entry.slug == slug, Entry.content_type == "project", Entry.is_visible.is_(True)))
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
-    repos = db.scalars(select(Repository).where(Repository.entry_id == project.id).order_by(Repository.custom_order)).all()
+    repos = db.scalars(select(Repository).where(Repository.entry_id == project.id, Repository.is_visible.is_(True)).order_by(Repository.custom_order)).all()
     technologies = db.scalars(select(Technology).join(EntryTechnology, EntryTechnology.technology_id == Technology.id).where(EntryTechnology.entry_id == project.id)).all()
     assets = db.execute(select(EntryAsset, SiteAsset).join(SiteAsset, EntryAsset.asset_id == SiteAsset.id).where(EntryAsset.entry_id == project.id).order_by(EntryAsset.custom_order)).all()
     return _project_json(project, repos, technologies, _project_blocks(project.id, db), assets)
