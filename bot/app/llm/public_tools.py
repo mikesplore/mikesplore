@@ -3,6 +3,7 @@
 import json
 
 from ..admin import list_admin_resource, list_profile_links, search_admin_content, sync_devto_articles
+from ..config import settings
 from ..tools import TOOLS, execute_tool
 from .admin_tools import ADMIN_TOOLS, execute_admin_tool
 from .client import client, client_answer_kwargs
@@ -84,4 +85,3 @@ async def present_admin_result(request: str, resource: str, records: list[dict],
         temperature=0,
     )
     return completion.choices[0].message.content or "I found no matching records."
-
