@@ -513,6 +513,17 @@ async def question(message: types.Message):
                         raise ValueError("The job description is too short to tailor the CV")
                     await prepare_cv_patch(message, job_description)
                     return
+                if operation.get("resource") == "role-policies" and operation.get("action") == "propose":
+                    policies = (operation.get("payload") or {}).get("policies") or []
+                    for policy in policies:
+                        await manage_content("role-policies", "create", policy)
+                    if policies:
+                        names = ", ".join(policy.get("role_family", "").title() for policy in policies)
+                        noun = "policy" if len(policies) == 1 else "policies"
+                        await message.answer(f"Saved {len(policies)} pending role {noun}: {names}. They are inactive until you ask me to activate them.")
+                    else:
+                        await message.answer("I found no evidence-supported role policies to propose.")
+                    return
                 if operation.get("resource") == "profile" and operation.get("action") in {"create", "update"}:
                     await update_profile(operation.get("payload") or {})
                     await message.answer("Profile updated.")

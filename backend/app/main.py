@@ -139,6 +139,18 @@ def manage_content(resource: str, action: str, payload: dict, db: Session = Depe
                 if key != "id" and hasattr(duplicate, key): setattr(duplicate, key, value)
             db.commit()
             return {"status": "upserted", "resource": resource, "id": str(duplicate.id)}
+    elif resource == "role-policies" and action == "create":
+        role_family = str(payload.get("role_family") or "").strip().lower()
+        if not role_family:
+            raise HTTPException(status_code=422, detail="Role policy requires a role_family")
+        payload["role_family"] = role_family
+        duplicate = db.scalar(select(RolePolicy).where(RolePolicy.role_family == role_family))
+        if duplicate:
+            for key, value in payload.items():
+                if key != "id" and hasattr(duplicate, key):
+                    setattr(duplicate, key, value)
+            db.commit()
+            return {"status": "upserted", "resource": resource, "id": str(duplicate.id)}
     elif resource == "entry-assets" and action == "create":
         required = {"entry_id", "asset_id", "role"}
         if not required.issubset(payload):
@@ -256,7 +268,7 @@ def bulk_manage_links(request: BulkLinkMutation, db: Session = Depends(get_db)):
 
 @app.get("/admin/search", dependencies=[Depends(require_service_key)])
 def admin_search(q: str = Query(min_length=1), db: Session = Depends(get_db)):
-    models = {"entries": Entry, "certificates": Certificate, "assets": SiteAsset, "links": ProfileLink, "skills": SkillGroup, "education": Education, "bucket-list": BucketListItem, "settings": SiteSetting, "repositories": Repository, "technologies": Technology, "entry-assets": EntryAsset}
+    models = {"entries": Entry, "certificates": Certificate, "assets": SiteAsset, "links": ProfileLink, "skills": SkillGroup, "education": Education, "bucket-list": BucketListItem, "settings": SiteSetting, "role-policies": RolePolicy, "repositories": Repository, "technologies": Technology, "entry-assets": EntryAsset}
     terms = [term.lower() for term in re.findall(r"[a-z0-9]+", q.lower()) if len(term) > 2]
     results = []
     for resource, model in models.items():
