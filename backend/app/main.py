@@ -514,10 +514,15 @@ def get_cv_tailoring_context(db: Session = Depends(get_db)):
     if not setting:
         raise HTTPException(status_code=404, detail="Base CV JSON has not been configured")
     data = setting.value
+    projects = []
+    for project in data.get("projects", [])[:20]:
+        bullets = [str(bullet)[:500] for bullet in (project.get("bullets") or [])[:6]]
+        projects.append({"id": _project_id(project), "name": project["name"], "date": project.get("date"), "stack": (project.get("stack") or [])[:20], "bullets": bullets})
+    skills = [{"category": group.get("category"), "items": (group.get("items") or [])[:30]} for group in data.get("skills", [])[:20]]
     return {
         "profile": {"name": data.get("name"), "title": data.get("title"), "summary": data.get("summary")},
-        "projects": [{"id": _project_id(p), "name": p["name"], "date": p.get("date"), "stack": p.get("stack"), "bullets": p.get("bullets", [])} for p in data.get("projects", [])],
-        "skills": data.get("skills", []),
+        "projects": projects,
+        "skills": skills,
         "revision": _cv_base_hash(data),
     }
 

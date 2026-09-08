@@ -220,7 +220,7 @@ async def tailor_cv(job_description: str, existing_patch: dict | None = None, re
             model=settings.groq_model,
             messages=messages,
             response_format={"type": "json_object"},
-            max_tokens=1200,
+            max_tokens=700,
             temperature=0,
         )
         message = completion.choices[0].message
@@ -241,7 +241,7 @@ async def tailor_cv(job_description: str, existing_patch: dict | None = None, re
                     ],
                     response_format={"type": "json_object"},
                     temperature=0,
-                    max_tokens=1200,
+                    max_tokens=700,
                 )
                 content = (final.choices[0].message.content or "").strip()
                 if content.startswith("```"):
