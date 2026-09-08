@@ -593,7 +593,15 @@ async def question(message: types.Message):
                     pending_upload[message.from_user.id] = (asset_type, upload.get("label") or asset_type)
                     if upload.get("entry_id"):
                         pending_upload_target[message.from_user.id] = {"entry_id": upload["entry_id"], "role": upload.get("role", "gallery")}
-                    await message.answer(f"Send the {asset_type} file now.")
+                    upload_reply = await answer(
+                        f"Tell the owner naturally that I need the {asset_type} file next. Explain briefly what it will be used for, and ask them to attach it. Do not sound like a command or mention internal tools.",
+                        user_context={
+                            "first_name": message.from_user.first_name if message.from_user else None,
+                            "last_name": message.from_user.last_name if message.from_user else None,
+                            "is_admin": True,
+                        },
+                    )
+                    await message.answer(telegram_html(upload_reply))
                     return
                 if operation.get("resource") == "profile" and operation.get("action") in {"create", "update"}:
                     await update_profile(operation.get("payload") or {})
