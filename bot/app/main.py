@@ -10,6 +10,7 @@ import logging
 import json
 import re
 import asyncio
+import random
 from .tools import list_certificates
 
 from .config import settings
@@ -34,6 +35,14 @@ last_cv_delivery: dict[int, tuple[str, str]] = {}
 list_context: dict[int, tuple[str, int]] = {}
 admin_result_context: dict[int, dict] = {}
 conversation_history: dict[int, list[dict[str, str]]] = {}
+
+PREFLIGHT_MESSAGES = (
+    "I’ll take a look…",
+    "One moment…",
+    "Checking that now…",
+    "Got it, I’m on it…",
+    "Let me handle that…",
+)
 
 
 async def show_typing(message: types.Message) -> None:
@@ -435,7 +444,7 @@ async def question(message: types.Message):
             return
         if is_admin(message):
             try:
-                await message.answer("Sure, I’m checking that now…")
+                await message.answer(random.choice(PREFLIGHT_MESSAGES))
                 instruction = message.text
                 operation = await extract_admin_operation(instruction, admin_authorized=is_admin(message))
                 if operation.get("action") == "list":
