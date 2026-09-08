@@ -129,12 +129,13 @@ async def answer(question: str, history: list[dict] | None = None, on_text=None,
     else:
         identity_context += " The sender is not authorized for portfolio administration; do not perform or promise writes."
     messages = [{"role": "system", "content": SYSTEM + "\n\n" + identity_context}, *(history or []), {"role": "user", "content": question}]
+    available_tools = TOOLS + (ADMIN_TOOLS if context.get("is_admin") else [])
     used_tools = False
     for _ in range(3):
         completion = await client.chat.completions.create(
             model=settings.groq_model,
             messages=messages,
-            tools=TOOLS,
+            tools=available_tools,
             tool_choice="auto",
             max_tokens=500,
             **client_answer_kwargs,
@@ -146,7 +147,11 @@ async def answer(question: str, history: list[dict] | None = None, on_text=None,
         messages.append(message)
         used_tools = True
         for call in message.tool_calls:
-            result = await execute_tool(call.function.name, json.loads(call.function.arguments or "{}"))
+            arguments = json.loads(call.function.arguments or "{}")
+            if context.get("is_admin") and any(item["function"]["name"] == call.function.name for item in ADMIN_TOOLS):
+                result = await execute_admin_tool(call.function.name, arguments, admin_authorized=True)
+            else:
+                result = await execute_tool(call.function.name, arguments)
             # Most tools return lists or structured dictionaries. Only delivery
             # tools return an action dictionary, so do not assume every result
             # supports mapping methods.
