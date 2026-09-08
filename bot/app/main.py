@@ -89,14 +89,10 @@ async def prepare_cv_patch(message: types.Message, job_description: str, revisio
         cv_name = (base.get("data") or {}).get("name") or "Tailored CV"
         pending_cv[message.from_user.id] = (patch, job_description, cv_name, base["revision"])
         await status.edit_text("Preparing proposed CV changes…")
-        await status.edit_text("Proposed CV changes:\n\n" + format_cv_patch(patch) + "\n\nConfirm, or tell me what to change.")
+        await status.edit_text("Proposed CV changes:\n\n" + format_cv_patch(patch))
     except Exception:
         logger.exception("CV patch preparation failed")
         await status.edit_text("I couldn't prepare a valid CV patch. Please check the base CV and try again.")
-
-
-    await message.answer(f"Delete certificate {html.escape(parts[1], quote=False)}? Send /confirm to delete or /cancel to abort.")
-
 
 async def deliver_certificates(message: types.Message, query: str = ""):
     items = await list_certificates()
@@ -163,7 +159,7 @@ async def question(message: types.Message):
                     return
             except Exception:
                 logger.exception("CV revision handling failed")
-                await message.answer("I couldn't understand that CV change. Please describe the change or use /confirm.")
+                await message.answer("I couldn't understand that CV change. Please describe what you want changed.")
                 return
         if confirmation_text:
             sync = pending_sync.pop(message.from_user.id, None)
@@ -538,7 +534,7 @@ async def document(message: types.Message):
                     logger.exception("Telegram bot profile photo update failed")
                     await message.answer("The portfolio image was updated, but Telegram's bot profile image could not be changed.")
         else:
-            await message.answer("I don't know what to do with that file. Use /upload certificate <title> for a certificate, or /apply before sending a job poster.")
+            await message.answer("I don't have an upload request for this file yet. Please describe what you want to add.")
     except httpx.HTTPStatusError as error:
         if error.response.status_code == 413:
             await message.answer("That file is too large. Please send a file no bigger than 5 MB.")
