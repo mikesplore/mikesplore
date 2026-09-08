@@ -209,7 +209,10 @@ async def extract_admin_operation(instruction: str, admin_authorized: bool = Fal
     extraction_tools = [tool for tool in ADMIN_TOOLS if tool["function"]["name"] != "sync_devto_articles" or explicit_sync]
     messages = [{"role": "system", "content": system}, {"role": "user", "content": instruction}]
     for _ in range(3):
-        completion = await complete(model=settings.groq_model, messages=messages, tools=extraction_tools, tool_choice="auto", max_tokens=300, temperature=0)
+        # The final operation can contain a full project description. 300 output
+        # tokens is not enough for that payload and causes Groq to truncate the
+        # function arguments, which it reports as `tool_use_failed` (400).
+        completion = await complete(model=settings.groq_model, messages=messages, tools=extraction_tools, tool_choice="auto", max_tokens=2048, temperature=0)
         message = completion.choices[0].message
         if not message.tool_calls:
             try:
@@ -241,13 +244,13 @@ async def extract_admin_operation(instruction: str, admin_authorized: bool = Fal
         raise ValueError("Admin lookup did not produce an operation")
     if not result.get("action") and instruction.lower().lstrip().startswith(("list ", "show ")):
         messages.append({"role": "user", "content": "Return the final operation now. This is a read-only list request. Call create_admin_operation with the correct resource, action=list, and payload={}."})
-        completion = await complete(model=settings.groq_model, messages=messages, tools=ADMIN_TOOLS, tool_choice={"type": "function", "function": {"name": "create_admin_operation"}}, max_tokens=120, temperature=0)
+        completion = await complete(model=settings.groq_model, messages=messages, tools=ADMIN_TOOLS, tool_choice={"type": "function", "function": {"name": "create_admin_operation"}}, max_tokens=2048, temperature=0)
         forced = completion.choices[0].message
         if forced.tool_calls:
             result = json.loads(forced.tool_calls[0].function.arguments or "{}")
     elif not result.get("action"):
         messages.append({"role": "user", "content": "Return the final structured admin operation now. Use the exact record ID from the lookup result, choose the correct resource and action, and call create_admin_operation. Do not perform another lookup."})
-        completion = await complete(model=settings.groq_model, messages=messages, tools=ADMIN_TOOLS, tool_choice={"type": "function", "function": {"name": "create_admin_operation"}}, max_tokens=180, temperature=0)
+        completion = await complete(model=settings.groq_model, messages=messages, tools=ADMIN_TOOLS, tool_choice={"type": "function", "function": {"name": "create_admin_operation"}}, max_tokens=2048, temperature=0)
         forced = completion.choices[0].message
         if forced.tool_calls:
             result = json.loads(forced.tool_calls[0].function.arguments or "{}")
