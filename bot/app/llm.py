@@ -82,6 +82,7 @@ ADMIN_TOOLS = [
     {"type": "function", "function": {"name": "request_upload", "description": "Request a file from the administrator. Use for profile images, certificates, CVs, project images, or other project media. Include the exact asset type and, for project media, the resolved entry_id and role.", "parameters": {"type": "object", "properties": {"asset_type": {"type": "string", "enum": ["profile-image", "certificate", "cv", "project-image", "project-media"]}, "label": {"type": "string"}, "entry_id": {"type": "string"}, "role": {"type": "string"}}, "required": ["asset_type"]}}},
     {"type": "function", "function": {"name": "request_cv_tailoring", "description": "Recognize a bare job description from the portfolio owner and start CV tailoring. Pass the complete job description exactly as provided. Do not use this for ordinary portfolio questions.", "parameters": {"type": "object", "properties": {"job_description": {"type": "string"}}, "required": ["job_description"]}}},
     {"type": "function", "function": {"name": "propose_role_policies", "description": "Analyze the verified CV context and propose pending role-family policies for CV tailoring. Never activate policies and never invent evidence.", "parameters": {"type": "object", "properties": {}, "required": []}}},
+    {"type": "function", "function": {"name": "list_role_policies", "description": "List role policies with exact IDs and activation status before activating or revising them.", "parameters": {"type": "object", "properties": {}, "required": []}}},
     {"type": "function", "function": {"name": "create_admin_operation", "description": "Return only the final structured admin operation after lookups. For action=list, payload MUST be {} and must never contain lookup results. Do not explain it in text.", "parameters": {"type": "object", "properties": {"resource": {"type": "string"}, "action": {"type": "string", "enum": ["list", "create", "update", "delete", "propose"]}, "id": {"type": "string"}, "payload": {"type": "object"}}, "required": ["resource", "action", "payload"]}}},
 ]
 
@@ -113,39 +114,9 @@ async def execute_admin_tool(name: str, arguments: dict, admin_authorized: bool 
         return {"resource": "cv-tailoring", "action": "request", "payload": arguments}
     if name == "propose_role_policies":
         return {"resource": "role-policies", "action": "propose", "payload": {"policies": await propose_role_policies()}}
+    if name == "list_role_policies":
+        return [{key: item.get(key) for key in ("id", "role_family", "titles", "status", "is_active", "confidence")} for item in await list_admin_resource("role-policies")]
     raise ValueError(f"Unsupported admin lookup tool: {name}")
-
-
-async def propose_role_policies() -> list[dict]:
-    """Derive conservative, inactive role policies from the verified CV context."""
-    context = await get_cv_tailoring_context()
-    prompt = (
-        "Derive conservative technical role-family policy candidates from this verified CV context. "
-        "Return only JSON with a policies array. Each item must contain role_family, titles, "
-        "related_skills, related_projects, evidence_requirements, excluded_claims, confidence, and source. "
-        "Use only evidence present in the context. Do not invent qualifications, employers, metrics, or tools. "
-        "Set source to cv-analysis, status to pending, and is_active to false. Include adjacent technical families "
-        "only when the CV evidence supports them.\n\n" + json.dumps(context, ensure_ascii=False)
-    )
-    try:
-        completion = await client.chat.completions.create(
-            model=settings.groq_model,
-            messages=[{"role": "system", "content": prompt}],
-            response_format={"type": "json_object"},
-            max_tokens=700,
-            temperature=0,
-        )
-    except APIStatusError as error:
-        raise ValueError(groq_error_message(error)) from error
-    result = json.loads(completion.choices[0].message.content or "{}")
-    policies = result.get("policies")
-    if not isinstance(policies, list):
-        raise ValueError("The LLM did not return a role-policy proposal")
-    return [
-        {**policy, "status": "pending", "source": policy.get("source") or "cv-analysis", "is_active": False}
-        for policy in policies
-        if isinstance(policy, dict) and isinstance(policy.get("role_family"), str) and policy["role_family"].strip()
-    ]
 
 
 async def answer(question: str, history: list[dict] | None = None, on_text=None, user_context: dict | None = None) -> str:
@@ -375,7 +346,7 @@ async def extract_job_description_from_image(content: bytes, mime_type: str) -> 
 
 async def extract_admin_operation(instruction: str, admin_authorized: bool = False) -> dict:
     allowed_resources = {"entries", "certificates", "assets", "links", "skills", "education", "bucket-list", "settings", "profile", "entry-assets", "entry-technologies", "repositories", "technologies", "topology", "metrics", "decisions", "highlights", "quotes", "snippets", "documents", "badges", "uploads", "cv-tailoring", "role-policies"}
-    system = "Extract one admin portfolio operation as JSON with resource, action (list/create/update/delete), id, and payload. For a read request such as 'list my assets', call the relevant lookup tool, then call create_admin_operation with action=list and payload {}. Never copy lookup records into the payload. Do not return a conversational answer. To derive dynamic role policies from the verified CV, call propose_role_policies; it returns resource role-policies and action propose. Use role-policies updates only to activate or revise an exact policy after listing it. Use lookup tools before updating or deleting an existing record; copy exact returned IDs and never invent them. Project metadata requests such as changing a project's status or category are entries updates: call list_projects first, select the exact matching project ID, use resource entries and action update, and put only the requested fields in payload. Do not use resource project. Repository metadata requests such as changing a repository's primary language, label, role, or primary flag are repositories updates: call list_repositories or find_repository first, select the exact matching repository ID, use resource repositories and action update, and put only the requested fields in payload. For any repository URL request, call find_repository with the exact URL first; if it returns a record, action MUST be update with that record's exact ID and never create a duplicate URL. Only use create when find_repository returns no record. To add technologies or any content block to a project, ALWAYS call list_projects first and copy the exact project entry ID into entry_id. For technologies also call list_technologies and use resource entry-technologies. Never use topology for technology relationships. For attaching an asset, call list_assets and list_projects, then create resource entry-assets with payload containing the exact asset_id, entry_id, role, alt_text, caption, and custom_order. Use profile only for profile text. Contact details use links. When one request names multiple contact/social platforms or usernames, create one bulk links operation with payload.links containing one complete link object per named platform; never collapse them into one link. For bulk link updates or deletes, call list_profile_links first and include the exact id in each link object. Infer categories per platform only when the user does not specify one: WhatsApp and Telegram are contact, while dev.to and LabLab AI are social. If the user explicitly says professional, social, or contact, apply that exact category to every named link unless the request assigns categories individually. Project content uses topology, metrics, decisions, highlights, quotes, snippets, documents, or badges with entry_id. Repository metadata uses repositories. Return action null only when a mutation target is genuinely ambiguous."
+    system = "Extract one admin portfolio operation as JSON with resource, action (list/create/update/delete), id, and payload. For a read request such as 'list my assets', call the relevant lookup tool, then call create_admin_operation with action=list and payload {}. Never copy lookup records into the payload. For 'activate them' or similar role-policy requests, call list_role_policies, then return resource role-policies, action update, and payload.policies containing each exact policy id with is_active true and status active. Use role-policies updates only after listing exact policies. Do not return a conversational answer. To derive dynamic role policies from the verified CV, call propose_role_policies; it returns resource role-policies and action propose. Use lookup tools before updating or deleting an existing record; copy exact returned IDs and never invent them. Project metadata requests such as changing a project's status or category are entries updates: call list_projects first, select the exact matching project ID, use resource entries and action update, and put only the requested fields in payload. Do not use resource project. Repository metadata requests such as changing a repository's primary language, label, role, or primary flag are repositories updates: call list_repositories or find_repository first, select the exact matching repository ID, use resource repositories and action update, and put only the requested fields in payload. For any repository URL request, call find_repository with the exact URL first; if it returns a record, action MUST be update with that record's exact ID and never create a duplicate URL. Only use create when find_repository returns no record. To add technologies or any content block to a project, ALWAYS call list_projects first and copy the exact project entry ID into entry_id. For technologies also call list_technologies and use resource entry-technologies. Never use topology for technology relationships. For attaching an asset, call list_assets and list_projects, then create resource entry-assets with payload containing the exact asset_id, entry_id, role, alt_text, caption, and custom_order. Use profile only for profile text. Contact details use links. When one request names multiple contact/social platforms or usernames, create one bulk links operation with payload.links containing one complete link object per named platform; never collapse them into one link. For bulk link updates or deletes, call list_profile_links first and include the exact id in each link object. Infer categories per platform only when the user does not specify one: WhatsApp and Telegram are contact, while dev.to and LabLab AI are social. If the user explicitly says professional, social, or contact, apply that exact category to every named link unless the request assigns categories individually. Project content uses topology, metrics, decisions, highlights, quotes, snippets, documents, or badges with entry_id. Repository metadata uses repositories. Return action null only when a mutation target is genuinely ambiguous."
     async def extract(system_prompt: str, user_prompt: str) -> dict:
         completion = await client.chat.completions.create(
             model=settings.groq_model,
@@ -438,7 +409,13 @@ async def extract_admin_operation(instruction: str, admin_authorized: bool = Fal
         and isinstance(result["payload"].get("links"), list)
         and all(isinstance(link, dict) and link.get("id") for link in result["payload"]["links"])
     )
-    if result.get("action") in {"update", "delete"} and result.get("resource") != "profile" and not result.get("id") and not bulk_link_mutation:
+    bulk_policy_mutation = (
+        result.get("resource") == "role-policies"
+        and isinstance(result.get("payload"), dict)
+        and isinstance(result["payload"].get("policies"), list)
+        and all(isinstance(policy, dict) and policy.get("id") for policy in result["payload"]["policies"])
+    )
+    if result.get("action") in {"update", "delete"} and result.get("resource") != "profile" and not result.get("id") and not bulk_link_mutation and not bulk_policy_mutation:
         raise ValueError("Admin updates and deletes require an exact record id from a lookup tool")
     if result.get("action") in {"create", "update"} and not isinstance(result.get("payload"), dict):
         raise ValueError("Admin mutations require an object payload")

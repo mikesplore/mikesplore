@@ -524,6 +524,12 @@ async def question(message: types.Message):
                     else:
                         await message.answer("I found no evidence-supported role policies to propose.")
                     return
+                if operation.get("resource") == "role-policies" and operation.get("action") == "update":
+                    policies = (operation.get("payload") or {}).get("policies") or []
+                    for policy in policies:
+                        await manage_content("role-policies", "update", policy)
+                    await message.answer(f"Activated {len(policies)} role polic{'y' if len(policies) == 1 else 'ies'}.")
+                    return
                 if operation.get("resource") == "profile" and operation.get("action") in {"create", "update"}:
                     await update_profile(operation.get("payload") or {})
                     await message.answer("Profile updated.")
