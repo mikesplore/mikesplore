@@ -47,14 +47,14 @@ def _source_entry(source: str, item: dict, visible: bool) -> dict:
             "source": {"provider": "github", "key": url, "repo": item.get("full_name")}}
 
 
-async def _fetch_source(source: str) -> list[dict]:
+async def _fetch_source(source: str, username: str | None = None) -> list[dict]:
     if source not in {"devto", "github"}:
         raise HTTPException(status_code=400, detail="Source must be devto or github")
-    username = settings.devto_username if source == "devto" else settings.github_username
+    username = username or (settings.devto_username if source == "devto" else settings.github_username)
     if not username:
         raise HTTPException(status_code=503, detail=f"{source} username is not configured")
-    url = (f"https://dev.to/api/articles?username={settings.devto_username}&per_page=100" if source == "devto"
-           else f"https://api.github.com/users/{settings.github_username}/repos?per_page=100&sort=updated")
+    url = (f"https://dev.to/api/articles?username={username}&per_page=100" if source == "devto"
+           else f"https://api.github.com/users/{username}/repos?per_page=100&sort=updated")
     headers = {"Accept": "application/vnd.github+json"}
     if source == "github" and settings.github_token:
         headers["Authorization"] = f"Bearer {settings.github_token}"
@@ -282,10 +282,16 @@ def admin_search(q: str = Query(min_length=1), db: Session = Depends(get_db)):
 
 
 @app.get("/admin/sync/{source}", dependencies=[Depends(require_service_key)])
-async def preview_sync(source: str):
+async def preview_sync(source: str, db: Session = Depends(get_db)):
     """Fetch source data without changing the database; the bot shows this result for approval."""
     try:
-        items = await _fetch_source(source)
+        username = None
+        if source == "devto" and not settings.devto_username:
+            link = db.scalar(select(ProfileLink).where(func.lower(ProfileLink.name) == "dev.to", ProfileLink.is_visible.is_(True)))
+            if link:
+                match = re.search(r"dev\.to/([^/?#]+)", link.url or "", re.IGNORECASE)
+                username = match.group(1) if match else None
+        items = await _fetch_source(source, username)
     except httpx.HTTPError as error:
         raise HTTPException(status_code=502, detail=f"{source} fetch failed: {error}")
     return {"source": source, "items": [_source_entry(source, item, source == "devto") for item in items]}

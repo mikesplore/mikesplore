@@ -537,6 +537,10 @@ async def question(message: types.Message):
                     else:
                         await message.answer("I found no evidence-supported role policies to propose.")
                     return
+                if operation.get("resource") == "devto-sync" and operation.get("action") == "request":
+                    result = operation.get("payload") or {}
+                    await message.answer(f"Synced {result.get('updated', 0)} Dev.to article(s), including their public bodies for article questions.")
+                    return
                 if operation.get("resource") == "role-policies" and operation.get("action") == "update":
                     policies = (operation.get("payload") or {}).get("policies") or []
                     for policy in policies:
