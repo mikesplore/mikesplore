@@ -563,7 +563,15 @@ async def question(message: types.Message):
                 await message.answer("I couldn't extract a valid entry. Please provide a clearer instruction.")
             return
         admin_words = ("add ", "set ", "update ", "change ", "remove ", "delete ", "attach ", "list ", "show ", "upload ")
-        if is_admin(message) and (normalized_admin_text.startswith("/") or normalized_admin_text.startswith(admin_words)):
+        media_admin_intent = (
+            any(term in normalized_admin_text for term in ("upload", "attach", "add image", "add photo", "gallery item", "project media"))
+            and any(term in normalized_admin_text for term in ("vela", "project", "gallery", "asset", "image", "photo"))
+        )
+        if is_admin(message) and (normalized_admin_text.startswith("/") or normalized_admin_text.startswith(admin_words) or media_admin_intent):
+            if media_admin_intent and not message.text.startswith("/") and not message.document:
+                pending_upload[message.from_user.id] = ("project-image", "project media")
+                await message.answer("Send the image or document now and I’ll add it to the requested project media.")
+                return
             try:
                 instruction = message.text.partition(" ")[2].strip() if message.text.startswith("/") else message.text
                 operation = await extract_admin_operation(instruction, admin_authorized=is_admin(message))
