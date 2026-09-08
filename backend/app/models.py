@@ -38,6 +38,27 @@ class Entry(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
 
+class LLMUsage(Base):
+    __tablename__ = "llm_usage"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    provider: Mapped[str] = mapped_column(String(64))
+    model: Mapped[str] = mapped_column(String(160))
+    workflow: Mapped[str] = mapped_column(String(64), default="unknown")
+    request_id: Mapped[str | None] = mapped_column(String(255))
+    input_tokens: Mapped[int | None] = mapped_column(BigInteger)
+    cached_input_tokens: Mapped[int | None] = mapped_column(BigInteger)
+    output_tokens: Mapped[int | None] = mapped_column(BigInteger)
+    total_tokens: Mapped[int | None] = mapped_column(BigInteger)
+    input_characters: Mapped[int | None] = mapped_column(BigInteger)
+    tool_payload_characters: Mapped[int | None] = mapped_column(BigInteger)
+    latency_ms: Mapped[int | None] = mapped_column(Integer)
+    success: Mapped[bool] = mapped_column(Boolean, default=True)
+    error_code: Mapped[str | None] = mapped_column(String(128))
+    usage_metadata: Mapped[dict] = mapped_column("metadata", JSONB, default=dict)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class Repository(Base):
     __tablename__ = "repositories"
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)

@@ -77,6 +77,10 @@ def list_projects(
     query = query.order_by(Entry.custom_order, Entry.title)
     total = db.scalar(select(func.count()).select_from(query.subquery())) or 0
     response.headers["X-Total-Count"] = str(total)
+    projects = db.scalars(query.offset((page - 1) * page_size).limit(page_size)).all()
+    return [_project_json(project, db.scalars(select(Repository).where(Repository.entry_id == project.id, Repository.is_visible.is_(True)).order_by(Repository.custom_order)).all(), db.scalars(select(Technology).join(EntryTechnology, EntryTechnology.technology_id == Technology.id).where(EntryTechnology.entry_id == project.id)).all(), _project_blocks(project.id, db), db.execute(select(EntryAsset, SiteAsset).join(SiteAsset, EntryAsset.asset_id == SiteAsset.id).where(EntryAsset.entry_id == project.id).order_by(EntryAsset.custom_order)).all()) for project in projects]
+
+
 @router.get("/projects/{slug}")
 @router.get("/api/v1/projects/{slug}")
 def get_project(slug: str, db: Session = Depends(get_db)):
@@ -135,5 +139,3 @@ def entry_content_blocks(entry_id: UUID, db: Session = Depends(get_db)):
     if not entry:
         raise HTTPException(status_code=404, detail="Entry not found")
     return _project_blocks(entry.id, db)
-    projects = db.scalars(query.offset((page - 1) * page_size).limit(page_size)).all()
-    return [_project_json(project, db.scalars(select(Repository).where(Repository.entry_id == project.id, Repository.is_visible.is_(True)).order_by(Repository.custom_order)).all(), db.scalars(select(Technology).join(EntryTechnology, EntryTechnology.technology_id == Technology.id).where(EntryTechnology.entry_id == project.id)).all(), _project_blocks(project.id, db), db.execute(select(EntryAsset, SiteAsset).join(SiteAsset, EntryAsset.asset_id == SiteAsset.id).where(EntryAsset.entry_id == project.id).order_by(EntryAsset.custom_order)).all()) for project in projects]

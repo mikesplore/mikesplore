@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from .auth import require_service_key
 from .config import settings
 from .db import get_db
-from .models import BucketListItem, Certificate, Education, Entry, Profile, ProfileLink, SkillGroup, SiteSetting
+from .models import BucketListItem, Certificate, Education, Entry, LLMUsage, Profile, ProfileLink, SkillGroup, SiteSetting
 from .routers import admin_content, admin_sync, assets, cv as cv_router, public_projects
 from .routers.assets import MAX_UPLOAD_BYTES  # noqa: F401  (kept so tests/tooling can import it from app.main)
 from .schemas import EntryRead, ProfileUpdate
@@ -26,6 +26,15 @@ PUBLIC_SETTING_KEYS = {"public_notice"}
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@app.post("/internal/llm-usage", dependencies=[Depends(require_service_key)])
+def record_llm_usage(payload: dict, db: Session = Depends(get_db)):
+    allowed = {"provider", "model", "workflow", "request_id", "input_tokens", "cached_input_tokens", "output_tokens", "total_tokens", "input_characters", "tool_payload_characters", "latency_ms", "success", "error_code", "metadata"}
+    data = {key: value for key, value in payload.items() if key in allowed}
+    db.add(LLMUsage(**{("usage_metadata" if key == "metadata" else key): value for key, value in data.items()}))
+    db.commit()
+    return {"status": "recorded"}
 
 
 @app.get("/counts")
