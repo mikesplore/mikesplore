@@ -128,7 +128,6 @@ def render(data, out_path):
     section_header("Summary", styles, story, Paragraph(data["summary"], styles["Body"]))
 
     # Skills
-    section_header("Technical Skills", styles, story)
     skill_paras = [Paragraph(f"<b>{g['category']}:</b> " + ", ".join(g["items"]), styles["Body"]) for g in data["skills"]]
     section_header("Technical Skills", styles, story, skill_paras[0] if skill_paras else None)
     for para in skill_paras[1:]:
