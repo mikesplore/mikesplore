@@ -572,6 +572,7 @@ async def question(message: types.Message):
             return
         if is_admin(message):
             try:
+                await message.answer("Sure, I’m checking that now…")
                 instruction = message.text.partition(" ")[2].strip() if message.text.startswith("/") else message.text
                 operation = await extract_admin_operation(instruction, admin_authorized=is_admin(message))
                 if operation.get("action") == "list":
