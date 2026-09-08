@@ -1,4 +1,5 @@
 from aiogram import Bot, Dispatcher, types
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.filters import Command
@@ -129,6 +130,39 @@ async def execute_admin_operation(operation: dict) -> str:
         else:
             await manage_content(resource, action, payload)
     return {"create": f"{resource.title()} created.", "update": f"{resource.title()} updated.", "delete": f"{resource.title()} deleted."}.get(action, "Change applied.")
+
+
+@dispatcher.callback_query()
+async def action_callback(callback: types.CallbackQuery):
+    user_id = callback.from_user.id
+    data = callback.data or ""
+    if data == "admin:cancel":
+        pending_mutation.pop(user_id, None)
+        await callback.answer("Cancelled")
+        if callback.message:
+            await callback.message.edit_text("Cancelled.")
+        return
+    if data == "admin:confirm":
+        mutation = pending_mutation.pop(user_id, None)
+        if not mutation or mutation[0] != "admin":
+            await callback.answer("No pending operation", show_alert=True)
+            return
+        try:
+            result = await execute_admin_operation(mutation[2] or {})
+            await callback.answer("Completed")
+            if callback.message:
+                await callback.message.edit_text(result)
+        except httpx.HTTPStatusError as error:
+            pending_mutation[user_id] = mutation
+            await callback.answer("Backend rejected the operation", show_alert=True)
+            if callback.message:
+                await callback.message.edit_text(f"The backend rejected that change: {error.response.text[:500]}")
+        except Exception:
+            pending_mutation[user_id] = mutation
+            logger.exception("Inline admin mutation failed")
+            await callback.answer("Operation failed", show_alert=True)
+        return
+    await callback.answer("Unknown action", show_alert=True)
 
 
 async def send_cv(message: types.Message):
@@ -384,7 +418,13 @@ async def question(message: types.Message):
                     target_name = target.get("name") or target.get("title") or target.get("label") or target.get("id") or operation.get("id")
                     target_url = target.get("url")
                     description = f"{target_name} ({target_url})" if target_url else str(target_name)
-                    await message.answer(f"I found {description}. Do you want me to delete it? Reply yes to confirm or /cancel to abort.")
+                    await message.answer(
+                        f"I found {description}. Do you want me to delete it?",
+                        reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
+                            InlineKeyboardButton(text="Delete", callback_data="admin:confirm"),
+                            InlineKeyboardButton(text="Cancel", callback_data="admin:cancel"),
+                        ]]),
+                    )
                 else:
                     await message.answer("I’ve prepared this change:\n\n" + format_preview(operation) + "\n\nReply yes to apply it or /cancel to abort.")
             except ValueError as error:
