@@ -149,6 +149,13 @@ async def action_callback(callback: types.CallbackQuery):
         if callback.message:
             await callback.message.edit_text("Cancelled.")
         return
+    if data == "upload:cancel":
+        pending_upload.pop(user_id, None)
+        pending_upload_target.pop(user_id, None)
+        await callback.answer("Cancelled")
+        if callback.message:
+            await callback.message.edit_text("Upload cancelled.")
+        return
     if data == "admin:confirm":
         mutation = pending_mutation.pop(user_id, None)
         if not mutation or mutation[0] != "admin":
@@ -461,7 +468,9 @@ async def question(message: types.Message):
                             "is_admin": True,
                         },
                     )
-                    await message.answer(telegram_html(upload_reply))
+                    await message.answer(telegram_html(upload_reply), reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
+                        InlineKeyboardButton(text="Cancel upload", callback_data="upload:cancel"),
+                    ]]))
                     return
                 if operation.get("resource") == "cv-tailoring" and operation.get("action") == "request":
                     job_description = (operation.get("payload") or {}).get("job_description", "").strip()
