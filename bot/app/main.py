@@ -66,7 +66,13 @@ def is_admin(message: types.Message) -> bool:
 
 @dispatcher.message(Command("start"))
 async def start(message: types.Message):
-    await message.answer("Ask me about the portfolio owner's projects, writing, hackathons, or events.")
+    first_name = message.from_user.first_name if message.from_user else None
+    last_name = message.from_user.last_name if message.from_user else None
+    response = await answer(
+        "Welcome this user to the portfolio assistant. Briefly explain what they can ask about and identify the portfolio owner by name from verified profile data.",
+        user_context={"first_name": first_name, "last_name": last_name, "is_admin": is_admin(message)},
+    )
+    await message.answer(telegram_html(response))
 
 
 @dispatcher.message(lambda message: False)
@@ -660,7 +666,16 @@ async def question(message: types.Message):
             last_edit = now
             await streamed_message.edit_text(html.escape(text[-4000:]))
 
-        response = await answer(question_text, history[-6:], on_text=update_stream)
+        response = await answer(
+            question_text,
+            history[-6:],
+            on_text=update_stream,
+            user_context={
+                "first_name": message.from_user.first_name if message.from_user else None,
+                "last_name": message.from_user.last_name if message.from_user else None,
+                "is_admin": is_admin(message),
+            },
+        )
         history.extend([
             {"role": "user", "content": question_text},
             {"role": "assistant", "content": response},

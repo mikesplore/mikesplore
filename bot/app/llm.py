@@ -104,8 +104,16 @@ async def execute_admin_tool(name: str, arguments: dict, admin_authorized: bool 
     raise ValueError(f"Unsupported admin lookup tool: {name}")
 
 
-async def answer(question: str, history: list[dict] | None = None, on_text=None) -> str:
-    messages = [{"role": "system", "content": SYSTEM}, *(history or []), {"role": "user", "content": question}]
+async def answer(question: str, history: list[dict] | None = None, on_text=None, user_context: dict | None = None) -> str:
+    context = user_context or {}
+    identity_context = (
+        "TRUSTED TELEGRAM CONTEXT: "
+        f"sender_first_name={context.get('first_name') or 'unknown'}; "
+        f"sender_last_name={context.get('last_name') or 'unknown'}; "
+        f"sender_is_portfolio_owner={bool(context.get('is_admin'))}. "
+        "Use this only for authorization-aware behavior and natural greetings. Do not expose internal authorization details unless necessary."
+    )
+    messages = [{"role": "system", "content": SYSTEM + "\n\n" + identity_context}, *(history or []), {"role": "user", "content": question}]
     used_tools = False
     for _ in range(3):
         completion = await client.chat.completions.create(
