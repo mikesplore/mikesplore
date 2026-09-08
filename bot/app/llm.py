@@ -368,9 +368,11 @@ async def extract_admin_operation(instruction: str, admin_authorized: bool = Fal
         )
         return json.loads(completion.choices[0].message.content or "{}")
 
+    explicit_sync = any(word in instruction.lower() for word in ("sync", "import", "refresh", "fetch", "update my dev.to"))
+    extraction_tools = [tool for tool in ADMIN_TOOLS if tool["function"]["name"] != "sync_devto_articles" or explicit_sync]
     messages = [{"role": "system", "content": system}, {"role": "user", "content": instruction}]
     for _ in range(3):
-        completion = await client.chat.completions.create(model=settings.groq_model, messages=messages, tools=ADMIN_TOOLS, tool_choice="auto", max_tokens=300, temperature=0)
+        completion = await client.chat.completions.create(model=settings.groq_model, messages=messages, tools=extraction_tools, tool_choice="auto", max_tokens=300, temperature=0)
         message = completion.choices[0].message
         if not message.tool_calls:
             try:
