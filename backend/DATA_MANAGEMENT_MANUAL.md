@@ -408,3 +408,25 @@ appropriate role and order.
 6. Review the LLM's explanation for high-impact operations.
 7. Confirm only when the LLM requests confirmation.
 8. Verify the public API response before building or updating the independent frontend.
+
+## Current LLM and upload behavior
+
+Every text request carries trusted Telegram context to the LLM: the sender's first name, last name,
+and whether the sender is the configured portfolio owner. Visitors receive only public tool
+definitions. The owner receives public and administrator tools. Administrator tools also enforce the
+owner check when executed.
+
+The LLM can call `request_upload` when a file is needed. The function selects the upload type and
+may include a project entry ID and media role. The next Telegram image or document is then uploaded
+using those arguments. Supported types include `profile-image`, `certificate`, `cv`, `project-image`,
+and `project-media`.
+
+Uploads are limited to 5 MB in both the Telegram bot and backend. Profile-image uploads update the
+profile asset; project-media requests can attach the resulting asset through the `entry_assets`
+junction.
+
+The bot sends a short preflight acknowledgement while the LLM performs lookups. It must not claim
+success until the backend responds successfully. Gallery and other admin list results are returned
+to the LLM for concise presentation; internal IDs are omitted unless the administrator asks for
+technical details. Direct delivery of a selected gallery image in response to a follow-up request
+is not yet implemented.
