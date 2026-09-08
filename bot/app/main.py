@@ -49,22 +49,8 @@ async def register_commands():
     )
     public_commands = [
         types.BotCommand(command="start", description="Start the portfolio assistant"),
-        types.BotCommand(command="help", description="Show help"),
     ]
     admin_commands = public_commands + [
-        types.BotCommand(command="add", description="Add a curated entry"),
-        types.BotCommand(command="admin", description="Manage data using an instruction"),
-        types.BotCommand(command="edit", description="Edit an entry"),
-        types.BotCommand(command="delete", description="Delete an entry"),
-        types.BotCommand(command="profile", description="Update profile text"),
-        types.BotCommand(command="apply", description="Tailor CV to a job description"),
-        types.BotCommand(command="cv", description="Upload the base CV JSON"),
-        types.BotCommand(command="upload", description="Upload an asset or certificate"),
-        types.BotCommand(command="sync", description="Fetch Dev.to or GitHub content"),
-        types.BotCommand(command="manage", description="Manage portfolio collections"),
-        types.BotCommand(command="delete-asset", description="Delete an uploaded asset"),
-        types.BotCommand(command="delete-certificate", description="Delete a certificate"),
-        types.BotCommand(command="confirm", description="Confirm a pending change"),
         types.BotCommand(command="cancel", description="Cancel a pending change"),
     ]
     await bot.set_my_commands(public_commands)
@@ -83,7 +69,7 @@ async def start(message: types.Message):
     await message.answer("Ask me about the portfolio owner's projects, writing, hackathons, or events.")
 
 
-@dispatcher.message(Command("help"))
+@dispatcher.message(lambda message: False)
 async def help_command(message: types.Message):
     admin_hint = (
         "\n\nAdmin commands:\n"
@@ -109,7 +95,7 @@ async def help_command(message: types.Message):
                          "skills, education, certificates, CV, and contact details." + admin_hint)
 
 
-@dispatcher.message(Command("add"))
+@dispatcher.message(lambda message: False)
 async def add_command(message: types.Message):
     if not is_admin(message):
         await message.answer("That command is restricted to the administrator.")
@@ -118,7 +104,7 @@ async def add_command(message: types.Message):
     await message.answer("Send the entry instruction as text. Use /cancel to discard it.")
 
 
-@dispatcher.message(Command("upload"))
+@dispatcher.message(lambda message: False)
 async def upload_command(message: types.Message):
     if not is_admin(message):
         await message.answer("That command is restricted to the administrator.")
@@ -131,7 +117,7 @@ async def upload_command(message: types.Message):
     await message.answer("Send the file now (maximum size: 10 MB). Use /cancel to discard it.")
 
 
-@dispatcher.message(Command("sync"))
+@dispatcher.message(lambda message: False)
 async def sync_command(message: types.Message):
     if not is_admin(message):
         await message.answer("That command is restricted to the administrator.")
@@ -158,7 +144,7 @@ async def sync_command(message: types.Message):
         await message.answer(f"I couldn't fetch {source} right now. Check the backend source configuration.")
 
 
-@dispatcher.message(Command("edit"))
+@dispatcher.message(lambda message: False)
 async def edit_command(message: types.Message):
     if not is_admin(message):
         await message.answer("That command is restricted to the administrator.")
@@ -176,7 +162,7 @@ async def edit_command(message: types.Message):
         await message.answer("I couldn't understand those changes.")
 
 
-@dispatcher.message(Command("profile"))
+@dispatcher.message(lambda message: False)
 async def profile_command(message: types.Message):
     if not is_admin(message):
         await message.answer("That command is restricted to the administrator.")
@@ -210,7 +196,7 @@ async def profile_command(message: types.Message):
         await message.answer("Admin operation extraction failed. Check the bot logs for the traceback.")
 
 
-@dispatcher.message(Command("cv"))
+@dispatcher.message(lambda message: False)
 async def cv_command(message: types.Message):
     if not is_admin(message):
         await message.answer("That command is restricted to the administrator.")
@@ -242,7 +228,7 @@ async def prepare_cv_patch(message: types.Message, job_description: str, revisio
         await status.edit_text("I couldn't prepare a valid CV patch. Please check the base CV and try again.")
 
 
-@dispatcher.message(Command("apply"))
+@dispatcher.message(lambda message: False)
 async def apply_command(message: types.Message):
     if not is_admin(message):
         await message.answer("That command is restricted to the administrator.")
@@ -256,7 +242,7 @@ async def apply_command(message: types.Message):
     await prepare_cv_patch(message, job_description)
 
 
-@dispatcher.message(Command("manage"))
+@dispatcher.message(lambda message: False)
 async def manage_command(message: types.Message):
     if not is_admin(message):
         await message.answer("That command is restricted to the administrator.")
@@ -287,7 +273,7 @@ async def manage_command(message: types.Message):
         await message.answer("The resource, action, or JSON payload is invalid.")
 
 
-@dispatcher.message(Command("admin"))
+@dispatcher.message(lambda message: False)
 async def admin_command(message: types.Message):
     if not is_admin(message):
         await message.answer("That command is restricted to the administrator.")
@@ -332,7 +318,7 @@ async def admin_command(message: types.Message):
         await message.answer("Admin operation extraction failed. Check the bot logs for the traceback.")
 
 
-@dispatcher.message(Command("delete"))
+@dispatcher.message(lambda message: False)
 async def delete_command(message: types.Message):
     if not is_admin(message):
         await message.answer("That command is restricted to the administrator.")
@@ -362,7 +348,7 @@ async def delete_command(message: types.Message):
     await message.answer(f"Delete entry {html.escape(parts[1], quote=False)}? Send /confirm to delete or /cancel to abort.")
 
 
-@dispatcher.message(Command("delete-asset"))
+@dispatcher.message(lambda message: False)
 async def delete_asset_command(message: types.Message):
     if not is_admin(message):
         await message.answer("That command is restricted to the administrator.")
@@ -375,7 +361,7 @@ async def delete_asset_command(message: types.Message):
     await message.answer(f"Delete asset {html.escape(parts[1], quote=False)}? Send /confirm to delete or /cancel to abort.")
 
 
-@dispatcher.message(Command("delete-certificate"))
+@dispatcher.message(lambda message: False)
 async def delete_certificate_command(message: types.Message):
     if not is_admin(message):
         await message.answer("That command is restricted to the administrator.")
@@ -571,6 +557,31 @@ async def question(message: types.Message):
                 await message.answer("Preview (send /confirm to save, /cancel to discard):\n\n" + format_preview(entry))
             except Exception:
                 await message.answer("I couldn't extract a valid entry. Please provide a clearer instruction.")
+            return
+        admin_words = ("add ", "set ", "update ", "change ", "remove ", "delete ", "attach ", "list ", "show ", "upload ")
+        if is_admin(message) and (normalized_admin_text.startswith("/") or normalized_admin_text.startswith(admin_words)):
+            try:
+                instruction = message.text.partition(" ")[2].strip() if message.text.startswith("/") else message.text
+                operation = await extract_admin_operation(instruction)
+                if operation.get("action") == "list":
+                    items = await manage_content(operation["resource"], "list", {})
+                    await message.answer(format_admin_list(operation["resource"], items))
+                    return
+                if operation.get("action") in {"update", "delete"} and operation.get("id"):
+                    records = await manage_content(operation["resource"], "list", {})
+                    target = next((record for record in records if str(record.get("id")) == str(operation["id"])), None)
+                    if target:
+                        operation["target"] = target
+                if not operation.get("action"):
+                    await message.answer("I found multiple possible records. Please make the instruction more specific.")
+                    return
+                pending_mutation[message.from_user.id] = ("admin", operation["resource"] + ":" + operation["action"], operation)
+                await message.answer("Admin preview (send /confirm to save, /cancel to discard):\n\n" + format_preview(operation))
+            except ValueError as error:
+                await message.answer(f"Admin operation validation failed: {str(error)[:500]}")
+            except Exception:
+                logger.exception("Natural-language admin operation failed")
+                await message.answer("Admin operation extraction failed. Check the bot logs for the traceback.")
             return
     try:
         await show_typing(message)
