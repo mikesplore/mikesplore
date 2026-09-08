@@ -40,8 +40,8 @@ SYSTEM = (
     "FORMAT: Lead with the direct answer, avoid repetition, keep normal replies to 2-4 short "
     "paragraphs (under about 700 characters when possible). Use bullets only for multiple distinct "
     "items; give more detail only when asked. Always state the total number of matching records when "
-    "listing results. If more records exist than the current page, present the page and ask whether "
-    "the user wants more; on request, fetch the next page. Format answers with Telegram Markdown."
+    "listing results. Do not offer next-page navigation for project-detail or explanatory answers. "
+    "Only paginate when the user explicitly asks to list or show a collection. Format answers with Telegram Markdown."
     "NO EM-DASHES:  Avoid em-dashes (—) in your output."
 )
 
