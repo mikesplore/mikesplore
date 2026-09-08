@@ -80,6 +80,7 @@ ADMIN_TOOLS = [
     {"type": "function", "function": {"name": "list_technologies", "description": "List normalized technologies with IDs and names.", "parameters": {"type": "object", "properties": {}, "required": []}}},
     {"type": "function", "function": {"name": "search_admin_content", "description": "Search existing admin-managed portfolio records when the requested record is not a contact link.", "parameters": {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]}}},
     {"type": "function", "function": {"name": "request_upload", "description": "Request a file from the administrator. Use for profile images, certificates, CVs, project images, or other project media. Include the exact asset type and, for project media, the resolved entry_id and role.", "parameters": {"type": "object", "properties": {"asset_type": {"type": "string", "enum": ["profile-image", "certificate", "cv", "project-image", "project-media"]}, "label": {"type": "string"}, "entry_id": {"type": "string"}, "role": {"type": "string"}}, "required": ["asset_type"]}}},
+    {"type": "function", "function": {"name": "request_cv_tailoring", "description": "Recognize a bare job description from the portfolio owner and start CV tailoring. Pass the complete job description exactly as provided. Do not use this for ordinary portfolio questions.", "parameters": {"type": "object", "properties": {"job_description": {"type": "string"}}, "required": ["job_description"]}}},
     {"type": "function", "function": {"name": "create_admin_operation", "description": "Return only the final structured admin operation after lookups. For action=list, payload MUST be {} and must never contain lookup results. Do not explain it in text.", "parameters": {"type": "object", "properties": {"resource": {"type": "string"}, "action": {"type": "string", "enum": ["list", "create", "update", "delete"]}, "id": {"type": "string"}, "payload": {"type": "object"}}, "required": ["resource", "action", "payload"]}}},
 ]
 
@@ -107,6 +108,8 @@ async def execute_admin_tool(name: str, arguments: dict, admin_authorized: bool 
         return arguments
     if name == "request_upload":
         return {"resource": "uploads", "action": "request", "payload": arguments}
+    if name == "request_cv_tailoring":
+        return {"resource": "cv-tailoring", "action": "request", "payload": arguments}
     raise ValueError(f"Unsupported admin lookup tool: {name}")
 
 
@@ -280,7 +283,7 @@ async def extract_job_description_from_image(content: bytes, mime_type: str) -> 
 
 
 async def extract_admin_operation(instruction: str, admin_authorized: bool = False) -> dict:
-    allowed_resources = {"entries", "certificates", "assets", "links", "skills", "education", "bucket-list", "settings", "profile", "entry-assets", "entry-technologies", "repositories", "technologies", "topology", "metrics", "decisions", "highlights", "quotes", "snippets", "documents", "badges", "uploads"}
+    allowed_resources = {"entries", "certificates", "assets", "links", "skills", "education", "bucket-list", "settings", "profile", "entry-assets", "entry-technologies", "repositories", "technologies", "topology", "metrics", "decisions", "highlights", "quotes", "snippets", "documents", "badges", "uploads", "cv-tailoring"}
     system = "Extract one admin portfolio operation as JSON with resource, action (list/create/update/delete), id, and payload. For a read request such as 'list my assets', call the relevant lookup tool, then call create_admin_operation with action=list and payload {}. Never copy lookup records into the payload. Do not return a conversational answer. Use lookup tools before updating or deleting an existing record; copy exact returned IDs and never invent them. Project metadata requests such as changing a project's status or category are entries updates: call list_projects first, select the exact matching project ID, use resource entries and action update, and put only the requested fields in payload. Do not use resource project. Repository metadata requests such as changing a repository's primary language, label, role, or primary flag are repositories updates: call list_repositories or find_repository first, select the exact matching repository ID, use resource repositories and action update, and put only the requested fields in payload. For any repository URL request, call find_repository with the exact URL first; if it returns a record, action MUST be update with that record's exact ID and never create a duplicate URL. Only use create when find_repository returns no record. To add technologies or any content block to a project, ALWAYS call list_projects first and copy the exact Vela/project entry ID into entry_id. For technologies also call list_technologies and use resource entry-technologies. Never use topology for technology relationships. For attaching an asset, call list_assets and list_projects, then create resource entry-assets with payload containing the exact asset_id, entry_id, role, alt_text, caption, and custom_order. Use profile only for profile text. Contact details use links. When one request names multiple contact/social platforms or usernames, create one bulk links operation with payload.links containing one complete link object per named platform; never collapse them into one link. For bulk link updates or deletes, call list_profile_links first and include the exact id in each link object. Infer categories per platform only when the user does not specify one: WhatsApp and Telegram are contact, while dev.to and LabLab AI are social. If the user explicitly says professional, social, or contact, apply that exact category to every named link unless the request assigns categories individually. Project content uses topology, metrics, decisions, highlights, quotes, snippets, documents, or badges with entry_id. Repository metadata uses repositories. Project demo/live links use documents with entry_id, title, url, link_style, and order_index. Return action null only when a mutation target is genuinely ambiguous."
     async def extract(system_prompt: str, user_prompt: str) -> dict:
         completion = await client.chat.completions.create(
@@ -304,9 +307,11 @@ async def extract_admin_operation(instruction: str, admin_authorized: bool = Fal
         messages.append(message)
         for call in message.tool_calls:
             arguments = json.loads(call.function.arguments or "{}")
-            if call.function.name in {"create_admin_operation", "request_upload"}:
+            if call.function.name in {"create_admin_operation", "request_upload", "request_cv_tailoring"}:
                 if call.function.name == "request_upload":
                     result = {"resource": "uploads", "action": "request", "payload": arguments}
+                elif call.function.name == "request_cv_tailoring":
+                    result = {"resource": "cv-tailoring", "action": "request", "payload": arguments}
                 else:
                     result = arguments
                 break

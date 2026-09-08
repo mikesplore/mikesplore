@@ -617,6 +617,12 @@ async def question(message: types.Message):
                     )
                     await message.answer(telegram_html(upload_reply))
                     return
+                if operation.get("resource") == "cv-tailoring" and operation.get("action") == "request":
+                    job_description = (operation.get("payload") or {}).get("job_description", "").strip()
+                    if len(job_description) < 30:
+                        raise ValueError("The job description is too short to tailor the CV")
+                    await prepare_cv_patch(message, job_description)
+                    return
                 if operation.get("resource") == "profile" and operation.get("action") in {"create", "update"}:
                     await update_profile(operation.get("payload") or {})
                     await message.answer("Profile updated.")
