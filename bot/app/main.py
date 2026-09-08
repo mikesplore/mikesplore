@@ -144,6 +144,9 @@ async def execute_admin_operation(operation: dict) -> str:
 async def action_callback(callback: types.CallbackQuery):
     user_id = callback.from_user.id
     data = callback.data or ""
+    if user_id != settings.admin_telegram_id and data.startswith(("admin:", "cv:", "upload:", "gallery:", "adminlist:")):
+        await callback.answer("This action is restricted to the portfolio owner.", show_alert=True)
+        return
     if data == "admin:cancel":
         pending_mutation.pop(user_id, None)
         await callback.answer("Cancelled")
