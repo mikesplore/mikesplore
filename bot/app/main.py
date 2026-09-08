@@ -864,11 +864,22 @@ def format_cv_patch(patch: dict) -> str:
     summary = patch.get("summary") or {}
     projects = patch.get("selected_projects") or []
     skills = patch.get("selected_skills") or {}
+    project_lines = []
+    for project in projects:
+        label = re.sub(r"[-_]+", " ", str(project)).strip().title()
+        project_lines.append(f"• {html.escape(label, quote=False)}")
+    skill_lines = []
+    for category, items in skills.items():
+        skill_lines.append(f"{html.escape(str(category), quote=False)}: " + ", ".join(html.escape(str(item), quote=False) for item in items))
     return (
-        f"Summary old:\n{html.escape(str(summary.get('old', '')))}\n\n"
-        f"Summary new:\n{html.escape(str(summary.get('new', '')))}\n\n"
-        f"Selected project IDs: {', '.join(html.escape(str(item)) for item in projects) or 'none'}\n"
-        f"Selected skills:\n{html.escape(json.dumps(skills, indent=2))}"
+        "Proposed CV update\n\n"
+        "New professional summary:\n"
+        f"{html.escape(str(summary.get('new', '')), quote=False)}\n\n"
+        "Projects to highlight:\n"
+        f"{chr(10).join(project_lines) or '• None selected'}\n\n"
+        "Skills to emphasize:\n"
+        f"{chr(10).join(skill_lines) or 'None selected'}\n\n"
+        "Reply with changes, or say yes to generate the tailored CV."
     )
 
 
