@@ -91,7 +91,13 @@ async def prepare_cv_patch(message: types.Message, job_description: str, revisio
         cv_name = (base.get("data") or {}).get("name") or "Tailored CV"
         pending_cv[message.from_user.id] = (patch, job_description, cv_name, base["revision"])
         await status.edit_text("Preparing proposed CV changes…")
-        await status.edit_text("Proposed CV changes:\n\n" + format_cv_patch(patch))
+        await status.edit_text(
+            "Proposed CV changes:\n\n" + format_cv_patch(patch),
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
+                InlineKeyboardButton(text="Generate CV", callback_data="cv:generate"),
+                InlineKeyboardButton(text="Request changes", callback_data="cv:revise"),
+            ]]),
+        )
     except Exception:
         logger.exception("CV patch preparation failed")
         await status.edit_text("I couldn't prepare a valid CV patch. Please check the base CV and try again.")
@@ -162,6 +168,34 @@ async def action_callback(callback: types.CallbackQuery):
             pending_mutation[user_id] = mutation
             logger.exception("Inline admin mutation failed")
             await callback.answer("Operation failed", show_alert=True)
+        return
+    if data in {"cv:generate", "cv:revise"}:
+        tailored = pending_cv.get(user_id)
+        if not tailored:
+            await callback.answer("This CV proposal has expired", show_alert=True)
+            return
+        if data == "cv:revise":
+            await callback.answer("Reply with the changes you want")
+            if callback.message:
+                await callback.message.answer("Tell me what you want changed in the proposed CV.")
+            return
+        try:
+            patch, job_description, label, base_revision = tailored
+            await callback.answer("Generating CV")
+            if callback.message:
+                await callback.message.edit_text("Generating the tailored CV…")
+            render_args = await request_cv_render(patch, job_description, base_revision, label)
+            result = await render_cv(**render_args)
+            async with httpx.AsyncClient(timeout=30) as client:
+                pdf_response = await client.get(result["pdf_url"])
+                pdf_response.raise_for_status()
+            pending_cv.pop(user_id, None)
+            if callback.message:
+                await callback.message.answer_document(types.BufferedInputFile(pdf_response.content, filename=cv_filename(label)), caption="Tailored CV")
+        except Exception as error:
+            logger.exception("Inline CV rendering failed")
+            if callback.message:
+                await callback.message.edit_text(f"The tailored CV could not be generated: {str(error)[:500]}")
         return
     if data.startswith("gallery:"):
         try:
@@ -374,6 +408,7 @@ async def question(message: types.Message):
                     page_size = 5
                     admin_result_context[message.from_user.id] = {"resource": operation["resource"], "items": items, "page": 0, "request": message.text or ""}
                     page_items = items[:page_size]
+                    page_start = 0
                     response = await present_admin_result(
                         message.text or "",
                         operation["resource"],
