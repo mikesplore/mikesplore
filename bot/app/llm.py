@@ -330,10 +330,21 @@ async def request_cv_render(patch: dict, job_description: str, base_revision: st
 
 async def propose_role_policies() -> list[dict]:
     context = await get_cv_tailoring_context()
-    prompt = "Derive conservative technical role-policy candidates from this verified CV context. Return only JSON with a policies array. Each item must contain role_family, titles, related_skills, related_projects, evidence_requirements, excluded_claims, confidence, and source. Use only evidence present in the context. Do not invent qualifications. Set source to cv-analysis and never mark policies active.\n\n" + json.dumps(context)
+    prompt = "Derive conservative technical role-policy candidates from the verified CV context supplied by the user. Return only JSON with a policies array. Each item must contain role_family, titles, related_skills, related_projects, evidence_requirements, excluded_claims, confidence, and source. Use only evidence present in the context. Do not invent qualifications. Set source to cv-analysis and never mark policies active."
     try:
-        completion = await client.chat.completions.create(model=settings.groq_model, messages=[{"role": "system", "content": prompt}], response_format={"type": "json_object"}, max_tokens=700, temperature=0)
+        completion = await client.chat.completions.create(
+            model=settings.groq_model,
+            messages=[
+                {"role": "system", "content": prompt},
+                {"role": "user", "content": json.dumps(context, ensure_ascii=False)},
+            ],
+            response_format={"type": "json_object"},
+            max_tokens=700,
+            temperature=0,
+        )
     except APIStatusError as error:
+        if getattr(error, "status_code", None) == 400:
+            raise ValueError("Groq rejected the role-policy proposal request format. Please try again.") from error
         raise ValueError(groq_error_message(error)) from error
     result = json.loads(completion.choices[0].message.content or "{}")
     policies = result.get("policies")
