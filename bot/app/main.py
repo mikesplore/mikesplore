@@ -23,7 +23,7 @@ from .admin_operations import execute_admin_operation as run_admin_operation
 from .callbacks import acknowledge, is_protected_action
 from .callback_handlers import register_callbacks
 from .uploads import register_upload_handler
-from .cv_handlers import configure as configure_cv_handlers, deliver_certificates as deliver_certificates_handler, format_cv_patch as format_cv_patch_handler, prepare_cv_patch as prepare_cv_patch_handler, send_cv as send_cv_handler
+from .cv_handlers import configure as configure_cv_handlers, deliver_certificates, format_cv_patch, prepare_cv_patch, send_cv
 
 bot = Bot(settings.telegram_bot_token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 dispatcher = Dispatcher()
@@ -70,13 +70,6 @@ async def start(message: types.Message):
         user_context={"first_name": first_name, "last_name": last_name, "is_admin": is_admin(message)},
     )
     await message.answer(telegram_html(response))
-
-
-async def prepare_cv_patch(message: types.Message, job_description: str, revision: str | None = None):
-    return await prepare_cv_patch_handler(message, job_description, revision)
-
-async def deliver_certificates(message: types.Message, query: str = ""):
-    return await deliver_certificates_handler(message, query)
 
 
 async def handle_llm_admin_operation(message: types.Message, operation: dict) -> bool:
@@ -131,12 +124,6 @@ async def handle_llm_admin_operation(message: types.Message, operation: dict) ->
     await run_admin_operation(operation, update_profile=update_profile, manage_content=manage_content, bulk_manage_links=bulk_manage_links)
     await message.answer(f"{resource.replace('-', ' ').title()} {'updated' if action == 'update' else 'created' }.")
     return True
-
-
-
-async def send_cv(message: types.Message):
-    return await send_cv_handler(message)
-
 
 @dispatcher.message(lambda message: not message.document and not message.photo)
 async def question(message: types.Message):
@@ -374,10 +361,6 @@ def format_admin_list(resource: str, items: list[dict]) -> str:
             title = item.get("title") or item.get("name") or item.get("label") or item.get("id") or "Record"
             lines.append(f"{index}. {html.escape(str(title), quote=False)} ({html.escape(str(item.get('id') or '—'), quote=False)})")
     return "\n".join(lines)[:3900]
-
-
-def format_cv_patch(patch: dict) -> str:
-    return format_cv_patch_handler(patch)
 
 
 def cv_filename(name: str) -> str:
