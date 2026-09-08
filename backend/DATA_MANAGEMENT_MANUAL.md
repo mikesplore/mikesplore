@@ -412,6 +412,6 @@ appropriate role and order.
 3. Upload project assets.
 4. Attach assets to the project.
 5. Add content blocks one at a time or in a small batch.
-6. Review every preview.
-7. Confirm the operation.
+6. Review the LLM's explanation for high-impact operations.
+7. Confirm only when the LLM requests confirmation.
 8. Verify the public API response before building or updating the independent frontend.
