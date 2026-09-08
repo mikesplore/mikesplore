@@ -578,6 +578,10 @@ async def question(message: types.Message):
                 if not operation.get("action"):
                     await message.answer("I found multiple possible records. Please make the instruction more specific.")
                     return
+                if operation.get("resource") == "profile" and operation.get("action") in {"create", "update"}:
+                    await update_profile(operation.get("payload") or {})
+                    await message.answer("Profile updated.")
+                    return
                 pending_mutation[message.from_user.id] = ("admin", operation["resource"] + ":" + operation["action"], operation)
                 await message.answer("Admin preview (send /confirm to save, /cancel to discard):\n\n" + format_preview(operation))
             except ValueError as error:
