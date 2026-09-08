@@ -88,9 +88,23 @@ async def search_portfolio(query: str, page: int = 1) -> dict:
         return {"profile": result.get("profile"), "total": result.get("total", 0), "page": result.get("page", page), "page_size": result.get("page_size", 5), "entries": [{"slug": item.get("slug"), "type": item.get("content_type"), "title": item.get("title"), "blurb": item.get("blurb"), "date": item.get("date"), "tags": item.get("tags", []), "url": item.get("links", {}).get("url")} for item in result.get("entries", [])], "certificates": [{"type": "certificate", "title": item.get("title")} for item in result.get("certificates", [])], "skills": result.get("skills", []), "links": [{"name": item.get("name"), "url": item.get("url")} for item in result.get("links", [])], "education": [{"degree": item.get("degree"), "school": item.get("school")} for item in result.get("education", [])], "bucket_list": [{"title": item.get("title"), "done": item.get("done")} for item in result.get("bucket_list", [])]}
 
 
+async def search_articles(query: str, page: int = 1) -> dict:
+    result = await search_portfolio(query, page)
+    articles = [entry for entry in result.get("entries", []) if entry.get("type") == "article"]
+    return {"total": len(articles), "page": page, "articles": articles}
+
+
+async def list_articles(page: int = 1) -> dict:
+    result = await list_entries("article", page)
+    return {"total": result["total"], "page": result["page"], "articles": result["entries"]}
+
+
 TOOLS = [{
     "type": "function",
     "function": {"name": "get_entry_by_slug", "description": "Get one verified visible portfolio entry by its exact slug.", "parameters": {"type": "object", "properties": {"slug": {"type": "string"}}, "required": ["slug"]}},
+}, {
+    "type": "function",
+    "function": {"name": "list_articles", "description": "List only public synced Dev.to articles. Never substitute projects or other entry types.", "parameters": {"type": "object", "properties": {"page": {"type": "integer", "minimum": 1, "default": 1}}, "required": []}},
 }, {
     "type": "function",
     "function": {
@@ -98,6 +112,9 @@ TOOLS = [{
         "description": "List public portfolio entries. Use this before answering facts about Mike's work.",
         "parameters": {"type": "object", "properties": {"content_type": {"type": "string", "enum": ["project", "article", "hackathon", "event"]}, "page": {"type": "integer", "minimum": 1, "default": 1}}, "required": []},
     },
+}, {
+    "type": "function",
+    "function": {"name": "search_articles", "description": "Search only synced public Dev.to articles by title, tags, description, or full article body. Never return projects for an article question.", "parameters": {"type": "object", "properties": {"query": {"type": "string"}, "page": {"type": "integer", "minimum": 1, "default": 1}}, "required": ["query"]}},
 }, {
     "type": "function",
     "function": {"name": "request_cv_delivery", "description": "Send the portfolio owner's verified CV file directly to the user when they ask to see, view, download, share, attach, or receive it.", "parameters": {"type": "object", "properties": {}, "required": []}},
@@ -152,6 +169,10 @@ async def execute_tool(name: str, arguments: dict):
         return await search_cv(arguments["query"])
     if name == "search_portfolio":
         return await search_portfolio(arguments["query"], arguments.get("page", 1))
+    if name == "search_articles":
+        return await search_articles(arguments["query"], arguments.get("page", 1))
+    if name == "list_articles":
+        return await list_articles(arguments.get("page", 1))
     if name != "list_entries":
         raise ValueError(f"Unknown tool: {name}")
     return await list_entries(arguments.get("content_type"), arguments.get("page", 1))
