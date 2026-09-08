@@ -25,17 +25,17 @@ def test_upload_limit_is_five_megabytes():
 def test_groq_error_messages_are_specific():
     assert "format" in groq_error_message(SimpleNamespace(status_code=400))
     assert "too large" in groq_error_message(SimpleNamespace(status_code=413))
-    assert "rate-limited" in groq_error_message(SimpleNamespace(status_code=429))
+    assert "rate limit" in groq_error_message(SimpleNamespace(status_code=429))
     assert "unavailable" in groq_error_message(SimpleNamespace(status_code=503))
 
 
-def test_groq_rate_limit_message_includes_provider_detail():
+def test_groq_rate_limit_message_is_concise():
     error = SimpleNamespace(status_code=429, body=RATE_LIMIT_BODY, response=None)
     message = groq_error_message(error)
-    assert "qwen/qwen3.8-27b" in message
-    assert "Limit 200000" in message
-    assert "Requested 3283" in message
-    assert "try again in 9m32.4s" in message.lower()
+    assert message == "Groq rate limit reached. Please try again in about 10 minutes."
+    assert "qwen/qwen3.8-27b" not in message
+    assert "Limit 200000" not in message
+    assert "settings/billing" not in message
 
 
 def test_groq_rate_limit_message_uses_retry_after_header_when_body_absent():
@@ -50,7 +50,7 @@ def test_friendly_error_returns_groq_detail_and_fallback_otherwise():
     assert friendly_error(ValueError("backend rejected the record"), "fallback") == "fallback"
 
 
-def test_complete_wrapper_converts_rate_limit_error_to_detailed_message(monkeypatch):
+def test_complete_wrapper_converts_rate_limit_error_to_concise_message(monkeypatch):
     request = httpx.Request("POST", "https://api.groq.com/openai/v1/chat/completions")
     response = httpx.Response(429, request=request, json=RATE_LIMIT_BODY)
     rate_limit = RateLimitError("Error code: 429", response=response, body=RATE_LIMIT_BODY)
@@ -69,7 +69,8 @@ def test_complete_wrapper_converts_rate_limit_error_to_detailed_message(monkeypa
     try:
         asyncio.run(complete(model="qwen/qwen3.8-27b"))
     except ValueError as error:
-        assert "qwen/qwen3.8-27b" in str(error)
-        assert "Requested 3283" in str(error)
+        assert "Groq rate limit reached" in str(error)
+        assert "10 minutes" in str(error)
+        assert "qwen/qwen3.8-27b" not in str(error)
     else:
         raise AssertionError("complete() should have converted the 429 error to ValueError")
