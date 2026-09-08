@@ -194,10 +194,10 @@ async def question(message: types.Message):
                     pending_cv[message.from_user.id] = tailored
                     logger.exception("Tailored CV rejected by backend")
                     await message.answer(f"The backend rejected the tailored CV: {error.response.text[:500]}")
-                except Exception:
+                except Exception as error:
                     pending_cv[message.from_user.id] = tailored
                     logger.exception("Tailored CV rendering failed")
-                    await message.answer("The tailored CV could not be rendered. The preview is still pending; try /confirm again.")
+                    await message.answer(f"The tailored CV could not be rendered: {str(error)[:500]}. The proposal is still pending; please say yes to retry or describe a change.")
                 return
             mutation = pending_mutation.pop(message.from_user.id, None)
             if mutation:
@@ -256,7 +256,7 @@ async def question(message: types.Message):
                 except Exception:
                     logger.exception("Admin mutation failed")
                     pending_mutation[message.from_user.id] = mutation
-                    await message.answer("The change could not be completed. The preview is still available; try /confirm again.")
+                    await message.answer("The change could not be completed. The proposal is still pending; please try again or say cancel.")
                 return
             entry = pending.pop(message.from_user.id, None)
             if not entry:
