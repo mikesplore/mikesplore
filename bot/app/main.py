@@ -31,6 +31,7 @@ pending_sync: dict[int, tuple[str, list[dict], list[str]]] = {}
 awaiting_cv: set[int] = set()
 pending_cv: dict[int, tuple[dict, str, str, str]] = {}
 list_context: dict[int, tuple[str, int]] = {}
+admin_result_context: dict[int, list[dict]] = {}
 conversation_history: dict[int, list[dict[str, str]]] = {}
 
 
@@ -161,6 +162,23 @@ async def action_callback(callback: types.CallbackQuery):
             pending_mutation[user_id] = mutation
             logger.exception("Inline admin mutation failed")
             await callback.answer("Operation failed", show_alert=True)
+        return
+    if data.startswith("gallery:"):
+        try:
+            index = int(data.split(":", 1)[1])
+            item = admin_result_context.get(user_id, [])[index]
+            url = item.get("asset_url")
+            if not url:
+                raise ValueError("missing media URL")
+            async with httpx.AsyncClient(timeout=20) as media_client:
+                response = await media_client.get(url)
+                response.raise_for_status()
+            await callback.answer("Sending image")
+            if callback.message:
+                await callback.message.answer_photo(types.BufferedInputFile(response.content, filename="gallery-image"), caption=item.get("asset_label") or item.get("alt_text") or "Gallery image")
+        except Exception:
+            logger.exception("Gallery image delivery failed")
+            await callback.answer("Image unavailable", show_alert=True)
         return
     await callback.answer("Unknown action", show_alert=True)
 
@@ -333,6 +351,7 @@ async def question(message: types.Message):
                             {**item, "asset_label": by_id.get(str(item.get("asset_id")), {}).get("label"), "asset_url": by_id.get(str(item.get("asset_id")), {}).get("url")}
                             for item in items
                         ]
+                    admin_result_context[message.from_user.id] = items
                     response = await present_admin_result(
                         message.text or "",
                         operation["resource"],
@@ -347,7 +366,15 @@ async def question(message: types.Message):
                                 media_response.raise_for_status()
                             await message.answer_photo(types.BufferedInputFile(media_response.content, filename="gallery-image"), caption=action.get("label") or "Gallery image")
                             return
-                    await message.answer(telegram_html(response))
+                    keyboard = None
+                    if operation["resource"] == "entry-assets":
+                        buttons = [
+                            InlineKeyboardButton(text=f"View {index + 1}", callback_data=f"gallery:{index}")
+                            for index, item in enumerate(items[:10]) if item.get("asset_url")
+                        ]
+                        if buttons:
+                            keyboard = InlineKeyboardMarkup(inline_keyboard=[buttons[index:index + 3] for index in range(0, len(buttons), 3)])
+                    await message.answer(telegram_html(response), reply_markup=keyboard)
                     return
                 if operation.get("action") in {"update", "delete"} and operation.get("id"):
                     records = await manage_content(operation["resource"], "list", {})
