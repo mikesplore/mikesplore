@@ -289,7 +289,13 @@ async def extract_admin_operation(instruction: str, admin_authorized: bool = Fal
         result["payload"] = result.get("payload") if isinstance(result.get("payload"), dict) else {}
     if result.get("action") is not None and (result.get("resource") not in allowed_resources or result.get("action") not in {"list", "create", "update", "delete"}):
         raise ValueError("Unsupported admin operation")
-    if result.get("action") in {"update", "delete"} and result.get("resource") != "profile" and not result.get("id"):
+    bulk_link_mutation = (
+        result.get("resource") == "links"
+        and isinstance(result.get("payload"), dict)
+        and isinstance(result["payload"].get("links"), list)
+        and all(isinstance(link, dict) and link.get("id") for link in result["payload"]["links"])
+    )
+    if result.get("action") in {"update", "delete"} and result.get("resource") != "profile" and not result.get("id") and not bulk_link_mutation:
         raise ValueError("Admin updates and deletes require an exact record id from a lookup tool")
     if result.get("action") in {"create", "update"} and not isinstance(result.get("payload"), dict):
         raise ValueError("Admin mutations require an object payload")
