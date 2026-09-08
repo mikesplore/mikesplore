@@ -568,18 +568,7 @@ async def question(message: types.Message):
             except Exception:
                 await message.answer("I couldn't extract a valid entry. Please provide a clearer instruction.")
             return
-        admin_words = ("add ", "set ", "update ", "change ", "remove ", "delete ", "attach ", "list ", "show ", "upload ")
-        media_admin_intent = (
-            any(term in normalized_admin_text for term in ("upload", "attach", "add image", "add photo", "gallery item", "project media", "profile picture", "profile photo"))
-            and any(term in normalized_admin_text for term in ("vela", "project", "gallery", "asset", "image", "photo", "picture"))
-        )
-        if is_admin(message) and (normalized_admin_text.startswith("/") or normalized_admin_text.startswith(admin_words) or media_admin_intent):
-            if media_admin_intent and not message.text.startswith("/") and not message.document:
-                asset_request = ("profile-image", "profile") if "profile picture" in normalized_admin_text or "profile photo" in normalized_admin_text else ("project-image", "project media")
-                pending_upload[message.from_user.id] = asset_request
-                destination = "profile picture" if asset_request[0] == "profile-image" else "requested project media"
-                await message.answer(f"Send the image or document now and I’ll update the {destination}.")
-                return
+        if is_admin(message):
             try:
                 instruction = message.text.partition(" ")[2].strip() if message.text.startswith("/") else message.text
                 operation = await extract_admin_operation(instruction, admin_authorized=is_admin(message))
@@ -593,8 +582,7 @@ async def question(message: types.Message):
                     if target:
                         operation["target"] = target
                 if not operation.get("action"):
-                    await message.answer("I found multiple possible records. Please make the instruction more specific.")
-                    return
+                    raise ValueError("No administrative operation was identified")
                 if operation.get("resource") == "profile" and operation.get("action") in {"create", "update"}:
                     await update_profile(operation.get("payload") or {})
                     await message.answer("Profile updated.")
@@ -637,11 +625,10 @@ async def question(message: types.Message):
                 else:
                     await message.answer("I’ve prepared this change:\n\n" + format_preview(operation) + "\n\nReply yes to apply it or /cancel to abort.")
             except ValueError as error:
-                await message.answer(f"Admin operation validation failed: {str(error)[:500]}")
+                logger.info("Message was not an admin operation: %s", error)
             except Exception:
                 logger.exception("Natural-language admin operation failed")
-                await message.answer("Admin operation extraction failed. Check the bot logs for the traceback.")
-            return
+                logger.info("Falling through to the public LLM response path")
     try:
         await show_typing(message)
         question_text = message.text or ""
