@@ -9,13 +9,12 @@ not guess database IDs or classify requests with regular expressions.
 
 ## Interface and authorization
 
-Only these slash commands are supported:
+The only slash commands used for normal operation are:
 
 - `/start` starts the assistant.
 - `/cancel` cancels a pending destructive or high-impact action.
 
-Do not use retired commands such as `/admin`, `/profile`, `/manage`, `/upload`, `/edit`, `/delete`,
-`/cv`, `/apply`, `/confirm`, or `/help`. Send requests as normal language.
+Everything else is expressed as an ordinary-language request.
 
 Visitors receive public read tools only. The configured portfolio owner receives administrator
 tools. Administrator tools verify authorization before writes, and all writes go through the
