@@ -19,6 +19,7 @@ from .llm import extract_entry, extract_job_description_from_image, extract_upda
 from .admin import apply_sync, bulk_manage_links, create_entry, delete_asset, delete_certificate, delete_entry, get_cv_base, list_certificates as list_certificate_records, manage_content, preview_sync, render_cv, save_cv_base, update_entry, update_profile, upload_asset, upload_certificate
 from .formatting import telegram_html
 from .state import admin_result_context, awaiting_cv, awaiting_entry, conversation_history, last_cv_delivery, list_context, pending, pending_cv, pending_mutation, pending_sync, pending_upload, pending_upload_target
+from .admin_operations import execute_admin_operation as run_admin_operation
 
 bot = Bot(settings.telegram_bot_token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 dispatcher = Dispatcher()
@@ -107,27 +108,6 @@ async def deliver_certificates(message: types.Message, query: str = ""):
             await message.answer_document(types.BufferedInputFile(file_response.content, filename=filename), caption=html.escape(item["title"], quote=False))
 
 
-async def execute_admin_operation(operation: dict) -> str:
-    """Execute one already-authorized admin operation for text or button flows."""
-    resource, action = operation["resource"], operation["action"]
-    if resource == "profile":
-        await update_profile(operation.get("payload", {}))
-    else:
-        payload = dict(operation.get("payload") or {key: value for key, value in operation.items() if key not in {"resource", "action", "id", "candidates", "payload"}})
-        if operation.get("id"):
-            payload["id"] = operation["id"]
-        values = payload.get("links") if resource == "links" else payload.get("technologies") if resource == "entry-technologies" else None
-        if isinstance(values, list):
-            if resource == "links":
-                await bulk_manage_links([{"action": action, "id": item.get("id"), "payload": {key: value for key, value in item.items() if key != "id"}} for item in values])
-            else:
-                for item in values:
-                    await manage_content(resource, action, {"entry_id": payload.get("entry_id"), **item})
-        else:
-            await manage_content(resource, action, payload)
-    return {"create": f"{resource.title()} created.", "update": f"{resource.title()} updated.", "delete": f"{resource.title()} deleted."}.get(action, "Change applied.")
-
-
 async def handle_llm_admin_operation(message: types.Message, operation: dict) -> bool:
     """Handle an operation returned by the single main LLM orchestration loop."""
     user_id = message.from_user.id
@@ -177,7 +157,7 @@ async def handle_llm_admin_operation(message: types.Message, operation: dict) ->
         label = target.get("name") or target.get("title") or target.get("label") or operation.get("id")
         await message.answer(f"Delete {label}?", reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="Delete", callback_data="admin:confirm"), InlineKeyboardButton(text="Cancel", callback_data="admin:cancel")]]))
         return True
-    await execute_admin_operation(operation)
+    await run_admin_operation(operation, update_profile=update_profile, manage_content=manage_content, bulk_manage_links=bulk_manage_links)
     await message.answer(f"{resource.replace('-', ' ').title()} {'updated' if action == 'update' else 'created' }.")
     return True
 
@@ -220,7 +200,7 @@ async def action_callback(callback: types.CallbackQuery):
         except TelegramBadRequest:
             logger.info("Callback acknowledgement expired before admin operation started")
         try:
-            result = await execute_admin_operation(mutation[2] or {})
+            result = await run_admin_operation(mutation[2] or {}, update_profile=update_profile, manage_content=manage_content, bulk_manage_links=bulk_manage_links)
             if callback.message:
                 await callback.message.edit_text(result)
         except httpx.HTTPStatusError as error:
@@ -425,7 +405,7 @@ async def question(message: types.Message):
                         await manage_content(resource, action, mutation[2] or {})
                     elif mutation[0] == "admin":
                         operation = mutation[2] or {}
-                        result_message = await execute_admin_operation(operation)
+                        result_message = await run_admin_operation(operation, update_profile=update_profile, manage_content=manage_content, bulk_manage_links=bulk_manage_links)
                     else: await update_entry(mutation[1], mutation[2] or {})
                     if mutation[0] == "profile":
                         result_message = "Profile updated."
