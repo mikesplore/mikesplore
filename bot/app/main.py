@@ -590,6 +590,14 @@ async def question(message: types.Message):
                         items,
                         {"first_name": message.from_user.first_name if message.from_user else None, "last_name": message.from_user.last_name if message.from_user else None, "is_admin": True},
                     )
+                    if response.startswith("__BOT_ACTION__"):
+                        action = json.loads(response.removeprefix("__BOT_ACTION__"))
+                        if action.get("action") == "send_gallery_image" and action.get("url"):
+                            async with httpx.AsyncClient(timeout=20) as media_client:
+                                media_response = await media_client.get(action["url"])
+                                media_response.raise_for_status()
+                            await message.answer_photo(types.BufferedInputFile(media_response.content, filename="gallery-image"), caption=action.get("label") or "Gallery image")
+                            return
                     await message.answer(telegram_html(response))
                     return
                 if operation.get("action") in {"update", "delete"} and operation.get("id"):
