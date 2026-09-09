@@ -11,6 +11,7 @@ import logging
 import json
 import re
 import asyncio
+import time
 from contextlib import asynccontextmanager
 from .tools import list_certificates
 
@@ -30,6 +31,11 @@ from .cv_handlers import configure as configure_cv_handlers, deliver_certificate
 
 bot = Bot(settings.telegram_bot_token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 dispatcher = Dispatcher()
+# Telegram retries a webhook update when the original HTTP response is delayed
+# or lost. Keep a short-lived update-id cache so a retry cannot trigger a second
+# LLM request or duplicate Telegram response.
+processed_update_ids: dict[int, float] = {}
+update_id_lock = asyncio.Lock()
 
 
 @asynccontextmanager
@@ -263,5 +269,16 @@ async def health():
 async def webhook(request: Request, x_telegram_bot_api_secret_token: str | None = Header(default=None)):
     if x_telegram_bot_api_secret_token != settings.telegram_webhook_secret:
         raise HTTPException(status_code=401, detail="Invalid webhook secret")
-    await dispatcher.feed_update(bot, types.Update.model_validate(await request.json(), context={"bot": bot}))
+    update = types.Update.model_validate(await request.json(), context={"bot": bot})
+    now = time.monotonic()
+    async with update_id_lock:
+        # Keep five minutes of IDs; Telegram's retry window is much shorter,
+        # while this bound prevents an unbounded in-memory structure.
+        for update_id, seen_at in list(processed_update_ids.items()):
+            if now - seen_at > 300:
+                processed_update_ids.pop(update_id, None)
+        if update.update_id in processed_update_ids:
+            return {"ok": True, "duplicate": True}
+        processed_update_ids[update.update_id] = now
+    await dispatcher.feed_update(bot, update)
     return {"ok": True}
