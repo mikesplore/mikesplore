@@ -79,7 +79,19 @@ def save_cv_base(payload: dict, db: Session = Depends(get_db)):
 
 @router.post("/admin/cv/render", dependencies=[Depends(require_service_key)])
 def render_cv_version(payload: dict, db: Session = Depends(get_db)):
-    return cv_service.render_cv(db, payload)
+    try:
+        return cv_service.render_cv(db, payload)
+    except HTTPException as error:
+        if error.status_code == 422:
+            patch = payload.get("patch")
+            summary = {"patch_keys": sorted(patch) if isinstance(patch, dict) else type(patch).__name__}
+            if isinstance(patch, dict) and isinstance(patch.get("summary"), dict):
+                summary["summary_keys"] = sorted(patch["summary"])
+                summary["selected_projects_type"] = type(patch.get("selected_projects")).__name__
+                summary["selected_skills_type"] = type(patch.get("selected_skills")).__name__
+            error.detail = f"{error.detail} | observed={summary!r}"
+        raise
+
 
 
 @router.get("/cv/search")

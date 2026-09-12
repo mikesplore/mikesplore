@@ -129,9 +129,6 @@ class _FakeMessage:
     def __init__(self):
         self.calls = []
 
-    async def edit_text(self, text=None, **kwargs):
-        self.calls.append("edit")
-
     async def answer(self, text=None, **kwargs):
         self.calls.append("answer")
 
@@ -140,9 +137,10 @@ class _FakeCallback:
     def __init__(self, data):
         self.data = data
         self.message = _FakeMessage()
+        self.answered = False
 
     async def answer(self, text=None, **kwargs):
-        pass
+        self.answered = True
 
 
 def test_detail_opens_new_message_while_list_edits_in_place(monkeypatch):
@@ -159,9 +157,11 @@ def test_detail_opens_new_message_while_list_edits_in_place(monkeypatch):
 
     list_callback = _FakeCallback("pub:list:projects:1")
     asyncio.run(browse.handle_public_callback(list_callback))
-    assert list_callback.message.calls == ["edit"]
+    assert list_callback.message.calls == ["answer"]
+    assert list_callback.answered
 
     detail_callback = _FakeCallback("pub:detail:projects:1:0")
     asyncio.run(browse.handle_public_callback(detail_callback))
     assert detail_callback.message.calls == ["answer"]
+    assert detail_callback.answered
 

@@ -19,6 +19,8 @@
   technologies, repository URL buttons); article/hackathon/event details render from the
   compact list entry plus an "Open link" URL button. Articles deliberately link out instead
   of dumping 12k-char bodies in chat.
+- Back-to-menu and section buttons post as fresh messages rather than editing the
+  current message.
 - Added a 90-second in-memory TTL cache per `(resource, page)` (and profile/project-detail
   keys, capped at 200 entries) so repeated taps don't re-hit the backend. `/counts` does not
   include articles, so the menu summary performs one extra `GET /entries?content_type=article`

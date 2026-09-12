@@ -56,23 +56,23 @@ MAX_PREVIEW_BYTES = 10 * 1024 * 1024
 
 # Icons (Telegram's Noto Emoji icon font) instead of pictorial emojis.
 ICONS = {
-    "menu": "\ue53e",            # list icon
-    "projects": "\ue36f",        # code icon
-    "articles": "\ue1c9",        # document icon
-    "hackathons": "\U0001F947",  # trophy icon
-    "events": "\U0001F4C5",      # calendar icon
-    "skills": "\U0001F396",      # medal icon
-    "certificates": "\U0001F4C3",  # scroll icon
-    "contact": "\ue051",         # chat icon
-    "bucket": "\u2611",          # checked box icon
-    "about": "\U0001F464",       # silhouette icon
-    "back": "\U0001F519",        # back arrow icon
-    "link": "\U0001F517",        # chain link icon
-    "repo": "\U0001F5A5",        # desktop computer icon
-    "open": "\U0001F4CC",        # pushpin icon
-    "camera": "\U0001F4F7",      # camera icon
-    "settings": "\u2699",        # gear icon
-    "detail": "\U0001F4C4",      # page icon
+    "menu": "\ue53e",
+    "projects": "\ue36f",
+    "articles": "\ue1c9",
+    "hackathons": "\U0001F947",
+    "events": "\U0001F4C5",
+    "skills": "\U0001F396",
+    "certificates": "\U0001F4C3",
+    "contact": "\ue051",
+    "bucket": "\u2611",
+    "about": "\U0001F464",
+    "back": "\U0001F519",
+    "link": "\U0001F517",
+    "repo": "\U0001F5A5",
+    "open": "\U0001F4CC",
+    "camera": "\U0001F4F7",
+    "settings": "\u2699",
+    "detail": "\U0001F4C4",
 }
 
 # resource -> (label, entries content_type)
@@ -148,13 +148,13 @@ def safe_url(url) -> str | None:
 def menu_button() -> types.InlineKeyboardButton:
     return types.InlineKeyboardButton(text=f"{ICONS['menu']} Menu", callback_data="pub:menu")
 def menu_button() -> types.InlineKeyboardButton:
-    return types.InlineKeyboardButton(text="☰ Menu", callback_data="pub:menu")
+    return types.InlineKeyboardButton(text="Menu", callback_data="pub:menu")
 def menu_keyboard() -> types.InlineKeyboardMarkup:
     buttons = [types.InlineKeyboardButton(text=f"{RESOURCE_ICONS[resource]} {RESOURCE_LABELS[resource]}", callback_data=f"pub:list:{resource}") for resource in MENU_ORDER]
 
 
 def menu_keyboard() -> types.InlineKeyboardMarkup:
-    buttons = [types.InlineKeyboardButton(text=RESOURCE_LABELS[resource], callback_data=f"pub:list:{resource}") for resource in MENU_ORDER]
+    buttons = [types.InlineKeyboardButton(text=RESOURCE_LABELS[resource], callback_data=f"pub:list:{resource}", style="primary") for resource in MENU_ORDER]
     rows = [buttons[index:index + 2] for index in range(0, len(buttons), 2)]
     return types.InlineKeyboardMarkup(inline_keyboard=rows)
 
@@ -241,19 +241,18 @@ async def send_menu(message: types.Message, first_name: str | None = None) -> No
     )
 
 
-async def _show(callback: types.CallbackQuery, text: str, markup: types.InlineKeyboardMarkup | None, alert: str = "Live portfolio data — no AI involved", as_new: bool = False) -> None:
-    """Render a browse view. Menu/list/pagination taps edit the tapped message in place;
-    detail taps pass as_new=True so every opened item stays behind in chat as a trail."""
+async def _show(callback: types.CallbackQuery, text: str, markup: types.InlineKeyboardMarkup | None, alert: str = "OK", as_new: bool = False) -> None:
+    """Render a browse view. Every view posts as a fresh message so the chat keeps a
+    visible history: /start persists, each section button is a new chat entry, and
+    back-to-menu also posts fresh rather than editing the current message in place.
+    """
     try:
         if callback.message:
-            if as_new:
-                await callback.message.answer(text, reply_markup=markup, link_preview_options=LinkPreviewOptions(is_disabled=True))
-            else:
-                try:
-                    await callback.message.edit_text(text, reply_markup=markup, link_preview_options=LinkPreviewOptions(is_disabled=True))
-                except TelegramBadRequest as error:
-                    if "message is not modified" not in str(error):
-                        raise
+            await callback.message.answer(
+                text,
+                reply_markup=markup,
+                link_preview_options=LinkPreviewOptions(is_disabled=True),
+            )
         await callback.answer(alert)
     except Exception:
         logger.exception("Browse render failed")
@@ -283,10 +282,10 @@ def entry_list_keyboard(resource: str, entries: list[dict], page: int, total: in
         rows.append([types.InlineKeyboardButton(text=f"{index + 1}. {title[:MAX_BUTTON_TITLE]}", callback_data=f"pub:detail:{resource}:{page}:{index}")])
     navigation = []
     if page > 1:
-        navigation.append(types.InlineKeyboardButton(text=f"{ICONS['back']} Prev", callback_data=f"pub:list:{resource}:{page - 1}"))
-    navigation.append(menu_button())
+        navigation.append(types.InlineKeyboardButton(text="Prev", callback_data=f"pub:list:{resource}:{page - 1}"))
+    navigation.append(types.InlineKeyboardButton(text="Menu", callback_data="pub:menu"))
     if page < pages:
-        navigation.append(types.InlineKeyboardButton(text=f"Next {ICONS['open']}", callback_data=f"pub:list:{resource}:{page + 1}"))
+        navigation.append(types.InlineKeyboardButton(text="Next", callback_data=f"pub:list:{resource}:{page + 1}"))
     rows.append(navigation)
     return types.InlineKeyboardMarkup(inline_keyboard=rows)
 
@@ -456,11 +455,11 @@ def entry_detail_keyboard(resource: str, page: int, entry: dict, extra_links: li
     link_buttons = list(extra_links or [])
     primary = safe_url(entry.get("url"))
     if primary and not any(button.url == primary for button in link_buttons):
-        link_buttons.insert(0, types.InlineKeyboardButton(text="🔗 Open link", url=primary))
+        link_buttons.insert(0, types.InlineKeyboardButton(text="Open link", url=primary))
     rows = [link_buttons[start:start + 2] for start in range(0, len(link_buttons), 2)]
     rows.append([
-        types.InlineKeyboardButton(text=f"◀️ Back to {RESOURCE_LABELS[resource]}", callback_data=f"pub:list:{resource}:{page}"),
-        menu_button(),
+        types.InlineKeyboardButton(text=f"Back to {RESOURCE_LABELS[resource]}", callback_data=f"pub:list:{resource}:{page}"),
+        types.InlineKeyboardButton(text="Menu", callback_data="pub:menu"),
     ])
     return types.InlineKeyboardMarkup(inline_keyboard=rows)
 
@@ -490,10 +489,10 @@ def project_detail_keyboard(entry: dict, project: dict | None, page: int) -> typ
         url = safe_url(repository.get("url"))
         if url:
             name = str(repository.get("name") or repository.get("link_label") or "Repository")
-            link_buttons.append(types.InlineKeyboardButton(text=f"🔗 {name[:24]}", url=url))
+            link_buttons.append(types.InlineKeyboardButton(text=f"{name[:24]}", url=url, style="primary"))
     fallback = safe_url((project.get("links") or {}).get("repo") or entry.get("url"))
     if fallback and not any(button.url == fallback for button in link_buttons):
-        link_buttons.insert(0, types.InlineKeyboardButton(text="🔗 Repository", url=fallback))
+        link_buttons.insert(0, types.InlineKeyboardButton(text="Repository", url=fallback, style="primary"))
     return entry_detail_keyboard("projects", page, entry, extra_links=link_buttons)
 
 
@@ -524,10 +523,7 @@ async def handle_detail(callback: types.CallbackQuery, resource: str, page: int,
         logger.exception("Browse detail failed: %s %s/%s", resource, page, index)
         await acknowledge(callback, "The portfolio service is unavailable right now. Please try again shortly.", show_alert=True, logger=logger)
         return
-    # Detail views post a fresh message instead of collapsing the tapped list,
-    # so the chat keeps a visible trail of every item the user opened; the list
-    # message above remains interactive. Back still collapses this message.
-    await _show(callback, text, markup, alert="Opened below ⬇️", as_new=True)
+    await _show(callback, text, markup, alert="Opened below ⬇️")
 
 
 async def handle_public_callback(callback: types.CallbackQuery) -> None:
