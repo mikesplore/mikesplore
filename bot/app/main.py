@@ -17,7 +17,7 @@ from .tools import list_certificates
 
 from .config import settings
 from .llm import answer
-from .llm import extract_entry, extract_job_description_from_image, extract_update, friendly_error, present_admin_result, request_cv_render, tailor_cv
+from .llm import extract_entry, extract_job_description_from_image, extract_update, friendly_error, present_admin_result, tailor_cv
 from .admin import apply_sync, bulk_manage_links, create_entry, delete_asset, delete_certificate, delete_entry, get_cv_base, get_profile, list_admin_resource, list_certificates as list_certificate_records, manage_content, preview_sync, render_cv, save_cv_base, update_entry, update_profile, upload_asset, upload_certificate
 from .formatting import telegram_html
 from .state import admin_result_context, awaiting_cv, awaiting_entry, conversation_history, last_cv_delivery, list_context, pending, pending_cv, pending_mutation, pending_sync, pending_upload, pending_upload_target, wizard_sessions
@@ -189,7 +189,6 @@ register_callbacks(dispatcher, {
     "update_profile": update_profile,
     "manage_content": manage_content,
     "bulk_manage_links": bulk_manage_links,
-    "request_cv_render": request_cv_render,
     "render_cv": render_cv,
     "cv_filename": cv_filename,
     "present_admin_result": present_admin_result,
@@ -256,7 +255,6 @@ register_message_handlers(dispatcher, {
     "list_context": list_context,
     "tailor_cv": tailor_cv,
     "apply_sync": apply_sync,
-    "request_cv_render": request_cv_render,
     "render_cv": render_cv,
     "last_cv_delivery": last_cv_delivery,
     "create_entry": create_entry,
@@ -273,7 +271,6 @@ register_message_handlers(dispatcher, {
     "answer": answer,
     "handle_llm_admin_operation": handle_llm_admin_operation,
     "telegram_html": telegram_html,
-    "request_cv_render": request_cv_render,
     "cv_filename": cv_filename,
     "format_preview": format_preview,
     "format_cv_patch": format_cv_patch,

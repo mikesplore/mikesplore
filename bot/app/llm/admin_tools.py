@@ -141,18 +141,6 @@ async def tailor_cv(job_description: str, existing_patch: dict | None = None, re
     raise ValueError("CV tailoring did not produce a final patch after searching")
 
 
-async def request_cv_render(patch: dict, job_description: str, base_revision: str, label: str) -> dict:
-    tool = {"type": "function", "function": {"name": "render_tailored_cv", "description": "Authorize rendering the already-approved tailored CV.", "parameters": {"type": "object", "properties": {"approved": {"type": "boolean"}}, "required": ["approved"]}}}
-    completion = await complete(model=settings.groq_model, messages=[{"role": "system", "content": "The administrator approved the CV patch. Call render_tailored_cv exactly once with approved=true."}, {"role": "user", "content": "Render the approved tailored CV."}], tools=[tool], tool_choice={"type": "function", "function": {"name": "render_tailored_cv"}}, max_tokens=80, temperature=0)
-    calls = completion.choices[0].message.tool_calls or []
-    if not calls:
-        raise ValueError("Groq did not produce the CV render function call.")
-    arguments = json.loads(calls[0].function.arguments or "{}")
-    if arguments.get("approved") is not True:
-        raise ValueError("The CV render function was not approved.")
-    return {"patch": patch, "job_description": job_description, "base_revision": base_revision, "label": label}
-
-
 async def propose_role_policies() -> list[dict]:
     context = await get_cv_tailoring_context()
     prompt = "Derive conservative technical role-policy candidates from the verified CV context supplied by the user. Return only JSON with a policies array. Each item must contain role_family, titles, related_skills, related_projects, evidence_requirements, excluded_claims, confidence, and source. Use only evidence present in the context. Do not invent qualifications. Set source to cv-analysis and never mark policies active."

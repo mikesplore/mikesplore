@@ -33,6 +33,12 @@ def register_message_handlers(dispatcher, dependencies):
                     try:
                         current_patch, job_description, label, base_revision = pending_cv[message.from_user.id]
                         decision = await tailor_cv(job_description, current_patch, message.text)
+                        if decision.get("status") != "rejected" and decision.get("action") != "confirm":
+                            decision = {
+                                "summary": {key: str(decision.get("summary", {}).get(key, "")) for key in ("old", "new")},
+                                "selected_projects": [str(item) for item in decision.get("selected_projects", [])],
+                                "selected_skills": {str(category): [str(item) for item in items] for category, items in (decision.get("selected_skills") or {}).items()},
+                            }
                         if decision.get("action") == "confirm":
                             confirmation_text = True
                         elif decision.get("status") == "rejected":
@@ -66,8 +72,7 @@ def register_message_handlers(dispatcher, dependencies):
                         await message.answer("Confirmed. I’m now rendering the tailored PDF…")
                         try:
                             patch, job_description, label, base_revision = tailored
-                            render_args = await request_cv_render(patch, job_description, base_revision, label)
-                            result = await render_cv(**render_args)
+                            result = await render_cv(patch, job_description, base_revision, label)
                             async with httpx.AsyncClient(timeout=30) as client:
                                 pdf_response = await client.get(result["pdf_url"])
                                 pdf_response.raise_for_status()
@@ -214,8 +219,8 @@ def register_message_handlers(dispatcher, dependencies):
                     logger.exception("Bot action failed")
                     await message.answer("I couldn't complete that request right now. Please try again shortly.")
                 return
-            # Every AI answer carries the browse keyboard so users can switch to
-            # deterministic, zero-LLM navigation from any reply.
-            await streamed_message.edit_text(telegram_html(response), reply_markup=browse.menu_keyboard())
+            # Browse navigation is available from /menu and deterministic browse
+            # commands. Ordinary LLM answers stay as plain replies.
+            await streamed_message.edit_text(telegram_html(response), reply_markup=None)
         
         

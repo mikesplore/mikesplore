@@ -44,6 +44,11 @@ def test_cv_patch_rejects_unknown_skill():
         _apply_cv_patch(base_cv(), patch)
 
 
-def test_cv_patch_requires_exact_shape():
-    with pytest.raises(HTTPException, match="exactly summary"):
+def test_cv_patch_requires_required_shape():
+    with pytest.raises(HTTPException, match="contain summary"):
         _validate_cv_patch({"summary": {}})
+
+
+def test_cv_patch_ignores_provider_metadata():
+    patch = valid_patch() | {"confidence": 0.9, "explanation": "verified"}
+    assert _validate_cv_patch(patch) == valid_patch()

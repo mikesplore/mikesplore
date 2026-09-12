@@ -14,6 +14,17 @@ async def prepare_cv_patch(message: types.Message, job_description: str, revisio
         await status.edit_text("Searching relevant projects and skills…")
         current = pending_cv.get(message.from_user.id)
         patch = await tailor_cv(job_description, current[0] if current else None, revision)
+        # Keep only the backend contract fields. This also protects rendering
+        # from provider-added metadata such as confidence or explanations.
+        if patch.get("status") != "rejected":
+            patch = {
+                "summary": {key: str(patch.get("summary", {}).get(key, "")) for key in ("old", "new")},
+                "selected_projects": [str(item) for item in patch.get("selected_projects", [])],
+                "selected_skills": {
+                    str(category): [str(item) for item in items]
+                    for category, items in (patch.get("selected_skills") or {}).items()
+                },
+            }
         if patch.get("status") == "rejected":
             await status.edit_text("I won't create a tailored CV for this job.\n\n" + html.escape(patch.get("reason", "There is not enough verified portfolio evidence for this role.")))
             return

@@ -49,9 +49,9 @@ def project_id(project: dict) -> str:
 
 
 def validate_cv_patch(patch: dict) -> dict:
-    allowed = {"summary", "selected_projects", "selected_skills"}
-    if not isinstance(patch, dict) or set(patch) != allowed:
-        raise HTTPException(status_code=422, detail="CV patch must contain exactly summary, selected_projects, and selected_skills")
+    required = {"summary", "selected_projects", "selected_skills"}
+    if not isinstance(patch, dict) or not required.issubset(patch):
+        raise HTTPException(status_code=422, detail="CV patch must contain summary, selected_projects, and selected_skills")
     summary = patch["summary"]
     if not isinstance(summary, dict) or set(summary) != {"old", "new"} or not all(isinstance(summary[key], str) for key in summary):
         raise HTTPException(status_code=422, detail="CV summary patch must contain old and new text")
@@ -61,9 +61,16 @@ def validate_cv_patch(patch: dict) -> dict:
         raise HTTPException(status_code=422, detail="selected_skills must map categories to skill names")
     if not patch["selected_projects"] or not any(patch["selected_skills"].values()):
         raise HTTPException(status_code=422, detail="The job must match at least one verified project and skill")
+    # Return only the render contract. Providers may include harmless metadata
+    # around an otherwise valid patch.
+    return {
+        "summary": {"old": summary["old"], "new": summary["new"]},
+        "selected_projects": list(patch["selected_projects"]),
+        "selected_skills": dict(patch["selected_skills"]),
+    }
 def apply_cv_patch(base: dict, patch: dict) -> dict:
     validate_cv_data(base)
-    validate_cv_patch(patch)
+    patch = validate_cv_patch(patch)
     projects = {project_id(project): project for project in base["projects"]}
     unknown_projects = set(patch["selected_projects"]) - set(projects)
     if unknown_projects:

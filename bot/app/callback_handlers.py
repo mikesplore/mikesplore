@@ -72,9 +72,8 @@ def register_callbacks(dispatcher, dependencies):
                     patch, job_description, label, base_revision = tailored
                     await callback.answer("Generating CV")
                     if callback.message:
-                        await callback.message.edit_text("Generating the tailored CV…")
-                    render_args = await request_cv_render(patch, job_description, base_revision, label)
-                    result = await render_cv(**render_args)
+                        await callback.message.answer("Generating the tailored CV…")
+                    result = await render_cv(patch, job_description, base_revision, label)
                     async with httpx.AsyncClient(timeout=30) as client:
                         pdf_response = await client.get(result["pdf_url"])
                         pdf_response.raise_for_status()
@@ -85,7 +84,8 @@ def register_callbacks(dispatcher, dependencies):
                 except Exception as error:
                     logger.exception("Inline CV rendering failed")
                     if callback.message:
-                        await callback.message.edit_text(f"The tailored CV could not be generated: {str(error)[:500]}", reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
+                        detail = error.response.text[:800] if isinstance(error, httpx.HTTPStatusError) else str(error)[:500]
+                        await callback.message.answer(f"The tailored CV could not be generated: {detail}", reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
                             InlineKeyboardButton(text="Retry", callback_data="cv:generate"),
                             InlineKeyboardButton(text="Request changes", callback_data="cv:revise"),
                         ]]))
@@ -148,4 +148,3 @@ def register_callbacks(dispatcher, dependencies):
                 return
             await callback.answer("Unknown action", show_alert=True)
         
-
