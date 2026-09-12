@@ -15,4 +15,4 @@ async def acknowledge(callback, text: str | None = None, *, show_alert: bool = F
 
 
 def is_protected_action(data: str) -> bool:
-    return data.startswith(("admin:", "cv:", "upload:", "gallery:", "adminlist:"))
+    return data.startswith(("admin:", "cv:", "upload:", "gallery:", "adminlist:", "mng:"))

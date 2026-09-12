@@ -17,11 +17,16 @@ def register_message_handlers(dispatcher, dependencies):
                     pending_sync.pop(message.from_user.id, None)
                     awaiting_cv.discard(message.from_user.id)
                     pending_cv.pop(message.from_user.id, None)
+                    wizard_sessions.pop(message.from_user.id, None)
                     await message.answer("Cancelled.")
                     return
                 if message.text.strip().startswith("/"):
-                    await message.answer("Only /start, /menu, /help, and /cancel are available. Use /menu to browse the portfolio with buttons, or describe what you need in ordinary language.")
+                    await message.answer("Only /start, /menu, /help, /manage, and /cancel are available. Use /menu to browse the portfolio with buttons, or describe what you need in ordinary language.")
                     return
+                active_wizard = wizard_sessions.get(message.from_user.id)
+                if active_wizard:
+                    if await handle_wizard_text(message, active_wizard):
+                        return
                 normalized_admin_text = message.text.strip().lower()
                 confirmation_text = normalized_admin_text in {"yes", "confirm", "go ahead", "proceed", "do it"}
                 if message.from_user.id in pending_cv and not confirmation_text:

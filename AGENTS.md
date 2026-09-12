@@ -43,6 +43,54 @@
   in place. Safe even for stale callbacks because aiogram 3.31's `InaccessibleMessage`
   supports `.answer` (it lacks `.edit_text`, which only the in-place path uses). Locked in
   by `test_detail_opens_new_message_while_list_edits_in_place` with fake callback objects.
+### Deterministic content-management wizard (2026-09-12)
+
+- Added `bot/app/wizard.py`: a deterministic, zero-LLM ``/manage`` wizard for the portfolio
+  owner. The LLM is not used for field values; instead the bot presents editable fields as
+  inline buttons, validates each typed value locally, and only an explicit "Finish & save"
+  writes to the backend. Matches the conversational workflow: pick a resource → pick a field
+  (current value shown) → type the new value → "edit another field" / "Finish & save" /
+  "Cancel".
+- Resources covered in this pass: profile, projects, articles, hackathons, events, contact
+  links, skill groups, education, bucket list, and certificates. Each resource is declared
+  once in a declarative `RESOURCES` catalog (label, kind, write backend, editable fields);
+  adding another editable collection later is a catalog entry plus any new `/admin/content`
+  dispatch the backend already exposes.
+- Credential/scheme pattern mirrors the public browse module: all `mng:*` callbacks are
+  protected and stay under the 64-byte Telegram limit; record identity is held in the
+  ephemeral per-user session (indexed by page/index like the browse coordinates), never in
+  the callback payload. Media fields (profile photo, project card/gallery images) arm the
+  existing `pending_upload`/`pending_upload_target` machinery so the file is uploaded through
+  the same R2-backed path as today; text edits are batched until Finish & save.
+- Field types with local validation: text, textarea, url, slug, date, year, int, tags (comma
+  split + dedup), bool (yes/no buttons, also accepts yes/no text), and select. Media fields
+  are prompted as a file upload and reported back into the summary afterward.
+- Boolean and select fields show Yes/No or choice buttons; select values are sent as text too.
+- Sub-resources for entries are wired next-free: projects carry "Technologies" and
+  "Repositories" branches that list the current linked items and accept comma-separated
+  technology names or repository URLs, written through the same `/admin/content` dispatch the
+  bot already uses.
+- Wire-in: ``/manage`` is a new admin `Command("manage")` in `main.py` (restricted to the
+  owner), wired into the admin command menu and admin `/help` text. `message_handlers.py`
+  clears the wizard on `/cancel` and routes in-session free-text to the wizard value handler
+  before the LLM catch-all. `callback_handlers.py` routes `mng:*` to the wizard before the
+  unknown-action fallback; `uploads.py` fires `wizard.prepare_media_upload` and
+  `wizard.media_upload_complete` around the existing upload flow.
+- Bugs surfaced and fixed while building this: the wizard surfaced that generic create for
+  `BucketListItem` 500s when no `id` is supplied, because it is the only non-autoincrement
+  single-column PK model with no server default. Backend fix in `admin_content`: the generic
+  create path now coerces single-column non-Integer PK models without a server default to a
+  generated UUID before `add()`. Confirmed live via a throwaway create/delete round-trip
+  through the same endpoint the wizard uses.
+- Tests: `bot/tests/test_wizard.py` (27 pure-function tests — callback-scheme protection + 64
+  byte ceiling, parsers, every validator including illegal values, pagination bounds, create
+  queue progression, finish-op assembly per resource including link/chain resource handling,
+  summary rendering with cleared/null values, keyboard pivots, callback-level cancel, finish
+  save with fake async write helpers, media-upload hooks). Combined suite: 46 bot tests
+  passing (including the existing 19), 15 backend tests passing, 61 total.
+- Deterministic zero-LLM end-to-end coverage of the wizard path itself is trivial because all
+  displays are deterministic; the important integration confirmations are the unit tests plus
+  the live Postgres round-trip, not a Telegram bot press.
 
 ### Webhook routing and LLM message serialization fix (2026-09-12)
 

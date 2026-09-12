@@ -18,12 +18,13 @@ from .tools import list_certificates
 from .config import settings
 from .llm import answer
 from .llm import extract_entry, extract_job_description_from_image, extract_update, friendly_error, present_admin_result, request_cv_render, tailor_cv
-from .admin import apply_sync, bulk_manage_links, create_entry, delete_asset, delete_certificate, delete_entry, get_cv_base, list_certificates as list_certificate_records, manage_content, preview_sync, render_cv, save_cv_base, update_entry, update_profile, upload_asset, upload_certificate
+from .admin import apply_sync, bulk_manage_links, create_entry, delete_asset, delete_certificate, delete_entry, get_cv_base, get_profile, list_admin_resource, list_certificates as list_certificate_records, manage_content, preview_sync, render_cv, save_cv_base, update_entry, update_profile, upload_asset, upload_certificate
 from .formatting import telegram_html
-from .state import admin_result_context, awaiting_cv, awaiting_entry, conversation_history, last_cv_delivery, list_context, pending, pending_cv, pending_mutation, pending_sync, pending_upload, pending_upload_target
+from .state import admin_result_context, awaiting_cv, awaiting_entry, conversation_history, last_cv_delivery, list_context, pending, pending_cv, pending_mutation, pending_sync, pending_upload, pending_upload_target, wizard_sessions
 from .admin_operations import execute_admin_operation as run_admin_operation
 from .callbacks import acknowledge, is_protected_action
 from . import browse
+from . import wizard
 from .callback_handlers import register_callbacks
 from .uploads import register_upload_handler
 from .message_handlers import register_message_handlers
@@ -68,6 +69,7 @@ async def register_commands():
         types.BotCommand(command="help", description="How to use this bot"),
     ]
     admin_commands = public_commands + [
+        types.BotCommand(command="manage", description="Edit portfolio content with buttons"),
         types.BotCommand(command="cancel", description="Cancel a pending change"),
     ]
     await bot.set_my_commands(public_commands)
@@ -89,7 +91,13 @@ HELP_TEXT = (
     "directly, so they are instant and never hit AI rate limits.\n"
     "• Free text — just ask anything. Questions are answered by AI grounded in the live "
     "portfolio data.\n"
-    "• /cancel — cancel a pending change (portfolio owner only)."
+    "• /cancel — cancel a pending change (portfolio owner only).\n"
+    "\n"
+    "<b>Portfolio owner</b>\n"
+    "• /manage — edit profile, projects, links, skills, education, bucket list or "
+    "certificates step by step with buttons, and upload new files.\n"
+    "• /manage &lt;resource&gt; — jump straight to a resource (e.g. /manage profile, "
+    "/manage projects, /manage projects new)."
 )
 
 
@@ -114,6 +122,14 @@ async def help_command(message: types.Message):
         reply_markup=browse.menu_keyboard(),
         link_preview_options=LinkPreviewOptions(is_disabled=True),
     )
+
+
+@dispatcher.message(Command("manage"))
+async def manage_command(message: types.Message):
+    if not is_admin(message):
+        await message.answer("This command is restricted to the portfolio owner.")
+        return
+    await wizard.handle_manage_command(message)
 
 
 
@@ -182,6 +198,7 @@ register_callbacks(dispatcher, {
     "types": types,
     "InlineKeyboardButton": InlineKeyboardButton,
     "InlineKeyboardMarkup": InlineKeyboardMarkup,
+    "wizard": wizard,
 })
 
 
@@ -204,6 +221,8 @@ register_upload_handler(dispatcher, {
     "types": types,
     "InlineKeyboardButton": InlineKeyboardButton,
     "InlineKeyboardMarkup": InlineKeyboardMarkup,
+    "wizard": wizard,
+    "wizard_sessions": wizard_sessions,
 })
 
 
@@ -267,6 +286,10 @@ register_message_handlers(dispatcher, {
     "InlineKeyboardButton": InlineKeyboardButton,
     "InlineKeyboardMarkup": InlineKeyboardMarkup,
     "friendly_error": friendly_error,
+    "wizard": wizard,
+    "wizard_sessions": wizard_sessions,
+    "handle_wizard_text": wizard.handle_wizard_text,
+    "handle_wizard_sub_text": wizard.handle_wizard_sub_text,
 })
 
 
@@ -285,6 +308,18 @@ configure_admin_handlers({
     "logger": logger,
     "InlineKeyboardButton": InlineKeyboardButton,
     "InlineKeyboardMarkup": InlineKeyboardMarkup,
+})
+
+wizard.configure({
+    "wizard_sessions": wizard_sessions,
+    "pending_upload": pending_upload,
+    "pending_upload_target": pending_upload_target,
+    "update_profile": update_profile,
+    "manage_content": manage_content,
+    "bulk_manage_links": bulk_manage_links,
+    "list_admin_resource": list_admin_resource,
+    "get_profile": get_profile,
+    "is_admin": is_admin,
 })
 
 

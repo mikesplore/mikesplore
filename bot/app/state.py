@@ -12,3 +12,7 @@ pending_cv: dict[int, tuple[dict, str, str, str]] = {}
 last_cv_delivery: dict[int, tuple[str, str]] = {}
 list_context: dict[int, tuple[str, int]] = {}
 admin_result_context: dict[int, dict] = {}
+# Deterministic /manage wizard: one active session per owner id. The session
+# holds an in-progress batch of edits; only "Finish & save" writes to the
+# backend, so an abandoned session is never a consistency problem.
+wizard_sessions: dict[int, dict] = {}

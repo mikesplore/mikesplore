@@ -9,6 +9,11 @@ def register_upload_handler(dispatcher, dependencies):
             if not is_admin(message):
                 await message.answer("Document ingestion is restricted to the administrator.")
                 return
+            wizard_session = wizard_sessions.get(message.from_user.id)
+            if wizard_session and wizard_session.get("step") == "media":
+                # Deterministic /manage wizard media field: arm pending_upload so
+                # the flow below uploads through the exact same path as /upload.
+                await wizard.prepare_media_upload(message, wizard_session)
             asset_type = "file"
             try:
                 if message.from_user.id not in awaiting_cv or pending_upload.get(message.from_user.id):
@@ -87,6 +92,8 @@ def register_upload_handler(dispatcher, dependencies):
                         except Exception:
                             logger.exception("Telegram bot profile photo update failed")
                             await message.answer("The portfolio image was updated, but Telegram's bot profile image could not be changed.")
+                if wizard_sessions.get(message.from_user.id):
+                    await wizard.media_upload_complete(message)
                 else:
                     await message.answer("I don't have an upload request for this file yet. Please describe what you want to add.")
             except httpx.HTTPStatusError as error:

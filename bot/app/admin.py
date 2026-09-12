@@ -132,9 +132,16 @@ async def list_profile_links() -> list[dict]:
         return response.json()
 
 
-async def list_admin_resource(resource: str) -> list[dict]:
+async def list_admin_resource(resource: str, payload: dict | None = None) -> list[dict]:
     async with httpx.AsyncClient(base_url=settings.backend_url, timeout=10) as client:
-        response = await client.post("/admin/content", params={"resource": resource, "action": "list"}, json={}, headers={"X-Service-Api-Key": settings.service_api_key})
+        response = await client.post("/admin/content", params={"resource": resource, "action": "list"}, json=payload or {}, headers={"X-Service-Api-Key": settings.service_api_key})
+        response.raise_for_status()
+        return response.json()
+
+
+async def get_profile() -> dict:
+    async with httpx.AsyncClient(base_url=settings.backend_url, timeout=10) as client:
+        response = await client.get("/profile")
         response.raise_for_status()
         return response.json()
 

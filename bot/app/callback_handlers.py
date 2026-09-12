@@ -143,6 +143,9 @@ def register_callbacks(dispatcher, dependencies):
                 if callback.message:
                     await callback.message.edit_text(telegram_html(response), reply_markup=InlineKeyboardMarkup(inline_keyboard=[buttons]) if buttons else None)
                 return
+            if data.startswith("mng:"):
+                await wizard.handle_wizard_callback(callback)
+                return
             await callback.answer("Unknown action", show_alert=True)
         
 

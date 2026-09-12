@@ -207,7 +207,7 @@ def format_menu_text(first_name: str | None, owner_name: str | None, counts: dic
     if first_name:
         lines.append(f"Hi {esc(first_name)}!")
     if owner_name:
-        lines.append(f"This is <b>{esc(owner_name)}</b>'s portfolio assistant.")
+        lines.append(f"This is <b>{esc(owner_name)}'s</b> portfolio assistant.")
     else:
         lines.append("Portfolio assistant.")
     lines.append("Browse everything with the buttons below, or just ask me a question in plain language.")

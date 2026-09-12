@@ -148,8 +148,21 @@ def manage_content(resource: str, action: str, payload: dict, response: Response
             if key not in {"id", "key"} and hasattr(item, key):
                 setattr(item, key, value)
     else:
-        if model is Entry and payload.get("slug") and db.scalar(select(Entry).where(Entry.slug == payload["slug"])):
-            raise HTTPException(status_code=409, detail=f"An entry with slug '{payload['slug']}' already exists; use update instead")
+        # Coerce records whose caller did not supply a primary key. Most
+        # tables rely on a server default (UUID/native serial), but
+        # BucketListItem is the one exception: a single String PK with no
+        # default. Only touch single-column PKs that are not autoinc Integer.
+        from sqlalchemy import inspect as _inspect
+
+        pk_columns = _inspect(model).primary_key
+        if len(pk_columns) == 1 and "id" not in payload:
+            pk_col = pk_columns[0]
+            has_default = (pk_col.default is not None) or (pk_col.server_default is not None)
+            is_autoinc = str(getattr(pk_col.type, "python_type", None)) == "int"
+            if not is_autoinc and not has_default:
+                import uuid as _uuid
+
+                payload["id"] = str(_uuid.uuid4())
         db.add(model(**{key: value for key, value in payload.items() if hasattr(model, key)}))
     db.commit()
     return {"status": action, "resource": resource}
