@@ -256,6 +256,8 @@ register_message_handlers(dispatcher, {
     "tailor_cv": tailor_cv,
     "apply_sync": apply_sync,
     "render_cv": render_cv,
+    "send_cv": send_cv,
+    "deliver_certificates": deliver_certificates,
     "last_cv_delivery": last_cv_delivery,
     "create_entry": create_entry,
     "delete_entry": delete_entry,

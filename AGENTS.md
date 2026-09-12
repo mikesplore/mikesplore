@@ -793,6 +793,21 @@ This phase was completed before the schema and backend work.
   and primarily people-leadership roles such as CTO, CEO, CIO, VP Engineering, Head of Engineering,
   and Engineering Manager remain excluded.
 
+### CV generation flow and message persistence update (2026-09-13)
+
+- Generate-CV confirmation no longer spends an additional LLM turn on an authorization-only
+  `render_tailored_cv` function call. The preview already contains the validated patch, job
+  description, label, and base revision; the explicit Telegram Generate button now calls the
+  protected backend render endpoint directly.
+- The Generate progress message and render errors are posted as new Telegram messages, preserving
+  the proposal and earlier conversation content. CV revision updates likewise remain visible as
+  new messages.
+- Backend CV patch validation now accepts the required render fields even when a provider adds
+  harmless metadata, then canonicalizes the patch to `summary`, `selected_projects`, and
+  `selected_skills`. Added regression coverage for this payload shape.
+- Ordinary LLM answers no longer receive the browse keyboard automatically; browsing remains
+  available through `/menu` and deterministic public browse interactions.
+
 ## Open items to resolve during the work, not before
 
 ### Manual source synchronization update (2026-09-04)
