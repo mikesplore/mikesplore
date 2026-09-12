@@ -1,5 +1,5 @@
 from aiogram import Bot, Dispatcher, types
-from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, LinkPreviewOptions
 from aiogram.client.default import DefaultBotProperties
 from aiogram.enums import ParseMode
 from aiogram.exceptions import TelegramBadRequest
@@ -23,6 +23,7 @@ from .formatting import telegram_html
 from .state import admin_result_context, awaiting_cv, awaiting_entry, conversation_history, last_cv_delivery, list_context, pending, pending_cv, pending_mutation, pending_sync, pending_upload, pending_upload_target
 from .admin_operations import execute_admin_operation as run_admin_operation
 from .callbacks import acknowledge, is_protected_action
+from . import browse
 from .callback_handlers import register_callbacks
 from .uploads import register_upload_handler
 from .message_handlers import register_message_handlers
@@ -53,15 +54,18 @@ async def show_typing(message: types.Message) -> None:
 async def register_commands():
     """Publish Telegram's command menu when the webhook process starts."""
     await bot.set_my_short_description(
-        "Ask about the portfolio, projects, skills, and certifications."
+        "Browse the portfolio with buttons or ask about projects, skills, and certifications."
     )
     await bot.set_my_description(
-        "This is a portfolio assistant. Ask about the owner's projects, "
-        "skills, writing, hackathons, certifications, education, or experience. "
-        "Answers are grounded in his current portfolio data."
+        "This is a portfolio assistant. Browse projects, writing, hackathons, skills, "
+        "certificates, and contact links with the /menu buttons, or ask about the owner's "
+        "background and experience. Button views read live portfolio data directly; "
+        "questions are answered with AI grounded in the current portfolio data."
     )
     public_commands = [
-        types.BotCommand(command="start", description="Start the portfolio assistant"),
+        types.BotCommand(command="start", description="Welcome and portfolio menu"),
+        types.BotCommand(command="menu", description="Browse the portfolio with buttons"),
+        types.BotCommand(command="help", description="How to use this bot"),
     ]
     admin_commands = public_commands + [
         types.BotCommand(command="cancel", description="Cancel a pending change"),
@@ -77,15 +81,39 @@ def is_admin(message: types.Message) -> bool:
     return bool(message.from_user and message.from_user.id == settings.admin_telegram_id)
 
 
+HELP_TEXT = (
+    "🧭 <b>How to use this bot</b>\n"
+    "\n"
+    "• /menu — browse the portfolio with buttons: projects, articles, hackathons, events, "
+    "skills, certificates, contact links, and more. Button views read the live portfolio data "
+    "directly, so they are instant and never hit AI rate limits.\n"
+    "• Free text — just ask anything. Questions are answered by AI grounded in the live "
+    "portfolio data.\n"
+    "• /cancel — cancel a pending change (portfolio owner only)."
+)
+
+
 @dispatcher.message(Command("start"))
 async def start(message: types.Message):
+    # Fully deterministic: /start renders counts and the browse keyboard directly
+    # from backend reads instead of spending LLM tokens on a greeting.
     first_name = message.from_user.first_name if message.from_user else None
-    last_name = message.from_user.last_name if message.from_user else None
-    response = await answer(
-        "Create a concise first-contact welcome using only current tool results. Look up the verified profile and available public portfolio collections first. Address the sender by their Telegram first name when available, identify the portfolio owner using the verified profile, and describe only the content categories that actually exist in the returned data. Do not use a hardcoded greeting, topic list, tagline, location, or portfolio fact.",
-        user_context={"first_name": first_name, "last_name": last_name, "is_admin": is_admin(message)},
+    await browse.send_menu(message, first_name)
+
+
+@dispatcher.message(Command("menu"))
+async def menu(message: types.Message):
+    first_name = message.from_user.first_name if message.from_user else None
+    await browse.send_menu(message, first_name)
+
+
+@dispatcher.message(Command("help"))
+async def help_command(message: types.Message):
+    await message.answer(
+        HELP_TEXT,
+        reply_markup=browse.menu_keyboard(),
+        link_preview_options=LinkPreviewOptions(is_disabled=True),
     )
-    await message.answer(telegram_html(response))
 
 
 

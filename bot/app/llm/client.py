@@ -14,6 +14,20 @@ client = AsyncGroq(api_key=settings.groq_api_key)
 client_answer_kwargs = {"temperature": 0}
 
 
+def _json_size(value) -> int:
+    """Approximate JSON byte size that never raises on SDK model objects.
+
+    Chat completions can carry Groq SDK models (e.g. ChatCompletionMessage)
+    inside ``messages`` after a tool-call round. Observability must not crash
+    a request that already succeeded.
+    """
+    def default(obj):
+        if hasattr(obj, "model_dump"):
+            return obj.model_dump(mode="json")
+        return str(obj)
+    return len(json.dumps(value, ensure_ascii=False, default=default))
+
+
 async def _record_usage(payload: dict) -> None:
     try:
         async with httpx.AsyncClient(base_url=settings.backend_url, timeout=5) as http:
@@ -45,8 +59,8 @@ async def complete(**kwargs):
             "cached_input_tokens": getattr(prompt_details, "cached_tokens", None) if prompt_details else None,
             "output_tokens": getattr(usage, "completion_tokens", None),
             "total_tokens": getattr(usage, "total_tokens", None),
-            "input_characters": len(json.dumps(kwargs.get("messages", []), ensure_ascii=False)),
-            "tool_payload_characters": len(json.dumps(kwargs.get("tools", []), ensure_ascii=False)),
+            "input_characters": _json_size(kwargs.get("messages", [])),
+            "tool_payload_characters": _json_size(kwargs.get("tools", [])),
             "latency_ms": round((time.perf_counter() - started) * 1000), "success": True,
         })
         return completion

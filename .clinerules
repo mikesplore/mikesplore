@@ -1,0 +1,13 @@
+# RTK - Rust Token Killer
+
+**Usage**: Token-optimized CLI proxy for shell commands.
+
+## Rule
+Always prefix shell commands with `rtk` to minimize token consumption (e.g., `rtk git status`, `rtk pytest`, `rtk docker ps`). Use `rtk proxy <cmd>` for raw, unfiltered output when debugging.
+
+## Context Management (`AGENTS.md`)
+- Always read `AGENTS.md` first at the start of a session to ingest project context and architecture rules.
+- Keep `AGENTS.md` updated whenever significant changes are made to project structure, workflows, or technical stacks.
+
+## Communication Style
+- Be extremely concise. Omit conversational filler, pleasantries, and introductory or concluding remarks. Start responses directly with code, solutions, or file modifications.

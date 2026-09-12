@@ -1,5 +1,7 @@
 from aiogram import types
 
+from . import browse
+
 
 def register_message_handlers(dispatcher, dependencies):
     globals().update(dependencies)
@@ -18,7 +20,7 @@ def register_message_handlers(dispatcher, dependencies):
                     await message.answer("Cancelled.")
                     return
                 if message.text.strip().startswith("/"):
-                    await message.answer("Only /start and /cancel are available. Please describe what you need in ordinary language.")
+                    await message.answer("Only /start, /menu, /help, and /cancel are available. Use /menu to browse the portfolio with buttons, or describe what you need in ordinary language.")
                     return
                 normalized_admin_text = message.text.strip().lower()
                 confirmation_text = normalized_admin_text in {"yes", "confirm", "go ahead", "proceed", "do it"}
@@ -207,6 +209,8 @@ def register_message_handlers(dispatcher, dependencies):
                     logger.exception("Bot action failed")
                     await message.answer("I couldn't complete that request right now. Please try again shortly.")
                 return
-            await streamed_message.edit_text(telegram_html(response))
+            # Every AI answer carries the browse keyboard so users can switch to
+            # deterministic, zero-LLM navigation from any reply.
+            await streamed_message.edit_text(telegram_html(response), reply_markup=browse.menu_keyboard())
         
         

@@ -50,7 +50,9 @@ async def answer(question: str, history: list[dict] | None = None, on_text=None,
         if not message.tool_calls:
             content = message.content or "I couldn't find an answer in the portfolio."
             return content
-        messages.append(message)
+        # Keep the conversation JSON-serializable: raw ChatCompletionMessage
+        # objects break downstream serialization (metrics, history reuse).
+        messages.append(message.model_dump(exclude_none=True))
         used_tools = True
         for call in message.tool_calls:
             arguments = json.loads(call.function.arguments or "{}")

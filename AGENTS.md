@@ -1,5 +1,68 @@
 # AGENTS.md — Portfolio Backend + Telegram Bot Conversion
 
+### Button-driven public browsing mode (2026-09-12)
+
+- Added `bot/app/browse.py`: a deterministic, zero-LLM browsing mode. Every inline-button
+  interaction (menu, lists, pagination, details) reads the backend's public REST endpoints
+  directly and renders locally, so browsing costs 0 Groq tokens instead of the previous
+  2–3 tool-loop calls per interaction. The LLM is now reserved for free-form questions.
+- Callback scheme (all payloads ≤ 64 bytes, `pub:` prefix, intentionally absent from
+  `is_protected_action` so browsing stays public): `pub:menu`, `pub:list:<resource>[:<page>]`,
+  `pub:detail:<resource>:<page>:<index>`. Slugs/titles are never embedded in callback data;
+  entries are addressed by resource/page/index coordinates. This is a deliberate deviation
+  from the presented plan's per-user `browse_context` map: stateless coordinates survive bot
+  restarts, so there is no stale per-user context to heal — a detail tap simply re-reads that
+  cached page and, if the index no longer exists, answers "list has changed, pick again".
+- Browsable resources: projects, articles, hackathons, events (paginated lists of 5 with
+  prev/next), skills, contact links, certificates, bucket list (with done/total progress),
+  and About (profile). Project detail upgrades via `GET /projects/{slug}` (status, blurb,
+  technologies, repository URL buttons); article/hackathon/event details render from the
+  compact list entry plus an "Open link" URL button. Articles deliberately link out instead
+  of dumping 12k-char bodies in chat.
+- Added a 90-second in-memory TTL cache per `(resource, page)` (and profile/project-detail
+  keys, capped at 200 entries) so repeated taps don't re-hit the backend. `/counts` does not
+  include articles, so the menu summary performs one extra `GET /entries?content_type=article`
+  page-1 read for the X-Total-Count total (2 GETs, 0 tokens).
+- `/start` is now fully deterministic (previously an LLM greeting): verified owner name from
+  `/profile`, live counts line, and the browse keyboard. Added `/menu` (same view) and a real
+  deterministic `/help`. All three are real aiogram `Command` handlers registered at import
+  time in `bot/app/main.py`, ahead of the catch-all text handler, and were added to
+  `register_commands()`'s public Telegram command menu along with refreshed bot descriptions.
+- `callback_handlers.py` routes `pub:*` before the protected-action fallback;
+  `message_handlers.py` now attaches the compact browse keyboard to every LLM answer and its
+  unknown-command text points to `/menu`.
+- Added `bot/tests/test_browse.py` (14 pure-function tests: callback-scheme size/publicity,
+  parsers, clipping/escaping, list/detail/menu formatters, navigation bounds, unsafe-URL
+  rejection, empty states). Full suite: 33 tests passing. Verified live against the running
+  local backend: all 9 sections render from real data, project detail resolves technologies
+  and repo buttons, and every generated callback payload stays under 64 bytes.
+- Hybrid rendering (user-selected option): menu/list/pagination taps still edit the tapped
+  message in place, but detail taps post a fresh message (`_show(as_new=True)`, "Opened
+  below ⬇️" toast) so the chat keeps a visible trail of every opened item, while the list
+  message above stays interactive. Back on a detail collapses that message into the list
+  in place. Safe even for stale callbacks because aiogram 3.31's `InaccessibleMessage`
+  supports `.answer` (it lacks `.edit_text`, which only the in-place path uses). Locked in
+  by `test_detail_opens_new_message_while_list_edits_in_place` with fake callback objects.
+
+### Webhook routing and LLM message serialization fix (2026-09-12)
+
+- Diagnosed a Telegram webhook misconfiguration: the registered URL used the reversed path
+  `/webhook/telegram`, while the combined service serves `/telegram/webhook`; the 404s in the
+  local uvicorn log were path mismatches, not missing routes. `POST /telegram/webhook` correctly
+  returned 401 without the secret header, proving the bot app is mounted and guarded.
+- Confirmed `setWebhook` must pass `secret_token` matching `TELEGRAM_WEBHOOK_SECRET`; without it,
+  Telegram omits the `X-Telegram-Bot-Api-Secret-Token` header and every update bounces with 401.
+- Fixed the first LLM tool-loop iteration crash: `public_tools.py` and `admin_tools.py` appended
+  the raw Groq `ChatCompletionMessage` object into `messages`, so the next `complete()` call's
+  usage-metrics `json.dumps(messages)` raised `TypeError: Object of type ChatCompletionMessage is
+  not JSON serializable` after the Groq request had already succeeded. Both sites now append
+  `message.model_dump(exclude_none=True)` plain dicts (role/tool_calls preserved and verified).
+- Hardened `bot/app/llm/client.py` with `_json_size()`, a never-raising serializer that converts
+  pydantic model objects via `model_dump(mode="json")` and falls back to `str()`, so observability
+  metrics can no longer crash a completed request.
+- Verified from the repository `.venv`: `compileall` on `bot`, a live `_json_size()` test against a
+  real `ChatCompletionMessage` with tool calls, and the full backend test suite (15 tests, passing).
+
 ### Groq error detail surfacing fix (2026-09-09)
 
 - `bot/app/llm/errors.py::groq_error_message` now reads Groq's `error.body.error.message`

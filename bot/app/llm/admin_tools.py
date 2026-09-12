@@ -220,7 +220,9 @@ async def extract_admin_operation(instruction: str, admin_authorized: bool = Fal
                 break
             except json.JSONDecodeError as error:
                 raise ValueError("The LLM returned an incomplete admin operation") from error
-        messages.append(message)
+        # Normalize to a plain dict so subsequent complete() calls and metrics
+        # stay JSON-serializable (raw ChatCompletionMessage objects are not).
+        messages.append(message.model_dump(exclude_none=True))
         for call in message.tool_calls:
             arguments = json.loads(call.function.arguments or "{}")
             if call.function.name in {"create_admin_operation", "request_upload", "request_cv_tailoring", "propose_role_policies", "sync_devto_articles"}:

@@ -1,5 +1,7 @@
 from aiogram import types
 
+from . import browse
+
 
 def register_callbacks(dispatcher, dependencies):
     globals().update(dependencies)
@@ -10,6 +12,10 @@ def register_callbacks(dispatcher, dependencies):
             data = callback.data or ""
             if user_id != settings.admin_telegram_id and is_protected_action(data):
                 await acknowledge(callback, "This action is restricted to the portfolio owner.", show_alert=True, logger=logger)
+                return
+            # Public button browsing: everyone can use it, and it never calls the LLM.
+            if data.startswith("pub:"):
+                await browse.handle_public_callback(callback)
                 return
             if data == "admin:cancel":
                 pending_mutation.pop(user_id, None)
