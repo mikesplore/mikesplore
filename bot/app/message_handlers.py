@@ -29,6 +29,24 @@ def register_message_handlers(dispatcher, dependencies):
                         return
                 normalized_admin_text = message.text.strip().lower()
                 confirmation_text = normalized_admin_text in {"yes", "confirm", "go ahead", "proceed", "do it"}
+                show_cv_proposal = (
+                    message.from_user.id in pending_cv
+                    and any(
+                        phrase in normalized_admin_text
+                        for phrase in (
+                            "show me",
+                            "show the proposal",
+                            "show proposed",
+                            "proposed changes",
+                            "proposed cv",
+                            "what changes",
+                        )
+                    )
+                )
+                if show_cv_proposal:
+                    patch = pending_cv[message.from_user.id][0]
+                    await message.answer("Proposed CV changes:\n\n" + format_cv_patch(patch))
+                    return
                 if message.from_user.id in pending_cv and not confirmation_text:
                     try:
                         current_patch, job_description, label, base_revision = pending_cv[message.from_user.id]

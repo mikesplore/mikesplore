@@ -31,8 +31,18 @@ async def prepare_cv_patch(message: types.Message, job_description: str, revisio
         base = await get_cv_base()
         cv_name = (base.get("data") or {}).get("name") or "Tailored CV"
         pending_cv[message.from_user.id] = (patch, job_description, cv_name, base["revision"])
-        await status.edit_text("Preparing proposed CV changes…")
-        await status.edit_text("Proposed CV changes:\n\n" + format_cv_patch(patch), reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="Generate CV", callback_data="cv:generate"), InlineKeyboardButton(text="Request changes", callback_data="cv:revise")]]))
+        # The LLM may already have streamed a short preflight message and the
+        # temporary status message may be stale by the time tailoring finishes.
+        # Send the proposal as a fresh message so it is always visible and
+        # approval is unambiguously based on this exact pending patch.
+        await status.edit_text("Analysis complete. I’ve prepared a proposed CV update below.")
+        await message.answer(
+            "Proposed CV changes:\n\n" + format_cv_patch(patch),
+            reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
+                InlineKeyboardButton(text="Generate CV", callback_data="cv:generate"),
+                InlineKeyboardButton(text="Request changes", callback_data="cv:revise"),
+            ]]),
+        )
     except Exception as error:
         logger.exception("CV patch preparation failed")
         await status.edit_text(friendly_error(error, "I couldn't prepare a valid CV patch. Please check the base CV and try again."))
