@@ -71,6 +71,7 @@ async def register_commands():
     admin_commands = public_commands + [
         types.BotCommand(command="manage", description="Edit portfolio content with buttons"),
         types.BotCommand(command="cancel", description="Cancel a pending change"),
+        types.BotCommand(command="apply", description="Recheck and apply a pending CV proposal"),
     ]
     await bot.set_my_commands(public_commands)
     await bot.set_my_commands(
@@ -92,6 +93,7 @@ HELP_TEXT = (
     "• Free text — just ask anything. Questions are answered by AI grounded in the live "
     "portfolio data.\n"
     "• /cancel — cancel a pending change (portfolio owner only).\n"
+    "• /apply — recheck and apply a pending CV proposal after the base CV changes.\n"
     "\n"
     "<b>Portfolio owner</b>\n"
     "• /manage — edit profile, projects, links, skills, education, bucket list or "
@@ -121,6 +123,29 @@ async def help_command(message: types.Message):
         HELP_TEXT,
         reply_markup=browse.menu_keyboard(),
         link_preview_options=LinkPreviewOptions(is_disabled=True),
+    )
+
+
+@dispatcher.message(Command("apply"))
+async def apply_command(message: types.Message):
+    """Reconcile a pending CV proposal with the current base CV.
+
+    Rendering is protected by a base revision check. If the base CV changed
+    while the proposal was waiting for approval, regenerate the proposal
+    against the current base so the owner can review it again.
+    """
+    if not is_admin(message):
+        await message.answer("This command is restricted to the portfolio owner.")
+        return
+    tailored = pending_cv.get(message.from_user.id)
+    if not tailored:
+        await message.answer("There is no pending CV proposal to apply.")
+        return
+    _patch, job_description, _label, _revision = tailored
+    await prepare_cv_patch(
+        message,
+        job_description,
+        "The base CV changed while this proposal was pending. Rebuild the proposal using the current base CV and show the updated proposed changes for approval.",
     )
 
 

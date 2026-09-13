@@ -101,7 +101,10 @@ def register_message_handlers(dispatcher, dependencies):
                         except httpx.HTTPStatusError as error:
                             pending_cv[message.from_user.id] = tailored
                             logger.exception("Tailored CV rejected by backend")
-                            await message.answer(f"The backend rejected the tailored CV: {error.response.text[:500]}")
+                            if error.response.status_code == 409:
+                                await message.answer("The base CV changed while this proposal was pending. Send /apply to rebuild the proposal against the current CV, then review it again.")
+                            else:
+                                await message.answer(f"The backend rejected the tailored CV: {error.response.text[:500]}")
                         except Exception as error:
                             pending_cv[message.from_user.id] = tailored
                             logger.exception("Tailored CV rendering failed")
