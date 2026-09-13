@@ -73,7 +73,7 @@ def register_callbacks(dispatcher, dependencies):
                     await callback.answer("Generating CV")
                     if callback.message:
                         await callback.message.answer("Generating the tailored CV…")
-                    result = await render_cv(patch, job_description, base_revision, label)
+                    result = await render_cv(patch, base_revision, job_description, label)
                     async with httpx.AsyncClient(timeout=30) as client:
                         pdf_response = await client.get(result["pdf_url"])
                         pdf_response.raise_for_status()

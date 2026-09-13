@@ -90,7 +90,7 @@ def register_message_handlers(dispatcher, dependencies):
                         await message.answer("Confirmed. I’m now rendering the tailored PDF…")
                         try:
                             patch, job_description, label, base_revision = tailored
-                            result = await render_cv(patch, job_description, base_revision, label)
+                            result = await render_cv(patch, base_revision, job_description, label)
                             async with httpx.AsyncClient(timeout=30) as client:
                                 pdf_response = await client.get(result["pdf_url"])
                                 pdf_response.raise_for_status()
