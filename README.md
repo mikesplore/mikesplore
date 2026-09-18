@@ -30,12 +30,15 @@ flowchart LR
 ```
 
 The backend exposes both the REST API and `/ws/voice` on one origin. The AssemblyAI gateway module
-does not access the database directly; the backend remains responsible for persistence, media, and
-owner-session authorization. Public questions are read-only. Profile, CV, project, certificate,
+does not access the database directly; it forwards verified tool requests to the REST API in the
+same backend process. If `BACKEND_URL` is omitted, it calls `http://127.0.0.1:$PORT` automatically
+(port 8000 locally). The backend remains responsible for persistence, media, and owner-session
+authorization. Public questions are read-only. Profile, CV, project, certificate,
 link, skill, and education changes require the owner PIN and an explicit browser confirmation.
 
-For local frontend testing against the live portfolio API, set `VITE_API_BASE_URL` and
-`BACKEND_URL` to the public backend origin, for example `https://portfolio.mikesplore.me`.
+For local frontend testing against the live portfolio API, set `VITE_API_BASE_URL` to the public
+backend origin, for example `https://portfolio.mikesplore.me`. `BACKEND_URL` is optional for the
+combined service and should usually be left empty.
 `DATABASE_URL` is only required by the main backend service and must be a PostgreSQL connection
 string; it is not an HTTP domain.
 
