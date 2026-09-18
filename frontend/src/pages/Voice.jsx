@@ -56,6 +56,8 @@ export default function Voice() {
   const [profileDraft, setProfileDraft] = useState({});
   const [sheetExpanded, setSheetExpanded] = useState(false);
   const [sheetDismissed, setSheetDismissed] = useState(false);
+  const [sheetMounted, setSheetMounted] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
   const socket = useRef(null);
   const capture = useRef(null);
   const processor = useRef(null);
@@ -315,7 +317,18 @@ export default function Voice() {
   const projectActions = actions.filter((action) => action.type === 'open_resource' && action.item_type === 'project');
   const linkActions = actions.filter((action) => action.type === 'open_resource' && action.item_type !== 'project');
 
-  return <main className="relative mx-auto flex min-h-screen w-full max-w-2xl flex-col items-center justify-center px-6 pb-8 text-center transition-[padding] duration-300 lg:max-w-none lg:pr-[clamp(22rem,34vw,42rem)]">
+  useEffect(() => {
+    if (hasSheetContent && !sheetDismissed) {
+      setSheetMounted(true);
+      requestAnimationFrame(() => setSheetOpen(true));
+      return undefined;
+    }
+    setSheetOpen(false);
+    const timeout = window.setTimeout(() => setSheetMounted(false), 300);
+    return () => window.clearTimeout(timeout);
+  }, [hasSheetContent, sheetDismissed]);
+
+  return <main className={`relative mx-auto flex min-h-screen w-full max-w-2xl flex-col items-center justify-center px-6 pb-8 text-center transition-[padding] duration-300 lg:max-w-none ${hasSheetContent && !sheetDismissed ? 'lg:pr-[clamp(22rem,34vw,42rem)]' : ''}`}>
     <div className="fixed right-5 top-5 z-30"><ThemeToggle /></div>
     <h1 className="mb-4 text-4xl font-bold">Milo</h1>
     <p className="mb-8 max-w-lg text-base text-muted">Ask Milo about Mike’s work.</p>
@@ -324,7 +337,7 @@ export default function Voice() {
       {state === 'idle' || state === 'error' ? 'Start talking' : 'Stop'}
     </button>
 
-    {hasSheetContent && !sheetDismissed && <aside className={`fixed inset-x-0 bottom-0 z-20 overflow-y-auto rounded-t-3xl border-t border-divider bg-page/95 px-5 pb-8 pt-4 text-center shadow-2xl backdrop-blur transition-[max-height,transform] duration-300 sm:inset-x-auto sm:left-1/2 sm:w-full sm:max-w-2xl sm:-translate-x-1/2 lg:inset-y-0 lg:right-0 lg:bottom-auto lg:left-auto lg:h-screen lg:max-h-none lg:w-[clamp(22rem,34vw,42rem)] lg:max-w-none lg:translate-x-0 lg:rounded-none lg:rounded-l-3xl lg:border-l lg:border-t-0 lg:px-7 lg:pt-7 ${sheetExpanded ? 'max-h-[94vh]' : 'max-h-[72vh]'}`}>
+    {sheetMounted && <aside className={`fixed inset-x-0 bottom-0 z-20 overflow-y-auto rounded-t-3xl border-t border-divider bg-page/95 px-5 pb-8 pt-4 text-center shadow-2xl backdrop-blur transition-[max-height,transform] duration-300 sm:inset-x-auto sm:left-1/2 sm:w-full sm:max-w-2xl sm:-translate-x-1/2 lg:inset-y-0 lg:right-0 lg:bottom-auto lg:left-auto lg:h-screen lg:max-h-none lg:w-[clamp(22rem,34vw,42rem)] lg:max-w-none lg:rounded-none lg:rounded-l-3xl lg:border-l lg:border-t-0 lg:px-7 lg:pt-7 lg:transition-transform ${sheetOpen ? 'lg:translate-x-0' : 'lg:translate-x-full'} ${sheetExpanded ? 'max-h-[94vh]' : 'max-h-[72vh]'}`}>
       <div className="relative mb-5">
         <button type="button" onClick={() => setSheetExpanded((expanded) => !expanded)} className="mx-auto block h-1 w-10 rounded-full bg-divider lg:hidden" aria-label={sheetExpanded ? 'Collapse details' : 'Expand details'} />
         <div className="hidden text-left text-xs font-semibold uppercase tracking-[0.2em] text-muted lg:block">Details</div>
