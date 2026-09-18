@@ -1,4 +1,4 @@
-# Shared Python dependencies for backend/ and bot/
+# Shared Python dependencies for backend/ and voice_gateway/
 alembic>=1.13,<2
 SQLAlchemy>=2.0,<3
 psycopg[binary]>=3.1,<4

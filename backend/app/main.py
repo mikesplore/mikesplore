@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import Depends, FastAPI, HTTPException, Query, Response, WebSocket, Header
+from fastapi import Depends, FastAPI, HTTPException, Query, Response, Header
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -177,14 +177,3 @@ app.include_router(owner_content.router)
 _validate_cv_patch = cv_service.validate_cv_patch
 _apply_cv_patch = cv_service.apply_cv_patch
 
-
-# The hackathon branch exposes only the portfolio API and AssemblyAI voice WebSocket.
-try:
-    from bot.app.assembly_voice import voice_agent_websocket
-except ModuleNotFoundError:
-    voice_agent_websocket = None
-if voice_agent_websocket is not None:
-    @app.websocket("/ws/voice")
-    @app.websocket("/ws/voice/")
-    async def voice_socket(websocket: WebSocket):
-        await voice_agent_websocket(websocket)

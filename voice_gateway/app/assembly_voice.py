@@ -6,15 +6,27 @@ import json
 import logging
 import time
 
+import httpx
 from fastapi import WebSocket, WebSocketDisconnect
 
 from .config import settings
 from .tools import TOOLS, execute_tool
-from backend.app.owner_auth import is_owner_session
 
 logger = logging.getLogger("uvicorn.error")
 
 ASSEMBLY_AGENT_URL = "wss://agents.assemblyai.com/v1/ws"
+
+
+async def validate_owner_session(token: str) -> bool:
+    if not token:
+        return False
+    try:
+        async with httpx.AsyncClient(base_url=settings.backend_url, timeout=5) as client:
+            response = await client.get("/owner/status", headers={"Authorization": f"Bearer {token}"})
+        return response.is_success
+    except httpx.HTTPError:
+        logger.warning("owner session validation failed through main backend")
+        return False
 
 
 def assembly_tools() -> list[dict]:
@@ -145,7 +157,7 @@ async def voice_agent_websocket(websocket: WebSocket) -> None:
                             await agent.send(json.dumps({"type": "session.end"}))
                             return
                         if command.get("type") == "owner_session":
-                            owner_unlocked = is_owner_session(command.get("token", ""))
+                            owner_unlocked = await validate_owner_session(command.get("token", ""))
                             logger.info("owner session forwarded valid=%s", owner_unlocked)
                             await send_client({"type": "owner_unlocked" if owner_unlocked else "owner_locked"})
                             if owner_unlocked and "profile" in pending_owner_action.lower() and ("picture" in pending_owner_action.lower() or "photo" in pending_owner_action.lower()):

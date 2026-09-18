@@ -5,6 +5,12 @@ import './index.css';
 
 function App() {
   useEffect(() => {
+    if (window.location.pathname === '/talk' || window.location.pathname === '/talk/') {
+      window.history.replaceState({}, '', '/');
+    }
+  }, []);
+
+  useEffect(() => {
     const controller = new AbortController();
     fetchAssets(controller.signal).then((assets) => {
       const profileImage = assets.find((asset) => asset.asset_type === 'profile-image')?.url;

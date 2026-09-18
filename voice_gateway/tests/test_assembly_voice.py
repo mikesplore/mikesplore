@@ -1,4 +1,4 @@
-from bot.app.assembly_voice import ASSEMBLY_AGENT_URL, assembly_tools
+from voice_gateway.app.assembly_voice import ASSEMBLY_AGENT_URL, assembly_tools
 
 
 def test_assembly_agent_endpoint_and_flat_tool_schema():

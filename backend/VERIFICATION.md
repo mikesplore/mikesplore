@@ -33,7 +33,7 @@ operation is required.
 ## Backend checks
 
 ```bash
-python -m compileall -q backend/app bot/app
+python -m compileall -q backend/app voice_gateway/app
 pytest -q backend/tests
 uvicorn backend.app.main:app --host 127.0.0.1 --port 8000
 ```

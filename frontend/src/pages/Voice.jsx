@@ -240,7 +240,8 @@ export default function Voice() {
     setError(''); setActions([]);
     const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
     const apiBase = import.meta.env.VITE_API_BASE_URL || `${protocol}://${window.location.host}`;
-    const backend = new URL(apiBase);
+    const voiceBase = import.meta.env.VITE_VOICE_API_BASE_URL || apiBase;
+    const backend = new URL(voiceBase);
     const wsProtocol = backend.protocol === 'https:' ? 'wss:' : 'ws:';
     const ws = new WebSocket(`${wsProtocol}//${backend.host}/ws/voice`);
     socket.current = ws;

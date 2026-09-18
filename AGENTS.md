@@ -859,9 +859,8 @@ This phase was completed before the schema and backend work.
   `Add AssemblyAI voice WebSocket loop` or `Connect visitor tools to voice agent`.
 - Keep the voice route and related integration isolated enough that it can be removed or
   disabled cleanly after AssemblyAI credits expire.
-- The implementation plan is tracked in
-  `docs/assemblyai-voice-representative-plan.md` and should be updated when scope or architecture
-  changes materially.
+- Current architecture and deployment instructions are maintained in `README.md`; update it when
+  scope or deployment architecture changes materially.
 
 ### Voice WebSocket handshake fix (2026-09-18)
 
@@ -875,3 +874,37 @@ This phase was completed before the schema and backend work.
 - The current runtime uses Uvicorn's `--ws websockets-sansio` with the installed `websockets 15.x`
   package. The public/Android deployment must use the same WebSocket implementation and proxy
   upgrade support.
+
+### Current AssemblyAI branch state (2026-09-18)
+
+- The `assemblyai-voice-representative` branch is a standalone hackathon frontend. `frontend/src/App.jsx`
+  renders the voice representative directly at `/`; the old portfolio pages, layout, navigation,
+  route were removed because the main branch already owns the conventional portfolio.
+- The remaining frontend API helper is `frontend/src/lib/voiceApi.js`. It contains only the asset
+  lookup needed for the voice app's dynamic favicon/profile-media setup.
+- Milo's conditional results and owner controls use a responsive presentation: a draggable bottom
+  sheet on mobile and a fluid, animated right-side panel on desktop. The main voice surface remains
+  centered when no conditional panel is present.
+- Audio handling uses AssemblyAI Voice Agent PCM output, an 80ms playback cushion, a 2048-frame
+  microphone buffer, and no microphone-to-speaker loopback. AssemblyAI turn detection uses 500ms
+  minimum silence and 2500ms maximum silence.
+- Owner mutations are protected by the backend PIN/session flow. Public reads remain unauthenticated;
+  profile, CV, project, certificate, link, skill, and education mutations require a valid owner
+  session plus the UI confirmation flow.
+- The branch uses the existing migration chain through `0018_llm_usage`, identical to `main`.
+  For the live demonstration, the separate hackathon backend may share the main database so owner
+  changes appear on the public portfolio. Back up the database first and do not introduce destructive
+  migrations.
+- Current verification commands:
+
+  ```bash
+  .venv/bin/python -m pytest -q backend/tests voice_gateway/tests
+  .venv/bin/python -m compileall -q backend/app voice_gateway/app
+  (cd frontend && npm run build)
+  ```
+
+- The deployment is split into a main portfolio backend and a lightweight voice gateway. The
+  gateway runs `voice_gateway.app.gateway:app`, owns the AssemblyAI connection, and does not require
+  `DATABASE_URL`; its `BACKEND_URL` points to the main backend for verified tools and owner-session
+  validation. Configure the frontend's `VITE_API_BASE_URL` to the main backend and
+  `VITE_VOICE_API_BASE_URL` to the gateway. Ensure main-backend CORS matches the deployed frontend.
