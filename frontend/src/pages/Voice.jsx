@@ -62,6 +62,7 @@ export default function Voice() {
   const capture = useRef(null);
   const processor = useRef(null);
   const intensityFrame = useRef(null);
+  const endingConversation = useRef(false);
 
   useEffect(() => {
     setSheetDismissed(false);
@@ -233,11 +234,17 @@ export default function Voice() {
     source.start(startAt);
     capture.current.nextAudioTime = startAt + buffer.duration;
     setState('speaking');
-    source.onended = () => { if (context.currentTime >= (capture.current?.nextAudioTime || 0) - 0.02) setState('listening'); };
+    source.onended = () => {
+      if (context.currentTime >= (capture.current?.nextAudioTime || 0) - 0.02) {
+        setState('listening');
+        if (endingConversation.current) stop();
+      }
+    };
   }
 
   async function start() {
     setError(''); setActions([]);
+    endingConversation.current = false;
     const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
     const apiBase = import.meta.env.VITE_API_BASE_URL || `${protocol}://${window.location.host}`;
     const voiceBase = import.meta.env.VITE_VOICE_API_BASE_URL || apiBase;
@@ -264,7 +271,11 @@ export default function Voice() {
       if (message.type === 'transcript') {
         if (message.final) {
           setActions([]);
-          if (/\b(end|stop|close|finish)\b.*\b(conversation|session|chat|talking)\b/i.test(message.text || '')) stop();
+          if (/\b(end|stop|close|finish)\b.*\b(conversation|session|chat|talking)\b/i.test(message.text || '')) {
+            // Let AssemblyAI produce the final acknowledgement. The session
+            // closes from the last response audio's onended callback.
+            endingConversation.current = true;
+          }
         }
       }
       if (message.type === 'audio') playAudio(message.audio);
@@ -318,6 +329,7 @@ export default function Voice() {
     capture.current?.context?.close?.(); capture.current = null;
     setState('idle');
     setVoiceIntensity(0);
+    endingConversation.current = false;
   }
 
   const hasSheetContent = Boolean(
