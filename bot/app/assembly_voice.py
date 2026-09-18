@@ -72,15 +72,33 @@ async def voice_agent_websocket(websocket: WebSocket) -> None:
 
     await websocket.accept()
     logger.info("voice client connected")
+
+    async def send_client(payload: dict) -> bool:
+        """Send to the browser without masking an already-closed client."""
+        try:
+            await websocket.send_json(payload)
+            return True
+        except (WebSocketDisconnect, RuntimeError):
+            logger.info("voice client disconnected while sending event=%s", payload.get("type"))
+            return False
+
     if not settings.assemblyai_api_key:
-        await websocket.send_json({"type": "error", "message": "AssemblyAI is not configured yet."})
+        await send_client({"type": "error", "message": "AssemblyAI is not configured yet."})
         await websocket.close(code=1011)
         return
 
     headers = {"Authorization": f"Bearer {settings.assemblyai_api_key}"}
     try:
         logger.info("opening AssemblyAI Voice Agent connection url=%s", ASSEMBLY_AGENT_URL)
-        async with websockets.connect(ASSEMBLY_AGENT_URL, additional_headers=headers, max_size=None, open_timeout=15) as agent:
+        async with websockets.connect(
+            ASSEMBLY_AGENT_URL,
+            additional_headers=headers,
+            max_size=None,
+            open_timeout=15,
+            ping_interval=20,
+            ping_timeout=20,
+            close_timeout=5,
+        ) as agent:
             agent_ready = asyncio.Event()
             audio_bytes = 0
             audio_frames = 0
@@ -100,7 +118,7 @@ async def voice_agent_websocket(websocket: WebSocket) -> None:
                         "transcription_prompt": "This is a portfolio conversation about software projects, programming, APIs, databases, cloud services, and web development. Preserve technical terms accurately.",
                         "voice_focus": "near-field",
                         "voice_focus_threshold": 0.8,
-                        "turn_detection": {"interrupt_response": True, "vad_threshold": 0.35, "min_silence": 700, "max_silence": 3000},
+                        "turn_detection": {"interrupt_response": True, "vad_threshold": 0.35, "min_silence": 500, "max_silence": 2500},
                     },
                     "output": {"voice": "emma", "format": {"encoding": "audio/pcm"}, "volume": 100},
                     "tools": assembly_tools(),
@@ -129,9 +147,9 @@ async def voice_agent_websocket(websocket: WebSocket) -> None:
                         if command.get("type") == "owner_session":
                             owner_unlocked = is_owner_session(command.get("token", ""))
                             logger.info("owner session forwarded valid=%s", owner_unlocked)
-                            await websocket.send_json({"type": "owner_unlocked" if owner_unlocked else "owner_locked"})
+                            await send_client({"type": "owner_unlocked" if owner_unlocked else "owner_locked"})
                             if owner_unlocked and "profile" in pending_owner_action.lower() and ("picture" in pending_owner_action.lower() or "photo" in pending_owner_action.lower()):
-                                await websocket.send_json({"type": "upload_requested", "action": pending_owner_action})
+                                await send_client({"type": "upload_requested", "action": pending_owner_action})
 
             client_task = asyncio.create_task(forward_client())
             try:
@@ -143,23 +161,23 @@ async def voice_agent_websocket(websocket: WebSocket) -> None:
                     if event_type == "session.ready":
                         agent_ready.set()
                         logger.info("assemblyai session ready")
-                        await websocket.send_json({"type": "ready", "sample_rate": 24000, "provider": "assemblyai-voice-agent"})
+                        await send_client({"type": "ready", "sample_rate": 24000, "provider": "assemblyai-voice-agent"})
                     elif event_type == "reply.audio":
                         if pending_browser_actions:
-                            await websocket.send_json({"type": "actions", "items": pending_browser_actions})
+                            await send_client({"type": "actions", "items": pending_browser_actions})
                             pending_browser_actions.clear()
                         audio = event.get("data", "")
                         logger.debug("assemblyai audio response chunk base64_bytes=%d", len(audio))
-                        await websocket.send_json({"type": "audio", "audio": audio})
+                        await send_client({"type": "audio", "audio": audio})
                     elif event_type in {"transcript.user", "transcript.user.delta"}:
                         text = event.get("text") or event.get("transcript") or ""
                         if text:
                             logger.info("voice transcript event final=%s text=%r", event_type == "transcript.user", text[:160])
-                            await websocket.send_json({"type": "transcript", "text": text, "final": event_type == "transcript.user"})
+                            await send_client({"type": "transcript", "text": text, "final": event_type == "transcript.user"})
                     elif event_type == "transcript.agent":
                         text = event.get("text") or ""
                         if text:
-                            await websocket.send_json({"type": "response", "text": text})
+                            await send_client({"type": "response", "text": text})
                     elif event_type == "tool.call":
                         call_id = event.get("call_id") or event.get("id")
                         name = event.get("name") or event.get("function", {}).get("name")
@@ -178,9 +196,9 @@ async def voice_agent_websocket(websocket: WebSocket) -> None:
                             action = result.get("requested_action", "owner action")
                             pending_owner_action = action
                             if owner_unlocked:
-                                await websocket.send_json({"type": "upload_requested" if "profile" in action.lower() and ("picture" in action.lower() or "photo" in action.lower()) else "owner_unlocked", "action": action})
+                                await send_client({"type": "upload_requested" if "profile" in action.lower() and ("picture" in action.lower() or "photo" in action.lower()) else "owner_unlocked", "action": action})
                             else:
-                                await websocket.send_json({"type": "pin_required", "title": "Enter your PIN to continue", "action": action})
+                                await send_client({"type": "pin_required", "title": "Enter your PIN to continue", "action": action})
                         pending_browser_actions.extend(await send_verified_actions(websocket, name, result))
                     elif event_type in {"reply.done", "input.speech.started"}:
                         logger.info("assemblyai event=%s status=%s", event_type, event.get("status"))
@@ -193,14 +211,14 @@ async def voice_agent_websocket(websocket: WebSocket) -> None:
                                     "is_error": isinstance(pending["result"], dict) and "error" in pending["result"],
                                 }))
                             pending_tool_results.clear()
-                        await websocket.send_json({"type": "interrupted" if event.get("status") == "interrupted" else "listening" if event_type == "input.speech.started" else "reply_done"})
+                        await send_client({"type": "interrupted" if event.get("status") == "interrupted" else "listening" if event_type == "input.speech.started" else "reply_done"})
                     elif event_type == "session.error":
                         logger.error("assemblyai session error details=%s", event)
-                        await websocket.send_json({"type": "error", "message": "AssemblyAI voice session failed."})
+                        await send_client({"type": "error", "message": "AssemblyAI voice session failed."})
             finally:
                 client_task.cancel()
     except (WebSocketDisconnect, asyncio.CancelledError):
         return
     except Exception:
         logger.exception("voice session failed")
-        await websocket.send_json({"type": "error", "message": "AssemblyAI voice session failed."})
+        await send_client({"type": "error", "message": "AssemblyAI voice session failed."})

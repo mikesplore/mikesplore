@@ -1,17 +1,6 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import Layout from './components/Layout';
-import Home from './pages/Home';
-import Timeline from './pages/Timeline';
-import Projects from './pages/Projects';
-import Hackathons from './pages/Hackathons';
-import Certificates from './pages/Certificates';
-import Events from './pages/Events';
-import Contact from './pages/Contact';
-import Cv from './pages/Cv';
-import BucketList from './pages/BucketList';
 import Voice from './pages/Voice';
 import { useEffect } from 'react';
-import { fetchAssets } from './lib/portfolioApi';
+import { fetchAssets } from './lib/voiceApi';
 import './index.css';
 
 function App() {
@@ -29,26 +18,7 @@ function App() {
     return () => controller.abort();
   }, []);
 
-  return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Layout />}>
-          <Route index element={<Home />} />
-          <Route path="projects" element={<Projects />} />
-          <Route path="timeline" element={<Timeline />} />
-          <Route path="hackathons" element={<Hackathons />} />
-          <Route path="certificates" element={<Certificates />} />
-          <Route path="events" element={<Events />} />
-          <Route path="bucket-list" element={<BucketList />} />
-          <Route path="cv" element={<Cv />} />
-          <Route path="about" element={<Navigate to="/" replace />} />
-          <Route path="contact" element={<Contact />} />
-        </Route>
-        {/* The voice representative is intentionally a distraction-free standalone page. */}
-        <Route path="/talk" element={<Voice />} />
-      </Routes>
-    </BrowserRouter>
-  );
+  return <Voice />;
 }
 
 export default App;

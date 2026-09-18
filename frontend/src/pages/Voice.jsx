@@ -227,7 +227,9 @@ export default function Voice() {
     const source = context.createBufferSource();
     source.buffer = buffer;
     source.connect(context.destination);
-    const startAt = Math.max(context.currentTime, capture.current.nextAudioTime || 0);
+    // Keep a short cushion between network delivery and playback so uneven
+    // WebSocket chunk timing doesn't turn into clicks or audible gaps.
+    const startAt = Math.max(context.currentTime + 0.08, capture.current.nextAudioTime || 0);
     source.start(startAt);
     capture.current.nextAudioTime = startAt + buffer.duration;
     setState('speaking');
@@ -286,7 +288,7 @@ export default function Voice() {
     const context = new AudioContext({ sampleRate: 24000, sinkId: 'default' });
     await context.resume();
     const source = context.createMediaStreamSource(stream);
-    const node = context.createScriptProcessor(4096, 1, 1);
+    const node = context.createScriptProcessor(2048, 1, 1);
     node.onaudioprocess = (event) => {
       if (ws.readyState === WebSocket.OPEN) {
         const samples = resampleTo24k(event.inputBuffer.getChannelData(0), context.sampleRate);
@@ -294,7 +296,9 @@ export default function Voice() {
         ws.send(pcm16(samples));
       }
     };
-    source.connect(node); node.connect(context.destination);
+    // The processor is only an input tap. Connecting it to the destination
+    // would route the microphone back through the phone/desktop speakers.
+    source.connect(node);
     capture.current = { stream, context, nextAudioTime: 0 };
     processor.current = node;
   }
