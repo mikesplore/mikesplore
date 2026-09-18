@@ -847,3 +847,18 @@ This phase was completed before the schema and backend work.
 - Fixed the blank project detail page caused by rendering the JSONB `details` object as a React
   child and calling string methods on absent metadata. Detail mapping now separates textual overview
   and technical details and renders optional platform, type, and status fields safely.
+
+### AssemblyAI hackathon branch and commit workflow (2026-09-17)
+
+- AssemblyAI voice-agent work is isolated on the `assemblyai-voice-representative` branch.
+- Commit changes as they reach coherent, verified milestones rather than leaving the entire
+  hackathon implementation as one uncommitted batch.
+- Before each commit, review `git diff`, run the relevant tests or smoke checks, and make sure
+  no secrets, real `.env` files, API keys, tokens, or temporary AssemblyAI output are included.
+- Use descriptive commit messages that identify the milestone, for example
+  `Add AssemblyAI voice WebSocket loop` or `Connect visitor tools to voice agent`.
+- Keep the voice route and related integration isolated enough that it can be removed or
+  disabled cleanly after AssemblyAI credits expire.
+- The implementation plan is tracked in
+  `docs/assemblyai-voice-representative-plan.md` and should be updated when scope or architecture
+  changes materially.
