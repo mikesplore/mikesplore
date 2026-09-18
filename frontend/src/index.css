@@ -69,6 +69,46 @@ body {
   color: var(--color-ink);
 }
 
+.voice-shell {
+  isolation: isolate;
+  overflow: hidden;
+  background-image:
+    radial-gradient(circle at 18% 22%, color-mix(in srgb, var(--color-accent) 12%, transparent) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 82% 76%, color-mix(in srgb, var(--color-teal) 10%, transparent) 0 1px, transparent 1.5px),
+    linear-gradient(135deg, transparent 24%, color-mix(in srgb, var(--color-ink) 3%, transparent) 25%, transparent 26%, transparent 74%, color-mix(in srgb, var(--color-ink) 3%, transparent) 75%, transparent 76%);
+  background-size: 32px 32px, 44px 44px, 18px 18px;
+}
+
+.voice-shell::before {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  content: '';
+  pointer-events: none;
+  opacity: 0.42;
+  background-image:
+    radial-gradient(circle at 18% 22%, color-mix(in srgb, var(--color-accent) 8%, transparent) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 82% 76%, color-mix(in srgb, var(--color-teal) 7%, transparent) 0 1px, transparent 1.5px),
+    linear-gradient(135deg, transparent 24%, color-mix(in srgb, var(--color-ink) 2%, transparent) 25%, transparent 26%, transparent 74%, color-mix(in srgb, var(--color-ink) 2%, transparent) 75%, transparent 76%);
+  background-size: 32px 32px, 44px 44px, 18px 18px;
+  mask-image: linear-gradient(to bottom, black, transparent 88%);
+}
+
+.voice-shell::after {
+  position: fixed;
+  width: min(42rem, 78vw);
+  height: min(42rem, 78vw);
+  top: 50%;
+  left: 50%;
+  z-index: 0;
+  content: '';
+  pointer-events: none;
+  border-radius: 9999px;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--color-accent) 5%, transparent), transparent 68%);
+  filter: blur(10px);
+}
+
 html,
 body {
   width: 100%;

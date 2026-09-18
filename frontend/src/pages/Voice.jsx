@@ -350,10 +350,10 @@ export default function Voice() {
     return () => window.clearTimeout(timeout);
   }, [hasSheetContent, sheetDismissed]);
 
-  return <main className={`relative mx-auto flex min-h-screen w-full max-w-2xl flex-col items-center justify-center px-6 pb-8 text-center transition-[padding] duration-300 lg:max-w-none ${hasSheetContent && !sheetDismissed ? 'lg:pr-[clamp(22rem,34vw,42rem)]' : ''}`}>
+  return <main className={`voice-shell relative mx-auto flex min-h-screen w-full max-w-2xl flex-col items-center justify-center px-6 pb-8 text-center transition-[padding] duration-300 lg:max-w-none ${hasSheetContent && !sheetDismissed ? 'lg:pr-[clamp(22rem,34vw,42rem)]' : ''}`}>
     <div className="fixed right-5 top-5 z-30"><ThemeToggle /></div>
     <h1 className="mb-4 text-4xl font-bold">Milo</h1>
-    <p className="mb-8 max-w-lg text-base text-muted">Ask Milo about Mike’s work.</p>
+    <p className="mb-8 max-w-lg text-base text-muted">Mike’s voice representative</p>
     <div className="mb-8"><VoiceOrb active={(state === 'listening' || state === 'speaking') && voiceIntensity > 0.04} mode={state} intensity={voiceIntensity} showLabel={false} /></div>
     <button type="button" onClick={state === 'idle' || state === 'error' ? start : stop} className="rounded-full bg-accent px-8 py-4 font-semibold text-on-accent shadow-lg">
       {state === 'idle' || state === 'error' ? 'Start talking' : 'Stop'}
