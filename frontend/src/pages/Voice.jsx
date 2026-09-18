@@ -17,15 +17,17 @@ export default function Voice() {
   const [error, setError] = useState('');
   const socket = useRef(null);
   const capture = useRef(null);
-  const playback = useRef(null);
   const processor = useRef(null);
-  const chunks = useRef([]);
 
   useEffect(() => () => stop(), []);
 
-  function playAudio(base64) {
-    chunks.current.push(Uint8Array.from(atob(base64), (char) => char.charCodeAt(0)));
-    if (state !== 'speaking') setState('speaking');
+  function speak(text) {
+    window.speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    setState('speaking');
+    utterance.onend = () => setState('listening');
+    utterance.onerror = () => setState('listening');
+    window.speechSynthesis.speak(utterance);
   }
 
   async function start() {
@@ -42,16 +44,7 @@ export default function Voice() {
       if (message.type === 'ready' || message.type === 'listening') setState('listening');
       if (message.type === 'thinking') setState('thinking');
       if (message.type === 'transcript') setTranscript(message.text);
-      if (message.type === 'response') setResponse(message.text);
-      if (message.type === 'audio') playAudio(message.data);
-      if (message.type === 'speech_finished') {
-        const blob = new Blob(chunks.current, { type: 'audio/mpeg' });
-        chunks.current = [];
-        const url = URL.createObjectURL(blob);
-        playback.current = new Audio(url);
-        playback.current.onended = () => { URL.revokeObjectURL(url); setState('listening'); };
-        await playback.current.play();
-      }
+      if (message.type === 'response') { setResponse(message.text); speak(message.text); }
     };
     ws.onerror = () => { setError('Voice connection failed.'); setState('error'); };
     ws.onclose = () => { if (state !== 'error') setState('idle'); };
@@ -69,11 +62,11 @@ export default function Voice() {
   function stop() {
     if (socket.current?.readyState === WebSocket.OPEN) socket.current.send(JSON.stringify({ type: 'stop' }));
     socket.current?.close(); socket.current = null;
+    window.speechSynthesis.cancel();
     processor.current?.disconnect(); processor.current = null;
     capture.current?.stream?.getTracks().forEach((track) => track.stop());
     capture.current?.context?.close?.(); capture.current = null;
-    playback.current?.pause?.(); playback.current = null;
-    chunks.current = []; setState('idle');
+    setState('idle');
   }
 
   return <main className="mx-auto flex min-h-[70vh] max-w-2xl flex-col items-center justify-center px-6 text-center">

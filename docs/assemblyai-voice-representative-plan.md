@@ -37,12 +37,12 @@ Shared agent and tool layer
     ├─ public Mikesplore REST endpoints
     └─ owner-scoped tools after authentication
     ↓ response text
-TTS provider
-    ↓ audio chunks
+Browser-native speechSynthesis
+    ↓ spoken response
 Browser playback
 ```
 
-- The browser never receives AssemblyAI, Groq, or TTS provider secrets.
+- The browser never receives AssemblyAI or Groq secrets.
 - The Telegram bot and voice agent reuse the same tool contracts and backend REST API.
 - The voice endpoint must support cancellation: a new user turn stops playback and cancels the current response where possible.
 - Conversation state is scoped to a connection initially; persistent memory is out of scope.
@@ -53,7 +53,7 @@ Browser playback
 - Frontend: existing React/Vite frontend, with a separate voice route/page.
 - Speech-to-text: AssemblyAI realtime API.
 - Agent: existing Groq integration, initially plain chat and later shared tool calling.
-- Text-to-speech: select and spike one provider before Phase 1 implementation; default evaluation is ElevenLabs for quality versus a simpler lower-risk provider for setup and cost.
+- Speech output: browser-native `speechSynthesis` for Phase 1, avoiding a second paid provider. A hosted TTS provider can be added later if voice quality becomes a submission requirement.
 - Transport: WebSocket between browser and FastAPI.
 - Authentication: visitor mode is public/read-only; owner mode uses a short-lived session unlocked by a typed PIN/passphrase.
 
@@ -64,12 +64,12 @@ Browser playback
 - Create an isolated Git branch.
 - Inspect the Telegram bot and identify existing public tools, LLM loop, formatting, and backend client code.
 - Define a shared tool interface without changing behavior.
-- Confirm AssemblyAI credits, API limits, environment-variable names, and the chosen TTS provider.
+- Confirm AssemblyAI credits, API limits, and environment-variable names.
 - Check the deployment host’s WebSocket and concurrent-connection limits.
 
 ### Phase 1 — prove the voice loop
 
-Browser microphone → FastAPI WebSocket → AssemblyAI transcription → plain Groq response → TTS → browser playback.
+Browser microphone → FastAPI WebSocket → AssemblyAI transcription → plain Groq response → browser speech synthesis.
 
 Required states: listening, thinking, speaking, error, and disconnected. Validate latency, interruption, cancellation, reconnect behavior, and microphone permissions before adding portfolio data.
 
@@ -118,7 +118,7 @@ Calendar scheduling, autonomous email sending, WhatsApp/CRM integrations, arbitr
 ## 8. Suggested execution order
 
 1. Create branch and audit current integration points.
-2. Choose TTS provider and verify AssemblyAI credit access.
+2. Verify AssemblyAI credit access and browser speech synthesis.
 3. Extract or formalize shared tools.
 4. Build and test the standalone voice loop.
 5. Connect visitor tools.
@@ -147,14 +147,14 @@ Calendar scheduling, autonomous email sending, WhatsApp/CRM integrations, arbitr
   handlers.
 - The FastAPI backend currently has no voice WebSocket endpoint. The frontend currently has no
   voice route or audio-streaming client.
-- The repository currently has no AssemblyAI or TTS dependency/configuration. Provider selection
-  and a minimal end-to-end provider spike are prerequisites for Phase 1.
+- The repository now has AssemblyAI configuration and browser-native speech output; no second
+  speech provider or API key is required for Phase 1.
 - The combined deployment mounts the Telegram app into the backend service, so the new endpoint
   must avoid interfering with existing HTTP routes and Telegram webhook handling.
 
 ### Live test readiness
 
 - The code path is ready for a live test, but the local `.env` currently has no
-  `ASSEMBLYAI_API_KEY`, `ELEVENLABS_API_KEY`, or `ELEVENLABS_VOICE_ID`. The keys must be added
+  `ASSEMBLYAI_API_KEY`. The key must be added
   locally or in the deployment environment before opening `/talk` for an end-to-end microphone
   test. Values must remain uncommitted.

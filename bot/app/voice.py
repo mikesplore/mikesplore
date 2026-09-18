@@ -2,15 +2,13 @@
 
 The browser sends 16 kHz, mono, signed 16-bit PCM frames. This module forwards
 those frames to AssemblyAI, turns completed transcripts into a plain Groq
-response, and streams an ElevenLabs MP3 response back to the browser.
+response. The browser speaks that response with its native speech synthesis API.
 """
 
 import asyncio
-import base64
 import json
 from urllib.parse import urlencode
 
-import httpx
 from fastapi import WebSocket, WebSocketDisconnect
 
 from .config import settings
@@ -45,24 +43,6 @@ async def _answer(transcript: str) -> str:
         _usage_workflow="voice_phase1",
     )
     return completion.choices[0].message.content or "I couldn't form a response."
-
-
-async def _send_tts(websocket: WebSocket, text: str) -> None:
-    if not settings.elevenlabs_api_key or not settings.elevenlabs_voice_id:
-        await websocket.send_json({"type": "error", "message": "TTS is not configured yet."})
-        return
-    url = f"https://api.elevenlabs.io/v1/text-to-speech/{settings.elevenlabs_voice_id}/stream"
-    params = {"output_format": "mp3_22050_32"}
-    payload = {"text": text, "model_id": settings.elevenlabs_model}
-    headers = {"xi-api-key": settings.elevenlabs_api_key, "accept": "audio/mpeg"}
-    async with httpx.AsyncClient(timeout=30) as client:
-        async with client.stream("POST", url, params=params, json=payload, headers=headers) as response:
-            response.raise_for_status()
-            await websocket.send_json({"type": "speech_started", "text": text})
-            async for chunk in response.aiter_bytes():
-                if chunk:
-                    await websocket.send_json({"type": "audio", "data": base64.b64encode(chunk).decode("ascii")})
-    await websocket.send_json({"type": "speech_finished"})
 
 
 async def voice_websocket(websocket: WebSocket) -> None:
@@ -122,7 +102,6 @@ async def voice_websocket(websocket: WebSocket) -> None:
                             try:
                                 answer = await response_task
                                 await websocket.send_json({"type": "response", "text": answer})
-                                await _send_tts(websocket, answer)
                             except asyncio.CancelledError:
                                 await websocket.send_json({"type": "interrupted"})
                     elif event_type == "Error":

@@ -19,9 +19,6 @@ class Settings(BaseSettings):
     admin_telegram_id: int
     service_api_key: str
     assemblyai_api_key: str = ""
-    elevenlabs_api_key: str = ""
-    elevenlabs_voice_id: str = ""
-    elevenlabs_model: str = "eleven_flash_v2_5"
     model_config = SettingsConfigDict(env_file=ENV_FILE, extra="ignore")
 
 
