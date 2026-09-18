@@ -151,3 +151,10 @@ Calendar scheduling, autonomous email sending, WhatsApp/CRM integrations, arbitr
   and a minimal end-to-end provider spike are prerequisites for Phase 1.
 - The combined deployment mounts the Telegram app into the backend service, so the new endpoint
   must avoid interfering with existing HTTP routes and Telegram webhook handling.
+
+### Live test readiness
+
+- The code path is ready for a live test, but the local `.env` currently has no
+  `ASSEMBLYAI_API_KEY`, `ELEVENLABS_API_KEY`, or `ELEVENLABS_VOICE_ID`. The keys must be added
+  locally or in the deployment environment before opening `/talk` for an end-to-end microphone
+  test. Values must remain uncommitted.
