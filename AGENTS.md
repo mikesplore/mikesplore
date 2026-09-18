@@ -903,8 +903,7 @@ This phase was completed before the schema and backend work.
   (cd frontend && npm run build)
   ```
 
-- The deployment is split into a main portfolio backend and a lightweight voice gateway. The
-  gateway runs `voice_gateway.app.gateway:app`, owns the AssemblyAI connection, and does not require
-  `DATABASE_URL`; its `BACKEND_URL` points to the main backend for verified tools and owner-session
-  validation. Configure the frontend's `VITE_API_BASE_URL` to the main backend and
-  `VITE_VOICE_API_BASE_URL` to the gateway. Ensure main-backend CORS matches the deployed frontend.
+- The current preview deployment mounts `voice_gateway.app.assembly_voice` back into
+  `backend.app.main`, so `mikesplore.onrender.com` serves both the REST API and `/ws/voice`.
+  The preview frontend uses only `VITE_API_BASE_URL=https://mikesplore.onrender.com`; the
+  production frontend remains configured independently for `backend-l1cr.onrender.com`.

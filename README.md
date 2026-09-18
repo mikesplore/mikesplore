@@ -17,8 +17,8 @@
 ## What's Inside?
 
 The main portfolio is available at **[mikesplore.me](https://mikesplore.me)**. This branch contains
-the standalone AssemblyAI voice representative and is deployed as separate frontend, voice-gateway,
-and main-backend services:
+the standalone AssemblyAI voice representative and is deployed as a preview service at
+`mikesplore.onrender.com`.
 
 * **Voice-first interface:** Milo is the complete frontend entry point; there is no dashboard or secondary voice route in this branch.
 * **Verified public browsing:** Ask about projects, profile information, links, certificates, CV resources, skills, and education.
@@ -33,22 +33,20 @@ Built with **React**, **FastAPI**, **PostgreSQL**, **AssemblyAI Voice Agent API*
 
 ## Architecture
 
-This branch separates the voice gateway from the main portfolio backend:
+This branch exposes the voice gateway through the same preview backend origin:
 
 ```mermaid
 flowchart LR
-    Browser[Voice frontend] -->|REST: profile, media, owner actions| Main[Main portfolio backend]
-    Browser -->|WebSocket: voice audio| Gateway[AssemblyAI voice gateway]
-    Gateway -->|Voice Agent session| Assembly[AssemblyAI]
-    Gateway -->|Verified tool requests| Main
+    Browser[Preview voice frontend] -->|REST and WebSocket| Main[Preview backend]
+    Main -->|Voice gateway module| Assembly[AssemblyAI Voice Agent]
     Main --> DB[(Portfolio PostgreSQL)]
     Main --> R2[(Cloudflare R2)]
 ```
 
-The gateway has no database connection. It forwards verified portfolio tools to the main backend,
-while the main backend remains responsible for persistence, media, and owner-session authorization.
-Public questions are read-only. Profile, CV, project, certificate, link, skill, and education
-changes require the owner PIN and an explicit browser confirmation.
+The backend exposes both the REST API and `/ws/voice` on one origin. The AssemblyAI gateway module
+does not access the database directly; the backend remains responsible for persistence, media, and
+owner-session authorization. Public questions are read-only. Profile, CV, project, certificate,
+link, skill, and education changes require the owner PIN and an explicit browser confirmation.
 
 For local frontend testing against the live portfolio API, set `VITE_API_BASE_URL` and
 `BACKEND_URL` to the public backend origin, for example `https://portfolio.mikesplore.me`.
@@ -80,10 +78,7 @@ pip install -r requirements.txt
 alembic -c backend/alembic.ini upgrade head
 uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload
 
-# In a second terminal: AssemblyAI voice gateway (no database connection)
-uvicorn voice_gateway.app.gateway:app --host 0.0.0.0 --port 8001 --reload
-
-# In a third terminal: frontend
+# In a second terminal: frontend
 cd frontend
 npm install
 npm run dev
@@ -93,7 +88,7 @@ The frontend opens Milo directly at `/`.
 
 ### Deployment
 
-Deploy two Render web services from this repository:
+Deploy the current branch as one Render web service:
 
 Main portfolio backend:
 
@@ -102,14 +97,6 @@ Pre-deploy: alembic -c backend/alembic.ini upgrade head
 Start:      uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT
 ```
 
-AssemblyAI voice gateway:
-
-```text
-Pre-deploy: none
-Start:      uvicorn voice_gateway.app.gateway:app --host 0.0.0.0 --port $PORT
-```
-
-Set `VITE_API_BASE_URL` to the main portfolio backend URL and `VITE_VOICE_API_BASE_URL` to the
-standalone voice gateway URL when building the frontend. The voice WebSocket uses `wss://`
-automatically on HTTPS deployments. Keep `OWNER_PIN`, service keys, storage credentials, and
-`ASSEMBLYAI_API_KEY` in the host's secret environment configuration.
+Set the preview frontend's single `VITE_API_BASE_URL` to `https://mikesplore.onrender.com`.
+The voice WebSocket uses `wss://` automatically on HTTPS deployments. Keep `OWNER_PIN`, service
+keys, storage credentials, and `ASSEMBLYAI_API_KEY` in the Render service's secret environment.

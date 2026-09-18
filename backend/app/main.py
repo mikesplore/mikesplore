@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import Depends, FastAPI, HTTPException, Query, Response, Header
+from fastapi import Depends, FastAPI, HTTPException, Query, Response, Header, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -17,6 +17,7 @@ from .routers.assets import MAX_UPLOAD_BYTES  # noqa: F401  (kept so tests/tooli
 from .schemas import EntryRead, ProfileUpdate
 from .services import cv as cv_service
 from .services.search import search_portfolio as search_portfolio_service
+from voice_gateway.app.assembly_voice import voice_agent_websocket
 
 app = FastAPI(title="Portfolio API", version="1.0.0")
 
@@ -173,7 +174,13 @@ app.include_router(assets.router)
 app.include_router(owner_content.router)
 
 
+@app.websocket("/ws/voice")
+@app.websocket("/ws/voice/")
+async def voice_socket(websocket: WebSocket):
+    """Expose the voice gateway on the preview backend's single origin."""
+    await voice_agent_websocket(websocket)
+
+
 # Backward-compatible names previously defined on app.main; imported by tests/tooling.
 _validate_cv_patch = cv_service.validate_cv_patch
 _apply_cv_patch = cv_service.apply_cv_patch
-
