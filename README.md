@@ -1,19 +1,5 @@
 # Mikesplore
 
-> **The digital showcase and interactive AI assistant for Michael Odhiambo.**  
-> Full-stack systems, production projects, technical writing, and live interactive AI workflows.
-
-<p align="center">
-  <a href="https://mikesplore.me"><strong>Visit Website (mikesplore.me)</strong></a> •
-  <a href="https://mikesplore.me"><strong>Open the voice representative</strong></a>
-</p>
-
-<p align="center">
-  <img src="https://readme-stats-github.pages.dev/api?username=mikesplore&theme=dark" alt="GitHub Stats" />
-</p>
-
----
-
 ## What's Inside?
 
 The main portfolio is available at **[mikesplore.me](https://mikesplore.me)**. This branch contains
