@@ -18,6 +18,10 @@ class Settings(BaseSettings):
     groq_vision_model: str = "meta-llama/llama-4-scout-17b-16e-instruct"
     admin_telegram_id: int
     service_api_key: str
+    assemblyai_api_key: str = ""
+    elevenlabs_api_key: str = ""
+    elevenlabs_voice_id: str = ""
+    elevenlabs_model: str = "eleven_flash_v2_5"
     model_config = SettingsConfigDict(env_file=ENV_FILE, extra="ignore")
 
 

@@ -9,6 +9,7 @@ import Events from './pages/Events';
 import Contact from './pages/Contact';
 import Cv from './pages/Cv';
 import BucketList from './pages/BucketList';
+import Voice from './pages/Voice';
 import { useEffect } from 'react';
 import { fetchAssets } from './lib/portfolioApi';
 import './index.css';
@@ -42,6 +43,7 @@ function App() {
           <Route path="cv" element={<Cv />} />
           <Route path="about" element={<Navigate to="/" replace />} />
           <Route path="contact" element={<Contact />} />
+          <Route path="talk" element={<Voice />} />
         </Route>
       </Routes>
     </BrowserRouter>

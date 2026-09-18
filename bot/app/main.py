@@ -30,6 +30,7 @@ from .uploads import register_upload_handler
 from .message_handlers import register_message_handlers
 from .admin_handlers import configure as configure_admin_handlers, handle_llm_admin_operation
 from .cv_handlers import configure as configure_cv_handlers, deliver_certificates, format_cv_patch, prepare_cv_patch, send_cv
+from .voice import voice_websocket
 
 bot = Bot(settings.telegram_bot_token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 dispatcher = Dispatcher()
@@ -48,6 +49,11 @@ async def lifespan(_app: FastAPI):
 
 app = FastAPI(title="Portfolio Telegram bot", lifespan=lifespan)
 logger = logging.getLogger(__name__)
+
+
+@app.websocket("/ws/voice")
+async def voice_socket(websocket):
+    await voice_websocket(websocket)
 async def show_typing(message: types.Message) -> None:
     await bot.send_chat_action(chat_id=message.chat.id, action="typing")
 
