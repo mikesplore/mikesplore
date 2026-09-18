@@ -35,16 +35,38 @@ Built with **React**, **FastAPI**, **PostgreSQL**, **AssemblyAI Voice Agent API*
 
 This branch separates the voice gateway from the main portfolio backend:
 
-```text
-Voice frontend
-  ├── main backend REST API → PostgreSQL and Cloudflare R2
-  └── voice gateway → AssemblyAI Voice Agent API
+```mermaid
+flowchart LR
+    Browser[Voice frontend] -->|REST: profile, media, owner actions| Main[Main portfolio backend]
+    Browser -->|WebSocket: voice audio| Gateway[AssemblyAI voice gateway]
+    Gateway -->|Voice Agent session| Assembly[AssemblyAI]
+    Gateway -->|Verified tool requests| Main
+    Main --> DB[(Portfolio PostgreSQL)]
+    Main --> R2[(Cloudflare R2)]
 ```
 
 The gateway has no database connection. It forwards verified portfolio tools to the main backend,
 while the main backend remains responsible for persistence, media, and owner-session authorization.
 Public questions are read-only. Profile, CV, project, certificate, link, skill, and education
 changes require the owner PIN and an explicit browser confirmation.
+
+For local frontend testing against the live portfolio API, set `VITE_API_BASE_URL` and
+`BACKEND_URL` to the public backend origin, for example `https://portfolio.mikesplore.me`.
+`DATABASE_URL` is only required by the main backend service and must be a PostgreSQL connection
+string; it is not an HTTP domain.
+
+### Judge test script
+
+Open the deployed voice frontend, allow microphone access, and try these phrases:
+
+1. **“Show me Mike’s projects.”** — Milo should speak a verified answer and display project cards.
+2. **“Show me Mike’s profile picture.”** — Milo should display the matching verified media card.
+3. **“What skills does Mike have?”** — Milo should answer from the portfolio data.
+4. **“Show me Mike’s CV.”** — Milo should request or display the verified CV resource.
+5. **“Update Mike’s profile name.”** — Milo should request owner verification before showing the edit flow.
+
+The first four are public read actions. The final phrase demonstrates the protected owner flow;
+the PIN should never be included in screenshots, recordings, or repository files.
 
 ---
 
