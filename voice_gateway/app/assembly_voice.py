@@ -8,6 +8,7 @@ import time
 
 import httpx
 from fastapi import WebSocket, WebSocketDisconnect
+from websockets.exceptions import ConnectionClosedError
 
 from .config import settings
 from .tools import TOOLS, execute_tool
@@ -115,7 +116,6 @@ async def voice_agent_websocket(websocket: WebSocket) -> None:
             audio_bytes = 0
             audio_frames = 0
             last_audio_log = time.monotonic()
-            pending_tool_results = []
             pending_browser_actions = []
             owner_unlocked = False
             pending_owner_action = ""
@@ -203,7 +203,12 @@ async def voice_agent_websocket(websocket: WebSocket) -> None:
                             logger.exception("voice tool failed name=%s", name)
                             result = {"error": "The verified portfolio lookup failed."}
                         logger.info("voice tool result name=%s success=%s", name, "error" not in result if isinstance(result, dict) else True)
-                        pending_tool_results.append({"call_id": call_id, "result": result})
+                        await agent.send(json.dumps({
+                            "type": "tool.result",
+                            "call_id": call_id,
+                            "result": json.dumps(result, default=str),
+                            "is_error": isinstance(result, dict) and "error" in result,
+                        }))
                         if name == "request_owner_unlock" and isinstance(result, dict) and result.get("action") == "request_owner_unlock":
                             action = result.get("requested_action", "owner action")
                             pending_owner_action = action
@@ -214,15 +219,6 @@ async def voice_agent_websocket(websocket: WebSocket) -> None:
                         pending_browser_actions.extend(await send_verified_actions(websocket, name, result))
                     elif event_type in {"reply.done", "input.speech.started"}:
                         logger.info("assemblyai event=%s status=%s", event_type, event.get("status"))
-                        if event_type == "reply.done" and pending_tool_results:
-                            for pending in pending_tool_results:
-                                await agent.send(json.dumps({
-                                    "type": "tool.result",
-                                    "call_id": pending["call_id"],
-                                    "result": json.dumps(pending["result"], default=str),
-                                    "is_error": isinstance(pending["result"], dict) and "error" in pending["result"],
-                                }))
-                            pending_tool_results.clear()
                         await send_client({"type": "interrupted" if event.get("status") == "interrupted" else "listening" if event_type == "input.speech.started" else "reply_done"})
                     elif event_type == "session.error":
                         logger.error("assemblyai session error details=%s", event)
@@ -230,6 +226,12 @@ async def voice_agent_websocket(websocket: WebSocket) -> None:
             finally:
                 client_task.cancel()
     except (WebSocketDisconnect, asyncio.CancelledError):
+        return
+    except ConnectionClosedError as error:
+        logger.info("voice session ended while closing upstream AssemblyAI connection: %s", error)
+        return
+    except TimeoutError:
+        logger.info("voice session close timed out after the browser disconnected")
         return
     except Exception:
         logger.exception("voice session failed")
