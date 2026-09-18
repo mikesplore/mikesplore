@@ -69,10 +69,10 @@ async def send_verified_actions(websocket: WebSocket, tool_name: str, result) ->
     elif tool_name == "list_bucket_list" and isinstance(result, list):
         items = [{"type": "display_item", "item_type": "bucket-list", "label": item.get("title") or "Bucket-list goal", "description": item.get("remark") or "", "done": bool(item.get("done"))} for item in result]
     elif tool_name == "get_entry_by_slug" and isinstance(result, dict) and result.get("found"):
-        items = [{"type": "open_resource", "item_type": result.get("content_type", "resource"), "label": result.get("title") or "Open resource", "url": result.get("url")}]
+        items = [{"type": "open_resource", "item_type": result.get("content_type", "resource"), "label": result.get("title") or "Open resource", "summary": result.get("blurb"), "image_url": result.get("image_url"), "url": result.get("url")}]
     elif tool_name in {"list_entries", "list_articles", "search_articles", "search_portfolio"} and isinstance(result, dict):
         records = result.get("entries", result.get("articles", []))
-        items = [{"type": "open_resource", "item_type": item.get("content_type", "resource"), "label": item.get("title") or "Open resource", "url": item.get("url")} for item in records]
+        items = [{"type": "open_resource", "item_type": item.get("content_type") or item.get("type", "resource"), "label": item.get("title") or "Open resource", "summary": item.get("blurb"), "image_url": item.get("image_url"), "url": item.get("url")} for item in records]
     safe_items = [item for item in items if (item.get("item_type") == "bucket-list" and item.get("label")) or (isinstance(item.get("url"), str) and item["url"].startswith("https://"))]
     logger.info("verified browser actions tool=%s candidates=%d emitted=%d", tool_name, len(items), len(safe_items[:5]))
     return safe_items[:5]

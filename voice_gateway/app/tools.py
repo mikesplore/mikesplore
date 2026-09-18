@@ -22,6 +22,7 @@ async def list_entries(content_type: str | None = None, page: int = 1, page_size
                 "date": entry.get("date"),
                 "tags": entry.get("tags", []),
                 "url": (entry.get("source") or {}).get("key") or entry.get("links", {}).get("url"),
+                "image_url": (entry.get("media") or {}).get("cover") or (entry.get("media") or {}).get("thumbnail") or entry.get("icon_url"),
             }
             for entry in entries
         ]}
@@ -119,7 +120,7 @@ async def search_portfolio(query: str, page: int = 1) -> dict:
         response = await client.get("/search", params={"q": query, "page": page, "page_size": 5})
         response.raise_for_status()
         result = response.json()
-        return {"profile": result.get("profile"), "total": result.get("total", 0), "page": result.get("page", page), "page_size": result.get("page_size", 5), "entries": [{"slug": item.get("slug"), "type": item.get("content_type"), "title": item.get("title"), "blurb": item.get("blurb"), "date": item.get("date"), "tags": item.get("tags", []), "url": (item.get("source") or {}).get("key") or item.get("links", {}).get("url")} for item in result.get("entries", [])], "certificates": [{"type": "certificate", "title": item.get("title")} for item in result.get("certificates", [])], "skills": result.get("skills", []), "links": [{"name": item.get("name"), "url": item.get("url")} for item in result.get("links", [])], "education": [{"degree": item.get("degree"), "school": item.get("school")} for item in result.get("education", [])], "bucket_list": [{"title": item.get("title"), "done": item.get("done")} for item in result.get("bucket_list", [])]}
+        return {"profile": result.get("profile"), "total": result.get("total", 0), "page": result.get("page", page), "page_size": result.get("page_size", 5), "entries": [{"slug": item.get("slug"), "type": item.get("content_type"), "title": item.get("title"), "blurb": item.get("blurb"), "date": item.get("date"), "tags": item.get("tags", []), "url": (item.get("source") or {}).get("key") or item.get("links", {}).get("url"), "image_url": (item.get("media") or {}).get("cover") or (item.get("media") or {}).get("thumbnail")} for item in result.get("entries", [])], "certificates": [{"type": "certificate", "title": item.get("title")} for item in result.get("certificates", [])], "skills": result.get("skills", []), "links": [{"name": item.get("name"), "url": item.get("url")} for item in result.get("links", [])], "education": [{"degree": item.get("degree"), "school": item.get("school")} for item in result.get("education", [])], "bucket_list": [{"title": item.get("title"), "done": item.get("done")} for item in result.get("bucket_list", [])]}
 
 
 async def search_articles(query: str, page: int = 1) -> dict:

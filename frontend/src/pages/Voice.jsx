@@ -365,7 +365,7 @@ export default function Voice() {
         <div className="hidden text-left text-xs font-semibold uppercase tracking-[0.2em] text-muted lg:block">Details</div>
         <button type="button" onClick={() => { setSheetDismissed(true); setSheetExpanded(false); }} className="absolute right-0 top-1/2 -translate-y-1/2 text-lg leading-none text-muted hover:text-ink" aria-label="Dismiss details">×</button>
       </div>
-      {(projectActions.length > 0 || linkActions.length > 0) && <div className="mb-5"><ProjectResultStrip projects={projectActions.map((action) => ({ title: action.label, url: action.url }))} links={linkActions.map((action) => ({ label: action.label, url: action.url }))} /></div>}
+      {(projectActions.length > 0 || linkActions.length > 0) && <div className="mb-5"><ProjectResultStrip projects={projectActions.map((action) => ({ title: action.label, url: action.url, summary: action.summary, imageUrl: action.image_url }))} links={linkActions.map((action) => ({ label: action.label, url: action.url, summary: action.summary, imageUrl: action.image_url }))} /></div>}
       {actions.some((action) => action.type === 'display_item') && <div className="mx-auto w-full max-w-2xl space-y-6 text-left">
         {actionGroups().map(([group, items]) => <section key={group}>
           <div className="mb-3 flex items-center justify-between"><h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-muted">{group}</h2><span className="text-xs text-muted">{items.length} {items.length === 1 ? 'item' : 'items'}</span></div>
