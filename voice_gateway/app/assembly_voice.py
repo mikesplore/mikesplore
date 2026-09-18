@@ -186,11 +186,13 @@ async def voice_agent_websocket(websocket: WebSocket) -> None:
                         await send_client({"type": "ready", "sample_rate": 24000, "provider": "assemblyai-voice-agent"})
                     elif event_type == "reply.audio":
                         if pending_browser_actions:
-                            await send_client({"type": "actions", "items": pending_browser_actions})
+                            if not await send_client({"type": "actions", "items": pending_browser_actions}):
+                                break
                             pending_browser_actions.clear()
                         audio = event.get("data", "")
                         logger.debug("assemblyai audio response chunk base64_bytes=%d", len(audio))
-                        await send_client({"type": "audio", "audio": audio})
+                        if not await send_client({"type": "audio", "audio": audio}):
+                            break
                     elif event_type in {"transcript.user", "transcript.user.delta"}:
                         text = event.get("text") or event.get("transcript") or ""
                         if text:
