@@ -5,7 +5,7 @@
 
 <p align="center">
   <a href="https://mikesplore.me"><strong>Visit Website (mikesplore.me)</strong></a> •
-  <a href="https://t.me/mikesplorebot"><strong>Chat with @mikesplorebot</strong></a>
+  <a href="https://mikesplore.me/talk"><strong>Talk to the voice representative</strong></a>
 </p>
 
 <p align="center">
@@ -21,13 +21,13 @@ Explore the full interactive platform directly on **[mikesplore.me](https://mike
 * **Featured Work & Architecture:** In-depth case studies of full-stack, AI, and mobile systems.
 * **Articles & Insights:** Technical write-ups on software engineering, API design, and DevOps.
 * **Hackathons & Milestones:** Event breakdowns, awards, and local developer community involvement.
-* **Interactive Telegram Assistant:** Ask [@mikesplorebot](https://t.me/mikesplorebot) questions about my work, request a tailored CV, or explore grounded portfolio data in real time.
+* **Interactive Voice Representative:** Speak naturally about Michael's verified work, skills, articles, and public portfolio resources.
 
 ---
 
 ## Tech Stack Overview
 
-Built with **React**, **FastAPI**, **PostgreSQL**, **Groq LLM Tool Calling**, **Telegram Bot API**, and **Cloudflare R2**.
+Built with **React**, **FastAPI**, **PostgreSQL**, **AssemblyAI Voice Agent API**, and **Cloudflare R2**.
 
 ---
 

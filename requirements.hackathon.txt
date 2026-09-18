@@ -1,4 +1,4 @@
-# Shared Python dependencies for backend/ and bot/
+# AssemblyAI Voice Agent hackathon runtime
 alembic>=1.13,<2
 SQLAlchemy>=2.0,<3
 psycopg[binary]>=3.1,<4
@@ -10,6 +10,5 @@ python-dotenv>=1,<2
 boto3>=1.35,<2
 python-multipart>=0.0.20,<1
 websockets>=15,<16
-pytest>=8,<9
 pypdf>=5,<6
 reportlab>=4,<5

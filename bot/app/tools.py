@@ -34,11 +34,25 @@ async def get_profile() -> dict:
         return response.json()
 
 
-async def list_certificates() -> list[dict]:
+async def list_certificates(query: str = "") -> list[dict]:
     async with httpx.AsyncClient(base_url=settings.backend_url, timeout=10) as client:
         response = await client.get("/certificates")
         response.raise_for_status()
-        return [{"title": item["title"], "certificate_id": item["id"], "image_url": item.get("image_url")} for item in response.json()]
+        certificates = response.json()
+        needle = query.strip().casefold()
+        if needle:
+            certificates = [item for item in certificates if needle in item.get("title", "").casefold()]
+        return [{"title": item["title"], "certificate_id": item["id"], "image_url": item.get("image_url")} for item in certificates]
+
+
+async def list_public_assets(asset_type: str | None = None) -> list[dict]:
+    async with httpx.AsyncClient(base_url=settings.backend_url, timeout=10) as client:
+        response = await client.get("/assets")
+        response.raise_for_status()
+        assets = response.json()
+        if asset_type:
+            assets = [item for item in assets if item.get("asset_type") == asset_type]
+        return [{"id": item.get("id"), "type": item.get("asset_type"), "label": item.get("label"), "url": item.get("url")} for item in assets]
 
 
 async def list_skills() -> list[dict]:
@@ -72,6 +86,10 @@ async def request_cv_delivery() -> dict:
 
 async def request_certificate_delivery(query: str = "") -> dict:
     return {"action": "send_certificates", "query": query}
+
+
+async def request_owner_unlock(action: str = "") -> dict:
+    return {"action": "request_owner_unlock", "requested_action": action[:120]}
 
 
 async def search_cv(query: str) -> dict:
@@ -147,7 +165,13 @@ TOOLS = [{
     },
 }, {
     "type": "function",
-    "function": {"name": "list_certificates", "description": "List available public certificates. Use this for certificate questions; files are sent separately by the bot.", "parameters": {"type": "object", "properties": {}, "required": []}},
+    "function": {"name": "list_certificates", "description": "List available public certificates. Include a title keyword when the user asks for one specific certificate; otherwise list all.", "parameters": {"type": "object", "properties": {"query": {"type": "string"}}, "required": []}},
+}, {
+    "type": "function",
+    "function": {"name": "list_public_assets", "description": "List verified public portfolio media. Set asset_type to profile-image for a profile picture, cv for a CV, or certificate for a certificate.", "parameters": {"type": "object", "properties": {"asset_type": {"type": "string", "enum": ["profile-image", "cv", "certificate"]}}, "required": []}},
+}, {
+    "type": "function",
+    "function": {"name": "request_owner_unlock", "description": "Request owner verification before a profile, CV, media, or portfolio update. Use this for any admin or mutation request. This only reveals the PIN prompt; it never performs the update.", "parameters": {"type": "object", "properties": {"action": {"type": "string"}}, "required": ["action"]}},
 }]
 
 
@@ -155,7 +179,9 @@ async def execute_tool(name: str, arguments: dict):
     if name == "get_profile":
         return await get_profile()
     if name == "list_certificates":
-        return await list_certificates()
+        return await list_certificates(arguments.get("query", ""))
+    if name == "list_public_assets":
+        return await list_public_assets(arguments.get("asset_type"))
     if name == "list_skills":
         return await list_skills()
     if name == "list_contact_links":
@@ -166,6 +192,8 @@ async def execute_tool(name: str, arguments: dict):
         return await request_cv_delivery()
     if name == "request_certificate_delivery":
         return await request_certificate_delivery(arguments.get("query", ""))
+    if name == "request_owner_unlock":
+        return await request_owner_unlock(arguments.get("action", ""))
     if name == "search_cv":
         return await search_cv(arguments["query"])
     if name == "search_portfolio":

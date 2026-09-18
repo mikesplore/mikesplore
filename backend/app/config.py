@@ -28,6 +28,9 @@ class Settings(BaseSettings):
     r2_bucket_name: str = ""
     r2_public_base_url: str = ""
     frontend_origin: str = "http://localhost:5173"
+    owner_pin: str = ""
+    owner_session_minutes: int = 5
+    owner_max_attempts: int = 5
     devto_username: str = ""
     github_username: str = ""
     github_token: str = ""

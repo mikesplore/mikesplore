@@ -1,6 +1,6 @@
 from uuid import UUID
 
-from fastapi import Depends, FastAPI, HTTPException, Query, Response
+from fastapi import Depends, FastAPI, HTTPException, Query, Response, WebSocket, Header
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -9,7 +9,10 @@ from .auth import require_service_key
 from .config import settings
 from .db import get_db
 from .models import BucketListItem, Certificate, Education, Entry, LLMUsage, Profile, ProfileLink, SkillGroup, SiteSetting
+from .owner_auth import lock_owner_session, require_owner_session, verify_pin
+from .owner_actions import owner_action_catalog
 from .routers import admin_content, admin_sync, assets, cv as cv_router, public_projects
+from .routers import owner_content
 from .routers.assets import MAX_UPLOAD_BYTES  # noqa: F401  (kept so tests/tooling can import it from app.main)
 from .schemas import EntryRead, ProfileUpdate
 from .services import cv as cv_service
@@ -21,6 +24,31 @@ frontend_origins = [origin.strip().rstrip("/") for origin in settings.frontend_o
 app.add_middleware(CORSMiddleware, allow_origins=frontend_origins, allow_credentials=False, allow_methods=["GET", "POST", "PATCH", "DELETE"], allow_headers=["*"])
 
 PUBLIC_SETTING_KEYS = {"public_notice"}
+
+
+@app.post("/owner/unlock")
+def unlock_owner(payload: dict, x_forwarded_for: str | None = Header(default=None)):
+    pin = payload.get("pin") if isinstance(payload, dict) else None
+    if not isinstance(pin, str) or not pin:
+        raise HTTPException(status_code=422, detail="PIN is required")
+    token = verify_pin(pin, x_forwarded_for or "unknown")
+    return {"owner_session": token, "expires_in": settings.owner_session_minutes * 60}
+
+
+@app.post("/owner/lock")
+def lock_owner(authorization: str | None = Header(default=None)):
+    lock_owner_session(authorization)
+    return {"status": "locked"}
+
+
+@app.get("/owner/status", dependencies=[Depends(require_owner_session)])
+def owner_status():
+    return {"unlocked": True, "expires_in": settings.owner_session_minutes * 60}
+
+
+@app.get("/owner/actions", dependencies=[Depends(require_owner_session)])
+def owner_actions():
+    return {"actions": owner_action_catalog()}
 
 
 @app.get("/health")
@@ -142,6 +170,7 @@ app.include_router(admin_content.router)
 app.include_router(admin_sync.router)
 app.include_router(cv_router.router)
 app.include_router(assets.router)
+app.include_router(owner_content.router)
 
 
 # Backward-compatible names previously defined on app.main; imported by tests/tooling.
@@ -149,11 +178,13 @@ _validate_cv_patch = cv_service.validate_cv_patch
 _apply_cv_patch = cv_service.apply_cv_patch
 
 
-# Host the Telegram webhook in the same Render service as the portfolio API.
-# This keeps one always-on instance while preserving /telegram/webhook.
+# The hackathon branch exposes only the portfolio API and AssemblyAI voice WebSocket.
 try:
-    from bot.app.main import app as telegram_app
+    from bot.app.assembly_voice import voice_agent_websocket
 except ModuleNotFoundError:
-    telegram_app = None
-if telegram_app is not None:
-    app.mount("/", telegram_app)
+    voice_agent_websocket = None
+if voice_agent_websocket is not None:
+    @app.websocket("/ws/voice")
+    @app.websocket("/ws/voice/")
+    async def voice_socket(websocket: WebSocket):
+        await voice_agent_websocket(websocket)

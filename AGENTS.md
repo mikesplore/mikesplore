@@ -862,3 +862,16 @@ This phase was completed before the schema and backend work.
 - The implementation plan is tracked in
   `docs/assemblyai-voice-representative-plan.md` and should be updated when scope or architecture
   changes materially.
+
+### Voice WebSocket handshake fix (2026-09-18)
+
+- The repeated `/ws/voice` 403 was not caused by the reverse proxy or missing WebSocket support.
+  FastAPI was interpreting the untyped `websocket` handler parameter as a required query
+  parameter, then closing the ASGI connection with validation error `Field required` before the
+  handler could call `accept()`.
+- Annotated the parameter as `WebSocket` in both the standalone bot app and the combined backend
+  forwarding route, with both slash variants registered. The local `websockets` client now
+  receives `{"type":"ready","sample_rate":16000}` from port 8001.
+- The current runtime uses Uvicorn's `--ws websockets-sansio` with the installed `websockets 15.x`
+  package. The public/Android deployment must use the same WebSocket implementation and proxy
+  upgrade support.

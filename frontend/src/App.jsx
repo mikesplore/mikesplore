@@ -43,8 +43,9 @@ function App() {
           <Route path="cv" element={<Cv />} />
           <Route path="about" element={<Navigate to="/" replace />} />
           <Route path="contact" element={<Contact />} />
-          <Route path="talk" element={<Voice />} />
         </Route>
+        {/* The voice representative is intentionally a distraction-free standalone page. */}
+        <Route path="/talk" element={<Voice />} />
       </Routes>
     </BrowserRouter>
   );

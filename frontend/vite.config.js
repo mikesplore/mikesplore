@@ -4,6 +4,9 @@ import react from '@vitejs/plugin-react'
 
 export default defineConfig({
   base: '/',
+  server: {
+    allowedHosts: ['local.mikesplore.me'],
+  },
   plugins: [
     react(),
     {
