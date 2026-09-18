@@ -34,6 +34,21 @@ async def get_profile() -> dict:
         return response.json()
 
 
+async def list_bucket_list() -> list[dict]:
+    """Return the public bucket-list items without exposing write capabilities."""
+    async with httpx.AsyncClient(base_url=settings.backend_url, timeout=10) as client:
+        response = await client.get("/bucket-list")
+        response.raise_for_status()
+        return [{"title": item.get("title"), "done": item.get("done"), "remark": item.get("remark")} for item in response.json()]
+
+
+async def list_education() -> list[dict]:
+    async with httpx.AsyncClient(base_url=settings.backend_url, timeout=10) as client:
+        response = await client.get("/education")
+        response.raise_for_status()
+        return [{"degree": item.get("degree"), "school": item.get("school"), "location": item.get("location"), "period": item.get("period")} for item in response.json()]
+
+
 async def list_certificates(query: str = "") -> list[dict]:
     async with httpx.AsyncClient(base_url=settings.backend_url, timeout=10) as client:
         response = await client.get("/certificates")
@@ -80,8 +95,8 @@ async def get_entry_by_slug(slug: str) -> dict:
         return {"found": True, **{key: entry.get(key) for key in ("slug", "content_type", "title", "blurb", "date", "year", "tags", "tech_stack", "details", "links")}, "url": source.get("key"), "article_body": body[:12000]}
 
 
-async def request_cv_delivery() -> dict:
-    return {"action": "send_cv"}
+async def request_cv_delivery() -> list[dict]:
+    return await list_public_assets("cv")
 
 
 async def request_certificate_delivery(query: str = "") -> dict:
@@ -145,6 +160,12 @@ TOOLS = [{
     "function": {"name": "list_contact_links", "description": "List all verified public professional and social contact links for the portfolio owner. Use this for contact, social media, or how-to-reach-the-owner questions.", "parameters": {"type": "object", "properties": {}, "required": []}},
 }, {
     "type": "function",
+    "function": {"name": "list_bucket_list", "description": "List Mike's public bucket-list goals and whether each is complete. This is read-only; never use it for changes.", "parameters": {"type": "object", "properties": {}, "required": []}},
+}, {
+    "type": "function",
+    "function": {"name": "list_education", "description": "List Mike's verified education history, including degree, school, period, and location.", "parameters": {"type": "object", "properties": {}, "required": []}},
+}, {
+    "type": "function",
     "function": {"name": "search_cv", "description": "Search verified text extracted from the portfolio owner's uploaded CV.", "parameters": {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]}},
 }, {
     "type": "function",
@@ -186,6 +207,10 @@ async def execute_tool(name: str, arguments: dict):
         return await list_skills()
     if name == "list_contact_links":
         return await list_contact_links()
+    if name == "list_bucket_list":
+        return await list_bucket_list()
+    if name == "list_education":
+        return await list_education()
     if name == "get_entry_by_slug":
         return await get_entry_by_slug(arguments["slug"])
     if name == "request_cv_delivery":

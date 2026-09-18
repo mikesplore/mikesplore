@@ -1,16 +1,18 @@
 """Owner-session resource listing and mutation gateway."""
 
+import uuid
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..db import get_db
-from ..models import Certificate, Education, Entry, ProfileLink, SkillGroup
+from ..models import BucketListItem, Certificate, Education, Entry, ProfileLink, SkillGroup
 from ..owner_auth import require_owner_session
 from ..services.search import model_record
 
 router = APIRouter(prefix="/owner/resources", tags=["owner"])
-MODELS = {"projects": Entry, "certificates": Certificate, "links": ProfileLink, "skills": SkillGroup, "education": Education}
+MODELS = {"projects": Entry, "certificates": Certificate, "links": ProfileLink, "skills": SkillGroup, "education": Education, "bucket-list": BucketListItem}
 
 
 def model_for(resource: str):
@@ -48,6 +50,8 @@ def mutate_owner_resource(resource: str, payload: dict, db: Session = Depends(ge
     elif action == "create":
         if resource == "projects":
             payload.setdefault("content_type", "project")
+        if resource == "bucket-list":
+            payload.setdefault("id", str(uuid.uuid4()))
         db.add(model(**{key: value for key, value in payload.items() if hasattr(model, key)}))
     else:
         raise HTTPException(status_code=400, detail="Unsupported owner mutation")

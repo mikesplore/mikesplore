@@ -8,6 +8,7 @@ OWNER_ACTIONS = {
     "edit_link": {"label": "Edit contact link", "kind": "profile_link"},
     "edit_skill": {"label": "Edit skills", "kind": "skill_group"},
     "edit_education": {"label": "Edit education", "kind": "education"},
+    "edit_bucket_list": {"label": "Edit bucket list", "kind": "bucket_list"},
 }
 
 

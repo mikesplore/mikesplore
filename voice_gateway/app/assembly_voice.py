@@ -33,7 +33,7 @@ async def validate_owner_session(token: str) -> bool:
 def assembly_tools() -> list[dict]:
     """Convert the existing OpenAI-shaped public tools to AssemblyAI's flat schema."""
     converted = []
-    delivery_tools = {"request_cv_delivery", "request_certificate_delivery"}
+    delivery_tools = {"request_certificate_delivery"}
     for item in TOOLS:
         function = item["function"]
         if function["name"] in delivery_tools:
@@ -50,8 +50,8 @@ def assembly_tools() -> list[dict]:
 SYSTEM_PROMPT = (
     "You are the spoken interface for Mike's portfolio. Use the provided verified tools for "
     "portfolio facts and never invent information. Keep spoken replies concise, natural, and "
-    "under three short sentences. You may use tools to look up public projects, articles, skills, "
-    "contact links, CV information, certificates, and public media. For a requested public file "
+    "under three short sentences. You may use tools to look up public projects, articles, skills, bucket-list goals, "
+    "contact links, education, CV information, certificates, bucket-list goals, and public media. For a requested CV, use request_cv_delivery; for a requested public file "
     "or image, use the public-media tool so the browser can display a verified card. For a named certificate, use list_certificates with its title as the query. If the visitor asks to end, stop, or close the conversation, acknowledge it briefly and do not call another tool. Never perform "
     "mutations or claim an upload occurred. Distinguish read requests from mutations: show, view, display, open, list, find, or download are public read requests and must never request owner unlock. Treat only explicit mutation verbs such as upload, update, replace, change, edit, delete, curate, or set as owner mutations, even when the user says profile picture, profile photo, CV, certificate, project, link, or skill. For any such request, call request_owner_unlock first and wait for the browser PIN flow. Do not answer that the action is done before the browser confirms it."
 )
@@ -64,12 +64,16 @@ async def send_verified_actions(websocket: WebSocket, tool_name: str, result) ->
         items = [{"type": "display_item", "item_type": item.get("type", "media"), "label": item.get("label") or "Public media", "url": item.get("url")} for item in result]
     elif tool_name == "list_certificates" and isinstance(result, list):
         items = [{"type": "display_item", "item_type": "certificate", "label": item.get("title") or "Certificate", "url": item.get("image_url")} for item in result]
+    elif tool_name == "request_cv_delivery" and isinstance(result, list):
+        items = [{"type": "display_item", "item_type": "cv", "label": item.get("label") or "CV", "url": item.get("url")} for item in result]
+    elif tool_name == "list_bucket_list" and isinstance(result, list):
+        items = [{"type": "display_item", "item_type": "bucket-list", "label": item.get("title") or "Bucket-list goal", "description": item.get("remark") or "", "done": bool(item.get("done"))} for item in result]
     elif tool_name == "get_entry_by_slug" and isinstance(result, dict) and result.get("found"):
         items = [{"type": "open_resource", "item_type": result.get("content_type", "resource"), "label": result.get("title") or "Open resource", "url": result.get("url")}]
     elif tool_name in {"list_entries", "list_articles", "search_articles", "search_portfolio"} and isinstance(result, dict):
         records = result.get("entries", result.get("articles", []))
         items = [{"type": "open_resource", "item_type": item.get("content_type", "resource"), "label": item.get("title") or "Open resource", "url": item.get("url")} for item in records]
-    safe_items = [item for item in items if isinstance(item.get("url"), str) and item["url"].startswith("https://")]
+    safe_items = [item for item in items if (item.get("item_type") == "bucket-list" and item.get("label")) or (isinstance(item.get("url"), str) and item["url"].startswith("https://"))]
     logger.info("verified browser actions tool=%s candidates=%d emitted=%d", tool_name, len(items), len(safe_items[:5]))
     return safe_items[:5]
 

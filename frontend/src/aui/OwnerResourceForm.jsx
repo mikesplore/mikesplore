@@ -6,6 +6,7 @@ const fields = {
   link: [['name', 'Name'], ['url', 'URL'], ['label', 'Label'], ['category', 'Category']],
   skill: [['category', 'Category'], ['items', 'Skills (comma-separated)']],
   education: [['degree', 'Degree'], ['school', 'School'], ['description', 'Description']],
+  'bucket-list': [['title', 'Goal'], ['remark', 'Notes'], ['done', 'Completed (true/false)']],
 };
 
 export default function OwnerResourceForm({ resource, resourceKey = resource, token, apiBase, onSave, onCancel }) {
@@ -31,7 +32,7 @@ export default function OwnerResourceForm({ resource, resourceKey = resource, to
   async function submit(event) {
     event.preventDefault();
     if (!confirming) { setConfirming(true); return; }
-    const payload = Object.fromEntries(Object.entries(values).map(([key, value]) => [key, key === 'items' ? value.split(',').map((item) => item.trim()).filter(Boolean) : value.trim()]));
+    const payload = Object.fromEntries(Object.entries(values).map(([key, value]) => [key, key === 'items' ? value.split(',').map((item) => item.trim()).filter(Boolean) : key === 'done' ? value.trim().toLowerCase() === 'true' : value.trim()]));
     if (file) payload.file = file;
     await onSave({ ...payload, action: operation, id: selectedId || undefined });
   }

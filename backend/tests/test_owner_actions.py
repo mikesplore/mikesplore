@@ -10,6 +10,7 @@ def test_owner_action_catalog_covers_all_curated_resources():
         "edit_link",
         "edit_skill",
         "edit_education",
+        "edit_bucket_list",
     }
     assert {item["action"] for item in owner_action_catalog()} == set(OWNER_ACTIONS)
 

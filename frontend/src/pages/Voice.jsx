@@ -88,7 +88,7 @@ export default function Voice() {
     actions.forEach((action) => {
       if (action.type !== 'display_item') return;
       const key = action.type === 'display_item'
-        ? (action.item_type === 'profile-image' ? 'Profile' : action.item_type === 'cv' ? 'Documents' : 'Media')
+        ? (action.item_type === 'profile-image' ? 'Profile' : action.item_type === 'cv' ? 'Documents' : action.item_type === 'bucket-list' ? 'Bucket list' : 'Media')
         : (action.item_type === 'project' ? 'Projects' : action.item_type === 'article' ? 'Articles' : 'Related links');
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key).push(action);
@@ -144,7 +144,7 @@ export default function Voice() {
 
   async function saveOwnerResource(resource, payload) {
     const token = sessionStorage.getItem('owner_session');
-    const resourceName = resource === 'project' ? 'projects' : resource === 'certificate' ? 'certificates' : resource === 'link' ? 'links' : resource === 'skill' ? 'skills' : 'education';
+    const resourceName = resource === 'project' ? 'projects' : resource === 'certificate' ? 'certificates' : resource === 'link' ? 'links' : resource === 'skill' ? 'skills' : resource === 'bucket-list' ? 'bucket-list' : 'education';
     if (resource === 'certificate' && payload.file) {
       const body = new FormData();
       body.append('title', payload.title || 'Certificate');
@@ -369,7 +369,7 @@ export default function Voice() {
       {actions.some((action) => action.type === 'display_item') && <div className="mx-auto w-full max-w-2xl space-y-6 text-left">
         {actionGroups().map(([group, items]) => <section key={group}>
           <div className="mb-3 flex items-center justify-between"><h2 className="text-xs font-semibold uppercase tracking-[0.2em] text-muted">{group}</h2><span className="text-xs text-muted">{items.length} {items.length === 1 ? 'item' : 'items'}</span></div>
-          <div className={items.length === 1 ? 'flex justify-center' : 'grid grid-cols-2 gap-3 sm:grid-cols-3'}>{items.map((action) => <button type="button" key={`${action.label}-${action.url}`} onClick={() => pickMedia(action)} className={`${action.item_type === 'profile-image' ? 'w-full max-w-xs' : items.length === 1 ? 'w-full max-w-sm' : 'w-full'} overflow-hidden rounded-2xl border border-divider bg-card text-left shadow-sm transition hover:border-primary`}>{action.item_type === 'cv' ? <div className="flex h-40 items-center justify-center bg-black/5 text-5xl">📄</div> : <div className={`${action.item_type === 'profile-image' ? 'aspect-square' : items.length === 1 ? 'h-56' : 'h-32'} bg-black/5`}><img src={action.url} alt={action.label} className={`${action.item_type === 'profile-image' ? 'h-full w-full object-contain p-3' : 'h-full w-full object-cover'}`} /></div>}<span className="block truncate px-4 py-3 text-sm font-medium text-ink">{action.label}</span></button>)}</div>
+          <div className={items.length === 1 ? 'flex justify-center' : 'grid grid-cols-2 gap-3 sm:grid-cols-3'}>{items.map((action) => <button type="button" key={`${action.label}-${action.url || action.item_type}`} onClick={() => pickMedia(action)} className={`${action.item_type === 'profile-image' ? 'w-full max-w-xs' : items.length === 1 ? 'w-full max-w-sm' : 'w-full'} overflow-hidden rounded-2xl border border-divider bg-card text-left shadow-sm transition hover:border-primary`}>{action.item_type === 'bucket-list' ? <div className="min-h-28 p-4"><div className="text-sm font-semibold text-ink">{action.done ? '✓ ' : '○ '}{action.label}</div>{action.description && <div className="mt-2 text-xs text-muted">{action.description}</div>}</div> : action.item_type === 'cv' ? <div className="flex h-40 items-center justify-center bg-black/5 text-5xl">📄</div> : <div className={`${action.item_type === 'profile-image' ? 'aspect-square' : items.length === 1 ? 'h-56' : 'h-32'} bg-black/5`}><img src={action.url} alt={action.label} className={`${action.item_type === 'profile-image' ? 'h-full w-full object-contain p-3' : 'h-full w-full object-cover'}`} /></div>}<span className="block truncate px-4 py-3 text-sm font-medium text-ink">{action.label}</span></button>)}</div>
         </section>)}
       </div>}
       {ownerUnlocked && <div className="mt-5"><OwnerModeBadge active onLock={lockOwner} /></div>}
@@ -379,6 +379,7 @@ export default function Voice() {
       {ownerUnlocked && /link|contact/i.test(ownerAction) && <div className="mt-5"><OwnerResourceForm resource="link" resourceKey="links" token={sessionStorage.getItem('owner_session')} apiBase={backendUrl()} onSave={(payload) => saveOwnerResource('link', payload)} onCancel={() => setOwnerAction('')} /></div>}
       {ownerUnlocked && /skill/i.test(ownerAction) && <div className="mt-5"><OwnerResourceForm resource="skill" resourceKey="skills" token={sessionStorage.getItem('owner_session')} apiBase={backendUrl()} onSave={(payload) => saveOwnerResource('skill', payload)} onCancel={() => setOwnerAction('')} /></div>}
       {ownerUnlocked && /education|school|degree/i.test(ownerAction) && <div className="mt-5"><OwnerResourceForm resource="education" resourceKey="education" token={sessionStorage.getItem('owner_session')} apiBase={backendUrl()} onSave={(payload) => saveOwnerResource('education', payload)} onCancel={() => setOwnerAction('')} /></div>}
+      {ownerUnlocked && /bucket/i.test(ownerAction) && <div className="mt-5"><OwnerResourceForm resource="bucket-list" resourceKey="bucket-list" token={sessionStorage.getItem('owner_session')} apiBase={backendUrl()} onSave={(payload) => saveOwnerResource('bucket-list', payload)} onCancel={() => setOwnerAction('')} /></div>}
       {ownerExpired && <div className="mt-5"><OwnerSessionExpired /></div>}
       {pinPrompt && <div className="mt-5"><PinPad title={pinPrompt.title} value={pin} attemptsLeft={pinPrompt.attemptsLeft} error={pinPrompt.error} onChange={(next) => { setPin(next); if (next.length === 4) submitPin(next); }} onCancel={() => { setPin(''); setPinPrompt(null); }} /></div>}
       {uploadRequested && ownerUnlocked && !uploadProgress && !pendingUploadFile && <div className="mt-5"><MediaDropzone onChoose={selectProfileImage} onDrop={selectProfileImage} accept={uploadType === 'cv' ? 'application/pdf' : 'image/jpeg,image/png'} title={uploadType === 'cv' ? 'Drop a CV here, or tap to choose one' : 'Drop an image here, or tap to choose one'} hint={uploadType === 'cv' ? 'PDF, up to 5MB' : 'JPG or PNG, up to 5MB'} /></div>}
