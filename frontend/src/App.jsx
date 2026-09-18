@@ -15,9 +15,7 @@ function App() {
     fetchAssets(controller.signal).then((assets) => {
       const profileImage = assets.find((asset) => asset.asset_type === 'profile-image')?.url;
       if (!profileImage) return;
-      document.querySelectorAll('link[rel="icon"], link[rel="apple-touch-icon"]').forEach((link) => {
-        link.href = profileImage;
-      });
+      document.querySelectorAll('link[rel="icon"], link[rel="apple-touch-icon"]').forEach((link) => { link.href = profileImage; });
     }).catch((error) => {
       if (error.name !== 'AbortError') console.warn('Profile icon unavailable', error);
     });
