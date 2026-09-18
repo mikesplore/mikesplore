@@ -290,6 +290,8 @@ export default function Voice() {
     await context.resume();
     const source = context.createMediaStreamSource(stream);
     const node = context.createScriptProcessor(2048, 1, 1);
+    const muteOutput = context.createGain();
+    muteOutput.gain.value = 0;
     node.onaudioprocess = (event) => {
       if (ws.readyState === WebSocket.OPEN) {
         const samples = resampleTo24k(event.inputBuffer.getChannelData(0), context.sampleRate);
@@ -297,9 +299,12 @@ export default function Voice() {
         ws.send(pcm16(samples));
       }
     };
-    // The processor is only an input tap. Connecting it to the destination
-    // would route the microphone back through the phone/desktop speakers.
+    // ScriptProcessorNode must be connected to an active graph for
+    // onaudioprocess to run. A zero-gain output keeps the graph alive without
+    // routing microphone audio back through the phone/desktop speakers.
     source.connect(node);
+    node.connect(muteOutput);
+    muteOutput.connect(context.destination);
     capture.current = { stream, context, nextAudioTime: 0 };
     processor.current = node;
   }
