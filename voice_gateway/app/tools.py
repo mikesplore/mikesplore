@@ -204,7 +204,7 @@ TOOLS = [{
     "function": {"name": "list_public_assets", "description": "List verified public portfolio media. Set asset_type to profile-image for a profile picture, cv for a CV, or certificate for a certificate.", "parameters": {"type": "object", "properties": {"asset_type": {"type": "string", "enum": ["profile-image", "cv", "certificate"]}}, "required": []}},
 }, {
     "type": "function",
-    "function": {"name": "request_owner_unlock", "description": "Request owner verification before a profile, CV, media, or portfolio update. Use this for any admin or mutation request. This only reveals the PIN prompt; it never performs the update.", "parameters": {"type": "object", "properties": {"action": {"type": "string"}}, "required": ["action"]}},
+    "function": {"name": "request_owner_unlock", "description": "MANDATORY FIRST STEP for every owner mutation. Immediately call this when the user says change, update, edit, rename, replace, upload, delete, set, or wants to modify anything—including 'I want to change my name', 'change my name', 'help me update my profile', or 'I need to edit a project'. Do not answer with instructions first and do not wait for the user to ask for a PIN. This only reveals the PIN prompt; it never performs the update.", "parameters": {"type": "object", "properties": {"action": {"type": "string"}}, "required": ["action"]}},
 }]
 
 
