@@ -33,8 +33,23 @@ from ..models import (
 )
 from ..schemas import BulkLinkMutation, EntryCreate, EntryRead, EntryUpdate, ProfileLinkCreate, ProfileLinkUpdate
 from ..services.search import model_record
+from ..services.sync import slugify
 
 router = APIRouter(tags=["admin"])
+
+
+def _ensure_entry_slug(payload: dict, db: Session) -> None:
+    """Give generic admin-created entries the required, unique public slug."""
+    if payload.get("slug") or payload.get("title") is None:
+        return
+    base = slugify(str(payload["title"])) or "entry"
+    candidate = base[:160]
+    suffix = 2
+    while db.scalar(select(Entry).where(Entry.slug == candidate)):
+        suffix_text = f"-{suffix}"
+        candidate = f"{base[:160 - len(suffix_text)]}{suffix_text}"
+        suffix += 1
+    payload["slug"] = candidate
 
 
 @router.post("/admin/content", dependencies=[Depends(require_service_key)])
@@ -148,6 +163,8 @@ def manage_content(resource: str, action: str, payload: dict, response: Response
             if key not in {"id", "key"} and hasattr(item, key):
                 setattr(item, key, value)
     else:
+        if resource == "entries" and action == "create":
+            _ensure_entry_slug(payload, db)
         # Coerce records whose caller did not supply a primary key. Most
         # tables rely on a server default (UUID/native serial), but
         # BucketListItem is the one exception: a single String PK with no

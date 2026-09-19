@@ -1,5 +1,21 @@
 # AGENTS.md — Portfolio Backend + Telegram Bot Conversion
 
+### Generic LLM project-create slug fix (2026-09-19)
+
+- Fixed the generic `POST /admin/content?resource=entries&action=create` path: LLM-created
+  projects commonly omit `slug`, but `entries.slug` is required. The backend now derives a
+  normalized slug from the title and adds a numeric suffix when that slug already exists.
+- This keeps the LLM payload simple and preserves the existing explicit-slug behavior. Added
+  focused regression coverage for derived unique slugs and supplied slugs.
+
+### Voice assistant grounding hardening (2026-09-19)
+
+- Strengthened the AssemblyAI voice-agent prompt so factual claims must be supported by the
+  latest verified backend tool result; missing records produce an explicit unknown response,
+  and tool failures cannot be mistaken for empty facts.
+- Specific content questions now require a search/list followed by exact-entry lookup before
+  detailed claims, reducing broad-list extrapolation and model-memory hallucinations.
+
 ### Button-driven public browsing mode (2026-09-12)
 
 - Added `bot/app/browse.py`: a deterministic, zero-LLM browsing mode. Every inline-button
