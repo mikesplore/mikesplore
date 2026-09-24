@@ -10,7 +10,11 @@ async def execute_admin_operation(operation: dict, *, update_profile, manage_con
     if resource == "project":
         resource = "entries"
     if resource == "profile":
-        await update_profile(operation.get("payload", {}))
+        # Tool-call JSON commonly includes null for fields it did not extract.
+        # The profile endpoint treats explicit null as a request to clear a
+        # column, so preserve patch semantics at this shared write boundary.
+        payload = operation.get("payload") or {}
+        await update_profile({key: value for key, value in payload.items() if value is not None})
     else:
         payload = dict(operation.get("payload") or {key: value for key, value in operation.items() if key not in {"resource", "action", "id", "candidates", "payload"}})
         if operation.get("resource") == "project":

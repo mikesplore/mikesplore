@@ -1,10 +1,32 @@
-import { useEffect, useState } from 'react';
+import { createElement, Fragment, useEffect, useMemo, useState } from 'react';
 import AvailabilityBanner from '../components/AvailabilityBanner';
 import { fetchProfile } from '../lib/portfolioApi';
+
+const ALLOWED_TAGS = new Set(['p', 'br', 'h2', 'h3', 'strong', 'b', 'em', 'i', 'ul', 'ol', 'li', 'a']);
+
+const renderAboutHtml = (source) => {
+  const template = document.createElement('template');
+  template.innerHTML = source || '';
+  const renderNode = (node, key) => {
+    if (node.nodeType === Node.TEXT_NODE) return node.textContent;
+    if (node.nodeType !== Node.ELEMENT_NODE) return null;
+    const tag = node.tagName.toLowerCase();
+    const children = Array.from(node.childNodes).map((child, index) => renderNode(child, `${key}-${index}`));
+    if (!ALLOWED_TAGS.has(tag)) return <Fragment key={key}>{children}</Fragment>;
+    if (tag === 'a') {
+      const href = node.getAttribute('href') || '';
+      if (!/^https?:\/\//i.test(href)) return <Fragment key={key}>{children}</Fragment>;
+      return createElement('a', { key, href, target: '_blank', rel: 'noreferrer', className: 'text-accent underline' }, ...children);
+    }
+    return createElement(tag, { key }, ...children);
+  };
+  return Array.from(template.content.childNodes).map((node, index) => renderNode(node, `about-${index}`));
+};
 
 const Home = () => {
   const [profile, setProfile] = useState(null);
   const [error, setError] = useState('');
+  const aboutContent = useMemo(() => renderAboutHtml(profile?.about), [profile?.about]);
   useEffect(() => {
     const controller = new AbortController();
     fetchProfile(controller.signal)
@@ -16,22 +38,12 @@ const Home = () => {
   }, []);
   if (error) return <p className="py-8 text-center text-base text-subtle">{error}</p>;
   if (!profile) return <p className="py-8 text-center text-base text-subtle">Loading profile…</p>;
-  const blocks = (profile.about || '').split(/\n\s*\n/).map((block) => block.trim()).filter(Boolean);
-  const sections = [];
-  for (let index = 0; index < blocks.length; index += 2) {
-    sections.push({ title: blocks[index], paragraphs: blocks[index + 1] ? [blocks[index + 1]] : [] });
-  }
   return (
     <div className="space-y-8">
       <AvailabilityBanner />
 
-      <div className="space-y-8 text-base leading-relaxed text-muted">
-        {sections.map((section) => (
-          <section key={section.title} className="space-y-3">
-            <h2 className="text-xl font-semibold text-ink">{section.title}</h2>
-            {section.paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}
-          </section>
-        ))}
+      <div className="about-content space-y-5 text-base leading-relaxed text-muted">
+        {aboutContent}
         {/*
         <section className="space-y-3">
           <h2 className="text-xl font-semibold text-ink">The Backstory</h2>

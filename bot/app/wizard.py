@@ -72,6 +72,10 @@ VALUE_HINTS = {
     "tags": "Comma-separated, e.g. python, fastapi, docker.",
 }
 
+FIELD_VALUE_HINTS = {
+    "about": "HTML is supported. Use <p>…</p> for paragraphs and <h2>…</h2> for section headings.",
+}
+
 FIELD_DESCRIPTIONS = {
     "title": "The name visitors will see for this project.",
     "slug": "The URL-safe identifier used to find the project, for example milo.",
@@ -611,7 +615,7 @@ def _prompt_value_text(session: dict, field: dict) -> str:
     description = FIELD_DESCRIPTIONS.get(field["key"])
     if description:
         lines.append(html.escape(description, quote=False))
-    hint = VALUE_HINTS.get(field["type"])
+    hint = FIELD_VALUE_HINTS.get(field["key"]) or VALUE_HINTS.get(field["type"])
     if hint:
         lines.append(f"<i>{hint}</i>")
     lines.append("Send the new value, or /cancel.")

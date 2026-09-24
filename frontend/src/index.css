@@ -82,6 +82,19 @@ a {
 }
 
 @layer components {
+  .about-content h2,
+  .about-content h3 {
+    color: var(--color-ink);
+    font-weight: 600;
+  }
+
+  .about-content h2 { font-size: 1.25rem; }
+  .about-content h3 { font-size: 1.125rem; }
+  .about-content ul,
+  .about-content ol { padding-left: 1.5rem; }
+  .about-content ul { list-style: disc; }
+  .about-content ol { list-style: decimal; }
+
   .chip {
     border-radius: 9999px;
     background-color: var(--color-elevated);
