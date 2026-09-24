@@ -120,6 +120,11 @@ def test_validate_value_text_and_textarea():
     assert value is None and error
 
 
+def test_about_textarea_strips_copied_wizard_prompt_chrome():
+    copied = "About Currently: My actual bio.\n\nLonger text is fine.\nSend the new value, or /cancel."
+    assert wizard.validate_value({"type": "textarea", "key": "about"}, copied) == ("My actual bio.", None)
+
+
 def test_about_prompt_escapes_html_examples_for_telegram():
     session = {"resource": "profile", "mode": "update", "current": {}, "step": "value"}
     prompt = wizard._prompt_value_text(session, wizard.field_by_key("profile", "about"))

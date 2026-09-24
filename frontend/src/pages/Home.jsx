@@ -6,9 +6,16 @@ const ALLOWED_TAGS = new Set(['p', 'br', 'h2', 'h3', 'strong', 'b', 'em', 'i', '
 
 const renderAboutHtml = (source) => {
   const template = document.createElement('template');
-  template.innerHTML = source || '';
+  // Older profile edits stored Telegram-escaped line breaks as literal text.
+  template.innerHTML = (source || '').replace(/&lt;br\s*\/?&gt;/gi, '<br>');
   const renderNode = (node, key) => {
-    if (node.nodeType === Node.TEXT_NODE) return node.textContent;
+    if (node.nodeType === Node.TEXT_NODE) {
+      const paragraphs = node.textContent.split(/\n\s*\n/).map((text) => text.trim()).filter(Boolean);
+      if (paragraphs.length > 1) {
+        return paragraphs.map((text, index) => <p key={`${key}-${index}`}>{text}</p>);
+      }
+      return node.textContent;
+    }
     if (node.nodeType !== Node.ELEMENT_NODE) return null;
     const tag = node.tagName.toLowerCase();
     const children = Array.from(node.childNodes).map((child, index) => renderNode(child, `${key}-${index}`));

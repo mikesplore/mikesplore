@@ -340,6 +340,17 @@ def validate_value(field: dict, raw: str) -> tuple:
         return (value, None)
     if ftype == "textarea":
         value = (raw or "").strip()
+        if field.get("key") == "about":
+            # If the admin copies the entire Telegram prompt while replacing
+            # this field, don't persist the prompt chrome as portfolio content.
+            value = re.sub(r"^About\s+Currently:\s*", "", value, count=1, flags=re.IGNORECASE)
+            value = re.sub(
+                r"\s*(?:<i>)?Longer text is fine\.?(?:</i>)?\s*Send the new value, or /cancel\.\s*$",
+                "",
+                value,
+                count=1,
+                flags=re.IGNORECASE,
+            ).strip()
         if not value:
             return (None, "The value can't be empty.")
         if len(value) > MAX_TEXTAREA_VALUE:
