@@ -110,6 +110,12 @@ def format_cv_sync_diff(old: dict, new: dict) -> str:
         for key in sorted(set(before) | set(after)):
             if before.get(key) != after.get(key):
                 lines.append(f"{html.escape(key)}: {html.escape(_compact(before.get(key), 90), quote=False)} → {html.escape(_compact(after.get(key), 90), quote=False)}")
+    old_profiles = {str(item.get("url")): item for item in old.get("profiles", []) if isinstance(item, dict) and item.get("url")}
+    new_profiles = {str(item.get("url")): item for item in new.get("profiles", []) if isinstance(item, dict) and item.get("url")}
+    added_profiles = set(new_profiles) - set(old_profiles)
+    if added_profiles:
+        lines.append("\n<b>Profile links</b>")
+        lines.extend("Added: " + html.escape(_compact(new_profiles[url].get("name"), 100), quote=False) for url in sorted(added_profiles))
     old_projects = {str(item.get("id") or item.get("name")): item for item in old.get("projects", []) if isinstance(item, dict)}
     new_projects = {str(item.get("id") or item.get("name")): item for item in new.get("projects", []) if isinstance(item, dict)}
     added, removed = set(new_projects) - set(old_projects), set(old_projects) - set(new_projects)
@@ -160,7 +166,7 @@ async def prepare_cv_sync(message: types.Message):
             await status.edit_text("Checking the portfolio evidence with Groq…")
         proposal = await sync_cv_data(base["data"], portfolio["data"])
         candidate = proposal["candidate"]
-        if set(candidate) != set(base["data"]):
+        if set(candidate) - set(base["data"]) - {"profiles"} or set(base["data"]) - set(candidate):
             raise ValueError("The CV sync proposal changed the CV JSON shape. No changes were saved.")
         candidate = await validate_cv_base(candidate)
         diff = format_cv_sync_diff(base["data"], candidate)

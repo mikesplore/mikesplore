@@ -60,6 +60,11 @@ def validate_cv_data(data: dict) -> dict:
         raise HTTPException(status_code=422, detail="CV skill items must be text")
     if any(not isinstance(item, str) for item in data["certifications"]):
         raise HTTPException(status_code=422, detail="CV certifications must be text values")
+    if "profiles" in data and (
+        not isinstance(data["profiles"], list)
+        or any(not isinstance(item, dict) or not isinstance(item.get("name"), str) or not isinstance(item.get("url"), str) for item in data["profiles"])
+    ):
+        raise HTTPException(status_code=422, detail="CV profiles must be a list of name and URL records")
     if any(not isinstance(item, dict) or not all(key in item for key in ("institution", "degree")) for item in data["education"]):
         raise HTTPException(status_code=422, detail="Each CV education item needs institution and degree")
     return data
@@ -197,10 +202,19 @@ def build_cv_data(db: Session) -> dict:
         .where(Entry.content_type == "hackathon", Entry.is_visible.is_(True))
         .order_by(Entry.custom_order, Entry.date.desc().nullslast(), Entry.title)
     ).all()
-    certificates.extend(
+    competitions_data = [
         f"{item.title} - {item.status}" if item.status else item.title
         for item in competitions
-    )
+    ]
+    contact_values = {str(value).strip().lower().rstrip("/") for value in contact.values() if value}
+    profile_links = [
+        {"id": str(item.id), "name": item.name, "url": item.url}
+        for item in links
+        if item.url
+        and item.url.lower().startswith(("http://", "https://"))
+        and item.url.strip().lower().rstrip("/") not in contact_values
+        and not any(term in item.name.lower() for term in ("email", "phone", "mobile"))
+    ]
     education = [
         {
             "institution": item.school,
@@ -232,6 +246,8 @@ def build_cv_data(db: Session) -> dict:
         "skills": skills,
         "projects": projects,
         "certifications": certificates,
+        "competitions": competitions_data,
+        "profile_links": profile_links,
         "education": education,
         "additional_info": additional_info,
     }

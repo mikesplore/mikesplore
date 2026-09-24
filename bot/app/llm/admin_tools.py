@@ -184,6 +184,8 @@ async def sync_cv_data(base_data: dict, portfolio_context: dict) -> list[dict]:
     prompt_data = {"approved_cv": cv_excerpt, "portfolio_projects": evidence,
                    "portfolio_skills": portfolio_context.get("skills", [])[:8],
                    "portfolio_certifications": portfolio_context.get("certifications", [])[:15],
+                   "portfolio_competitions": portfolio_context.get("competitions", [])[:15],
+                   "portfolio_profile_links": portfolio_context.get("profile_links", [])[:30],
                    "portfolio_education": portfolio_context.get("education", [])[:5]}
     allowed_field_paths = ["title", "summary"] + [
         f"contact.{key}" for key in (base_data.get("contact") or {}) if isinstance(key, str)
@@ -215,10 +217,12 @@ async def sync_cv_data(base_data: dict, portfolio_context: dict) -> list[dict]:
                                 "items": {
                                     "type": "object",
                                     "properties": {
-                                        "op": {"type": "string", "enum": ["set", "add_project"]},
+                                        "op": {"type": "string", "enum": ["set", "add_project", "move_profile_link"]},
                                         "path": {"type": "string", "enum": allowed_field_paths},
                                         "value": {"type": "string"},
                                         "source_id": {"type": "string"},
+                                        "profile_id": {"type": "string"},
+                                        "certification": {"type": "string"},
                                     },
                                     "required": ["op"],
                                 },
@@ -291,6 +295,13 @@ async def sync_cv_data(base_data: dict, portfolio_context: dict) -> list[dict]:
     target_project_count = 3
     project_additions = 0
     portfolio_by_id = {str(project.get("id")): project for project in projects if project.get("id")}
+    profile_links = portfolio_context.get("profile_links", [])
+    profile_links_by_id = {str(item.get("id")): item for item in profile_links if item.get("id")}
+    verified_awards = [
+        re.sub(r"[^a-z0-9]+", " ", str(item).strip().casefold()).strip()
+        for item in [*(portfolio_context.get("certifications") or []), *(portfolio_context.get("competitions") or [])]
+        if isinstance(item, str) and item.strip()
+    ]
     seen_changes = 0
     for change in result["changes"][:10]:
         if not isinstance(change, dict):
@@ -342,6 +353,26 @@ async def sync_cv_data(base_data: dict, portfolio_context: dict) -> list[dict]:
             current_projects.append({"name": source["name"], "date": source.get("date") or "", "stack": stack, "bullets": source_bullets[:3], "id": source_id})
             seen_changes += 1
             project_additions += 1
+        elif operation == "move_profile_link":
+            profile_id = str(change.get("profile_id") or change.get("source_id") or "")
+            source = profile_links_by_id.get(profile_id)
+            certification = change.get("certification")
+            if not source or not isinstance(certification, str) or certification not in candidate.get("certifications", []):
+                raise ValueError("The CV sync proposed an invalid profile-link move.")
+            normalized_certification = re.sub(r"[^a-z0-9]+", " ", certification.strip().casefold()).strip()
+            if any(
+                normalized_certification == award
+                or f" {award} " in f" {normalized_certification} "
+                or f" {normalized_certification} " in f" {award} "
+                for award in verified_awards
+            ):
+                raise ValueError("The CV sync cannot move a verified certificate or competition into profile links.")
+            candidate["certifications"].remove(certification)
+            profile_value = {"name": str(source.get("name") or "Profile"), "url": str(source.get("url") or "")}
+            candidate.setdefault("profiles", [])
+            if profile_value["url"] and profile_value not in candidate["profiles"]:
+                candidate["profiles"].append(profile_value)
+            seen_changes += 1
         elif operation == "remove_project":
             raise ValueError("Automatic project removal is not supported; edit the approved CV directly.")
         else:

@@ -959,3 +959,8 @@ This phase was completed before the schema and backend work.
   excess bullets before saving, portfolio-derived CV context and tailoring context expose at most
   three, and the PDF renderer consumes the validated source. This keeps stored and rendered CV data
   aligned.
+- CV sync context now supplies certificate-table records and profile links as separate evidence.
+  A reviewed `move_profile_link` operation can remove an exact misclassified CV certification and
+  add the matching database profile link to a dedicated header-links field; the merger rejects
+  removal when the item matches a verified certificate or competition. PDF bullets now use an
+  inline marker, and duplicate languages/location/work-style lines are suppressed.

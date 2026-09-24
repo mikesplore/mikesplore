@@ -19,8 +19,7 @@ from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.enums import TA_CENTER
 from reportlab.platypus import (
-    SimpleDocTemplate, Paragraph, Spacer, HRFlowable, ListFlowable, ListItem,
-    KeepTogether
+    SimpleDocTemplate, Paragraph, Spacer, HRFlowable, KeepTogether
 )
 
 ACCENT = colors.HexColor("#1a1a1a")
@@ -90,11 +89,12 @@ def section_header(text, styles, story, glue=None):
 
 def bullets(items, styles):
     if not items:
-        return None
-    return ListFlowable(
-        [ListItem(Paragraph(b, styles["BulletText"]), leftIndent=8, bulletIndent=0) for b in items],
-        bulletType="bullet", start="•", leftIndent=14, spaceAfter=4,
+        return []
+    bullet_style = ParagraphStyle(
+        "InlineBulletText", parent=styles["BulletText"], leftIndent=12,
+        firstLineIndent=-10, spaceAfter=2,
     )
+    return [Paragraph(f"•&nbsp;&nbsp;{item}", bullet_style) for item in items]
 
 
 def render(data, out_path):
@@ -124,13 +124,21 @@ def render(data, out_path):
             url = escape(c[key] if c[key].startswith("http") else f'https://{c[key]}', {'"': '&quot;'})
             parts.append(f'<link href="{url}" color="#555555">{display}</link>')
     contact_line = " | ".join(filter(None, parts))
+    profile_links = (data.get("profiles") or [])[:5]
+    if profile_links:
+        rendered_profiles = []
+        for profile in profile_links:
+            name = esc(profile.get("name"))
+            raw_url = str(profile.get("url") or "").strip()
+            if name and raw_url.startswith(("http://", "https://")):
+                url = escape(raw_url, {'"': '&quot;'})
+                rendered_profiles.append(f'<link href="{url}" color="#555555">{name}</link>')
+        if rendered_profiles:
+            contact_line = " | ".join(filter(None, (contact_line, " · ".join(rendered_profiles))))
     if contact_line:
         story.append(Paragraph(contact_line, styles["CVContact"]))
 
     ai = data.get("additional_info", {})
-    footnote = " &nbsp;|&nbsp; ".join(esc(b) for b in (ai.get("languages"), ai.get("work_style")) if b)
-    if footnote:
-        story.append(Paragraph(footnote, styles["CVContact"]))
 
     # Summary
     if data.get("summary"):
@@ -152,16 +160,12 @@ def render(data, out_path):
             story.append(Paragraph(f"{esc(p['name'])}{date_label}", styles["ProjectTitle"]))
             if p.get("stack"):
                 story.append(Paragraph(esc(p["stack"]), styles["ProjectMeta"]))
-            project_bullets = bullets([esc(item) for item in p["bullets"]], styles)
-            if project_bullets:
-                story.append(project_bullets)
+            story.extend(bullets([esc(item) for item in p["bullets"][:3]], styles))
 
     # Certifications
     if data["certifications"]:
         section_header("Certifications & Competitions", styles, story)
-        certification_bullets = bullets([esc(item) for item in data["certifications"]], styles)
-        if certification_bullets:
-            story.append(certification_bullets)
+        story.extend(bullets([esc(item) for item in data["certifications"]], styles))
 
     # Education
     if data["education"]:
@@ -173,13 +177,16 @@ def render(data, out_path):
 
     # Additional info
     ai = data.get("additional_info", {})
-    if ai:
+    skills_have_languages = any("language" in str(group.get("category", "")).lower() for group in data.get("skills", []))
+    has_contact_location = bool(c.get("location"))
+    additional_rows = [
+        ("Work style", ai.get("work_style")),
+        ("Languages", None if skills_have_languages else ai.get("languages")),
+        ("Location", None if has_contact_location else ai.get("location_note")),
+    ]
+    if any(value for _label, value in additional_rows):
         section_header("Additional Information", styles, story)
-        for label, val in [
-            ("Work style", ai.get("work_style")),
-            ("Languages", ai.get("languages")),
-            ("Location", ai.get("location_note")),
-        ]:
+        for label, val in additional_rows:
             if val:
                 story.append(Paragraph(f"<b>{label}:</b> {esc(val)}", styles["Body"]))
 
