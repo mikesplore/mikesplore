@@ -763,7 +763,10 @@ async def begin_resource(target, resource_key: str, start_create: bool = False, 
         await show_field_picker(screen, session, edit=edit)
         return
     try:
-        records = await list_admin_resource(spec["write"], {"page_size": 200})
+        list_params = {"page_size": 200}
+        if spec["write"] == "entries" and spec.get("content_type"):
+            list_params["content_type"] = spec["content_type"]
+        records = await list_admin_resource(spec["write"], list_params)
     except Exception:
         await screen.answer(f"I couldn't load {spec['label'].lower()} right now. Please try again.")
         return

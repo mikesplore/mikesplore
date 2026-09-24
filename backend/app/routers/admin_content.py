@@ -134,6 +134,8 @@ def manage_content(resource: str, action: str, payload: dict, response: Response
         payload["normalized_url"] = url
     if action == "list":
         query = select(model)
+        if resource == "entries" and payload.get("content_type"):
+            query = query.where(Entry.content_type == payload["content_type"])
         if resource == "entry-assets" and payload.get("entry_id"):
             query = query.where(EntryAsset.entry_id == payload["entry_id"])
         total = db.scalar(select(func.count()).select_from(query.subquery())) or 0

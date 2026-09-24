@@ -181,6 +181,19 @@ def test_page_records_clamps_bounds():
     assert index == 0 and pages == 1
 
 
+def test_project_manage_listing_requests_only_project_entries():
+    calls = []
+
+    async def list_resource(resource, params):
+        calls.append((resource, params))
+        return [{"id": "project-id", "content_type": "project", "title": "Project"}]
+
+    _configure({"list_admin_resource": list_resource})
+    asyncio.run(wizard.begin_resource(FakeMessage(), "projects"))
+
+    assert calls == [("entries", {"page_size": 200, "content_type": "project"})]
+
+
 def test_advance_create_queue_moves_through_required_fields():
     session = _session(resource="projects", step="create", create_queue=["slug", "title", "blurb"], pending_field="slug")
     wizard.advance_create_queue(session)
