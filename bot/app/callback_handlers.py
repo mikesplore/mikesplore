@@ -85,7 +85,7 @@ def register_callbacks(dispatcher, dependencies):
                     logger.exception("Inline CV rendering failed")
                     if callback.message:
                         if isinstance(error, httpx.HTTPStatusError) and error.response.status_code == 409:
-                            detail = "The base CV changed while this proposal was pending. Send /apply to rebuild the proposal against the current CV, then review it again."
+                            detail = "Portfolio data changed while this proposal was pending. Send /apply to rebuild it from current records, then review it again."
                         else:
                             detail = error.response.text[:800] if isinstance(error, httpx.HTTPStatusError) else str(error)[:500]
                         await callback.message.answer(f"The tailored CV could not be generated: {detail}", reply_markup=InlineKeyboardMarkup(inline_keyboard=[[

@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
 """
-Render cv_data.json into a clean, ATS-friendly PDF.
+Render verified portfolio-derived CV data into a clean, ATS-friendly PDF.
 
 Usage:
     python3 render_cv.py [cv_data.json] [output.pdf]
 
 This script is intentionally dumb: it does zero content editing.
-The bot that tailors the CV to a job description should only ever
-write to cv_data.json (validated against the same schema shown in
-this file's expected keys). This script just lays it out.
+The backend maps current portfolio records into the renderer's data shape;
+this script only lays them out.
 """
 
 import json
 import sys
+from xml.sax.saxutils import escape
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
 from reportlab.lib import colors
@@ -97,6 +97,8 @@ def bullets(items, styles):
 
 def render(data, out_path):
     data = without_em_dashes(data)
+    def esc(value):
+        return escape(str(value or ""))
     styles = build_styles()
     doc = SimpleDocTemplate(
         out_path, pagesize=letter,
@@ -106,29 +108,31 @@ def render(data, out_path):
     story = []
 
     # Header
-    story.append(Paragraph(data["name"], styles["CVName"]))
-    story.append(Paragraph(data["title"], styles["CVTitle"]))
+    story.append(Paragraph(esc(data["name"]), styles["CVName"]))
+    story.append(Paragraph(esc(data["title"]), styles["CVTitle"]))
     c = data["contact"]
-    parts = [c.get("location"), c.get("email"), c.get("phone")]
+    parts = [esc(c.get("location")), esc(c.get("email")), esc(c.get("phone"))]
     if c.get("email"):
-        parts[1] = f'<link href="mailto:{c["email"]}" color="#555555">{c["email"]}</link>'
+        email = esc(c["email"])
+        parts[1] = f'<link href="mailto:{email}" color="#555555">{email}</link>'
     for key in ("website", "github"):
         if c.get(key):
-            url = c[key] if c[key].startswith("http") else f'https://{c[key]}'
-            parts.append(f'<link href="{url}" color="#555555">{c[key]}</link>')
+            display = esc(c[key])
+            url = escape(c[key] if c[key].startswith("http") else f'https://{c[key]}', {'"': '&quot;'})
+            parts.append(f'<link href="{url}" color="#555555">{display}</link>')
     contact_line = " | ".join(filter(None, parts))
     story.append(Paragraph(contact_line, styles["CVContact"]))
 
     ai = data.get("additional_info", {})
-    footnote = " &nbsp;|&nbsp; ".join(b for b in (ai.get("languages"), ai.get("work_style")) if b)
+    footnote = " &nbsp;|&nbsp; ".join(esc(b) for b in (ai.get("languages"), ai.get("work_style")) if b)
     if footnote:
         story.append(Paragraph(footnote, styles["CVContact"]))
 
     # Summary
-    section_header("Summary", styles, story, Paragraph(data["summary"], styles["Body"]))
+    section_header("Summary", styles, story, Paragraph(esc(data["summary"]), styles["Body"]))
 
     # Skills
-    skill_paras = [Paragraph(f"<b>{g['category']}:</b> " + ", ".join(g["items"]), styles["Body"]) for g in data["skills"]]
+    skill_paras = [Paragraph(f"<b>{esc(g['category'])}:</b> " + ", ".join(esc(item) for item in g["items"]), styles["Body"]) for g in data["skills"]]
     section_header("Technical Skills", styles, story, skill_paras[0] if skill_paras else None)
     for para in skill_paras[1:]:
         story.append(Spacer(1, 2))
@@ -137,19 +141,19 @@ def render(data, out_path):
     # Projects
     section_header("Key Projects", styles, story)
     for p in data["projects"]:
-        story.append(Paragraph(f"{p['name']}  <font color='#555555'>- {p['date']}</font>", styles["ProjectTitle"]))
-        story.append(Paragraph(p["stack"], styles["ProjectMeta"]))
-        story.append(bullets(p["bullets"], styles))
+        story.append(Paragraph(f"{esc(p['name'])}  <font color='#555555'>- {esc(p['date'])}</font>", styles["ProjectTitle"]))
+        story.append(Paragraph(esc(p["stack"]), styles["ProjectMeta"]))
+        story.append(bullets([esc(item) for item in p["bullets"]], styles))
 
     # Certifications
     section_header("Certifications & Competitions", styles, story)
-    story.append(bullets(data["certifications"], styles))
+    story.append(bullets([esc(item) for item in data["certifications"]], styles))
 
     # Education
     section_header("Education", styles, story)
     for e in data["education"]:
-        story.append(Paragraph(f"<b>{e['institution']}</b>", styles["Body"]))
-        story.append(Paragraph(e["degree"], styles["Body"]))
+        story.append(Paragraph(f"<b>{esc(e['institution'])}</b>", styles["Body"]))
+        story.append(Paragraph(esc(e["degree"]), styles["Body"]))
         story.append(Spacer(1, 4))
 
     # Additional info
@@ -162,7 +166,7 @@ def render(data, out_path):
             ("Location", ai.get("location_note")),
         ]:
             if val:
-                story.append(Paragraph(f"<b>{label}:</b> {val}", styles["Body"]))
+                story.append(Paragraph(f"<b>{label}:</b> {esc(val)}", styles["Body"]))
 
     doc.build(story)
 

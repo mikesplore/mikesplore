@@ -59,7 +59,7 @@ EXTRACT_SYSTEM = (
 )
 
 CV_TAILOR_SYSTEM = (
-    "Tailor the CV using only the supplied verified base-CV context. "
+    "Tailor the CV using only the supplied verified current-portfolio context. "
     "The candidate is an individual software engineer and may credibly apply to software engineering, ICT, IT, development, infrastructure, data, cloud, QA, security, support, and other hands-on or technical roles. "
     "Reject only roles outside technology or roles primarily requiring executive/people leadership, such as CTO, CEO, CIO, VP Engineering, Head of Engineering, or Engineering Manager. "
     "Return exactly one JSON object: "

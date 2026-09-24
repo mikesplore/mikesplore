@@ -45,13 +45,6 @@ async def upload_asset(asset_type: str, label: str, filename: str, content: byte
         return response.json()
 
 
-async def get_cv_base() -> dict:
-    async with httpx.AsyncClient(base_url=settings.backend_url, timeout=10) as client:
-        response = await client.get("/admin/cv/base", headers={"X-Service-Api-Key": settings.service_api_key})
-        response.raise_for_status()
-        return response.json()
-
-
 async def get_cv_tailoring_context() -> dict:
     async with httpx.AsyncClient(base_url=settings.backend_url, timeout=15) as client:
         response = await client.get("/admin/cv/tailoring-context", headers={"X-Service-Api-Key": settings.service_api_key})
@@ -59,9 +52,9 @@ async def get_cv_tailoring_context() -> dict:
         return response.json()
 
 
-async def save_cv_base(data: dict) -> dict:
+async def get_cv_profile() -> dict:
     async with httpx.AsyncClient(base_url=settings.backend_url, timeout=10) as client:
-        response = await client.post("/admin/cv/base", json=data, headers={"X-Service-Api-Key": settings.service_api_key})
+        response = await client.get("/admin/cv/profile", headers={"X-Service-Api-Key": settings.service_api_key})
         response.raise_for_status()
         return response.json()
 
@@ -69,6 +62,13 @@ async def save_cv_base(data: dict) -> dict:
 async def render_cv(patch: dict, base_revision: str, job_description: str, label: str) -> dict:
     async with httpx.AsyncClient(base_url=settings.backend_url, timeout=60) as client:
         response = await client.post("/admin/cv/render", json={"patch": patch, "base_revision": base_revision, "job_description": job_description, "label": label}, headers={"X-Service-Api-Key": settings.service_api_key})
+        response.raise_for_status()
+        return response.json()
+
+
+async def render_current_cv() -> dict:
+    async with httpx.AsyncClient(base_url=settings.backend_url, timeout=60) as client:
+        response = await client.post("/admin/cv/render-current", headers={"X-Service-Api-Key": settings.service_api_key})
         response.raise_for_status()
         return response.json()
 

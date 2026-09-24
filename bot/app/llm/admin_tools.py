@@ -90,10 +90,10 @@ async def extract_profile_update(instruction: str) -> dict:
     return {key: value for key, value in result.items() if value is not None}
 
 
-async def tailor_cv(job_description: str, existing_patch: dict | None = None, revision: str | None = None) -> dict:
-    context = await get_cv_tailoring_context()
+async def tailor_cv(job_description: str, existing_patch: dict | None = None, revision: str | None = None, context: dict | None = None) -> dict:
+    context = context or await get_cv_tailoring_context()
     instruction = "JOB DESCRIPTION:\n" + job_description
-    instruction += "\n\nVERIFIED BASE CV CONTEXT:\n" + json.dumps(context)
+    instruction += "\n\nVERIFIED CURRENT PORTFOLIO CONTEXT:\n" + json.dumps(context)
     if existing_patch:
         instruction += "\n\nPENDING PATCH:\n" + json.dumps(existing_patch) + "\n\nREVISION REQUEST:\n" + (revision or "")
     messages = [{"role": "system", "content": CV_TAILOR_SYSTEM}, {"role": "user", "content": instruction}]

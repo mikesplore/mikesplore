@@ -48,18 +48,6 @@ def register_upload_handler(dispatcher, dependencies):
                     return
                 if asset_request:
                     asset_type, label = asset_request
-                    if asset_type == "cv-json":
-                        import json
-                        try:
-                            data = json.loads(buffer.getvalue().decode("utf-8"))
-                            await save_cv_base(data)
-                        except Exception:
-                            logger.exception("Base CV JSON upload failed")
-                            await message.answer("That is not a valid CV JSON file or it failed backend validation.")
-                            return
-                        pending_upload.pop(message.from_user.id, None)
-                        await message.answer("Base CV JSON saved.")
-                        return
                     if asset_type == "certificate":
                         # Certificates have their own database collection and public
                         # listing endpoint. Do not store them as generic site assets.
@@ -112,4 +100,3 @@ def register_upload_handler(dispatcher, dependencies):
                     InlineKeyboardButton(text="Cancel", callback_data="upload:cancel"),
                 ]]))
         
-

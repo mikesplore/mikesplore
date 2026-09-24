@@ -9,14 +9,13 @@ except ImportError:  # R2 support is optional for read-only and test usage.
     boto3 = None
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
-from pypdf import PdfReader
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..auth import require_service_key
 from ..config import settings
 from ..db import get_db
-from ..models import Certificate, SiteAsset, SiteSetting
+from ..models import Certificate, SiteAsset
 from ..services.sync import slugify
 
 router = APIRouter(tags=["assets"])
@@ -91,12 +90,6 @@ async def upload_asset(asset_type: str = Form(...), label: str = Form(""), file:
     file_bytes = await file.read(MAX_UPLOAD_BYTES + 1)
     if len(file_bytes) > MAX_UPLOAD_BYTES:
         raise HTTPException(status_code=413, detail="Upload exceeds the 5 MB limit")
-    cv_text = None
-    if asset_type == "cv":
-        try:
-            cv_text = "\n".join(page.extract_text() or "" for page in PdfReader(BytesIO(file_bytes)).pages).strip()
-        except Exception:
-            raise HTTPException(status_code=400, detail="The CV must be a readable PDF file")
     client.upload_fileobj(BytesIO(file_bytes), settings.r2_bucket_name, object_key, ExtraArgs={"ContentType": file.content_type or "application/octet-stream"})
     asset_url = _public_url(object_key)
     item = None
@@ -111,13 +104,6 @@ async def upload_asset(asset_type: str = Form(...), label: str = Form(""), file:
         db.add(item)
     db.commit()
     db.refresh(item)
-    if asset_type == "cv":
-        cv_setting = db.get(SiteSetting, "cv_text")
-        if cv_setting:
-            cv_setting.value = {"text": cv_text, "asset_url": asset_url}
-        else:
-            db.add(SiteSetting(key="cv_text", value={"text": cv_text, "asset_url": asset_url}))
-        db.commit()
     if previous_url and previous_url.startswith(_public_base()):
         previous_key = previous_url.removeprefix(_public_base())
         if previous_key != object_key:

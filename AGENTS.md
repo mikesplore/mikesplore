@@ -864,3 +864,23 @@ This phase was completed before the schema and backend work.
   projects, collections, counts, and paginated Timeline reads. The cache is capped at 100 entries
   with least-recently-used eviction, returns cloned values so page code cannot mutate cached data,
   and skips writes when a request has been aborted.
+
+### CV tailoring from live portfolio data (2026-09-24)
+
+- Kept `cv_renderer.py`'s existing renderer contract and PDF layout, but replaced the tailoring
+  source snapshot with a backend assembler over the current profile, profile links, visible skill
+  groups, visible projects and technologies/highlights, certificates, hackathon results, and
+  education records. No base CV JSON is required for proposals or rendering.
+- Tailoring proposals and rendering share one portfolio revision hash. If any included source data
+  changes while approval is pending, rendering rejects the stale proposal and `/apply` rebuilds it.
+- Project bullets come from ordered project highlights; when a project has none, its current blurb
+  is used. Optional legacy CV presentation data is no longer read as a source. Removed the base-CV
+  JSON upload/write route; separately stored CV PDFs remain available for direct delivery.
+- CV text search now searches the same live assembled data instead of the legacy `cv_text` setting.
+- Escaped portfolio text before passing it to ReportLab so characters such as ampersands and angle
+  brackets in live records do not get parsed as formatting markup.
+- Updated onboarding and bot messages to describe portfolio-based tailoring. Changed files passed
+  Python syntax compilation and `git diff --check`; no live database or PDF render was run here.
+- Updated the Telegram View CV action to call a protected `/admin/cv/render-current` endpoint,
+  assemble the same CV layout from current portfolio records, store a generated version, and send
+  that PDF. The uploaded CV asset remains untouched; tailoring and View CV now both use live data.

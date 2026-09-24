@@ -93,20 +93,15 @@ Add my GitHub profile as a professional link and my WhatsApp as a contact link.
 
 Repeat requests are safe because normalized links are upserted.
 
-## 6. Add the base CV
+## 6. Populate current CV source data
 
-Attach the CV file and tell the assistant what it is:
+CV tailoring reads the current profile, visible projects and their highlights/technologies, visible
+skill groups, education records, certificates, and hackathon results directly from the portfolio
+database. Keep those records current; no base CV upload is required. The bot selects from those
+verified records and rewrites only the summary for the job description.
 
-```text
-This is my current base CV. Store it as my CV and use it for future tailoring.
-```
-
-The file is stored as an asset. The CV base data used for tailoring must contain verified profile,
-experience, education, skills, project, and qualification information. Do not rely on the LLM to
-invent missing sections.
-
-The upload limit is 5 MB. PDFs are not automatically sent to the LLM during ordinary asset
-listing; they are handled by the specific CV workflow.
+The PDF layout remains the existing CV layout. A separately uploaded CV PDF can still be stored
+and delivered when requested in chat, but it is not the source for tailored CV content.
 
 ## 7. Populate portfolio content
 
@@ -177,9 +172,9 @@ Paste a complete job description without a command prefix:
 [paste the job description]
 ```
 
-The assistant should recognize it, compare it against the verified CV and active role policies, and
+The assistant should recognize it, compare it against current portfolio evidence and active role policies, and
 show a proposed summary, projects, and skills. Revise it naturally or approve it with the inline
-button. The base CV must remain unchanged.
+button. Rendering creates a versioned PDF without changing portfolio records.
 
 Test more than one technical family, such as backend, mobile, DevOps, ICT support, or data roles.
 The assistant should assess each role against stored evidence rather than rejecting it because the
@@ -196,7 +191,7 @@ title differs from the owner's current profile.
 - Gallery items can be listed and viewed.
 - Role policies are initially pending and inactive.
 - Active policies influence CV tailoring.
-- Tailored CV rendering does not overwrite the base CV.
+- Tailored CV rendering uses a snapshot of the current portfolio and does not overwrite portfolio records.
 - Failed writes show the backend reason and remain retryable.
 
 For routine management, use `backend/DATA_MANAGEMENT_MANUAL.md`. This document is only for

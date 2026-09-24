@@ -1,5 +1,6 @@
 """Public, admin, and CV search helpers backed by verified database content."""
 
+import json
 import re
 
 from sqlalchemy import cast, func, or_, select, String
@@ -20,6 +21,7 @@ from ..models import (
     SkillGroup,
     Technology,
 )
+from .cv import build_cv_data
 
 
 def model_record(item) -> dict:
@@ -68,10 +70,8 @@ def admin_search(db: Session, q: str) -> list[dict]:
 
 
 def search_cv(db: Session, q: str) -> dict:
-    setting = db.get(SiteSetting, "cv_text")
-    if not setting:
-        return {"matches": [], "total": 0}
-    text = setting.value.get("text", "")
+    data = build_cv_data(db)
+    text = json.dumps(data, ensure_ascii=False)
     terms = [word.lower() for word in re.findall(r"[a-z0-9]+", q.lower()) if len(word) > 2]
     if not terms or not all(term in text.lower() for term in terms):
         return {"matches": [], "total": 0}

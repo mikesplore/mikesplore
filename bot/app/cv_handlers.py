@@ -13,7 +13,8 @@ async def prepare_cv_patch(message: types.Message, job_description: str, revisio
     try:
         await status.edit_text("Searching relevant projects and skills…")
         current = pending_cv.get(message.from_user.id)
-        patch = await tailor_cv(job_description, current[0] if current else None, revision)
+        context = await get_cv_tailoring_context()
+        patch = await tailor_cv(job_description, current[0] if current else None, revision, context=context)
         # Keep only the backend contract fields. This also protects rendering
         # from provider-added metadata such as confidence or explanations.
         if patch.get("status") != "rejected":
@@ -28,14 +29,13 @@ async def prepare_cv_patch(message: types.Message, job_description: str, revisio
         if patch.get("status") == "rejected":
             await status.edit_text("I won't create a tailored CV for this job.\n\n" + html.escape(patch.get("reason", "There is not enough verified portfolio evidence for this role.")))
             return
-        base = await get_cv_base()
-        cv_name = (base.get("data") or {}).get("name") or "Tailored CV"
-        pending_cv[message.from_user.id] = (patch, job_description, cv_name, base["revision"])
+        cv_name = (context.get("profile") or {}).get("name") or "Tailored CV"
+        pending_cv[message.from_user.id] = (patch, job_description, cv_name, context["revision"])
         # The LLM may already have streamed a short preflight message and the
         # temporary status message may be stale by the time tailoring finishes.
         # Send the proposal as a fresh message so it is always visible and
         # approval is unambiguously based on this exact pending patch.
-        await status.edit_text("Analysis complete. I’ve prepared a proposed CV update below.")
+        await status.edit_text("Analysis complete. I’ve prepared a proposed CV below.")
         await message.answer(
             "Proposed CV changes:\n\n" + format_cv_patch(patch),
             reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
@@ -45,7 +45,7 @@ async def prepare_cv_patch(message: types.Message, job_description: str, revisio
         )
     except Exception as error:
         logger.exception("CV patch preparation failed")
-        await status.edit_text(friendly_error(error, "I couldn't prepare a valid CV patch. Please check the base CV and try again."))
+        await status.edit_text(friendly_error(error, "I couldn't prepare a CV proposal from the current portfolio data."))
 
 
 async def deliver_certificates(message: types.Message, query: str = ""):
@@ -65,22 +65,19 @@ async def deliver_certificates(message: types.Message, query: str = ""):
 
 
 async def send_cv(message: types.Message):
-    async with httpx.AsyncClient(base_url=settings.backend_url, timeout=20) as client:
-        response = await client.get("/assets")
-        response.raise_for_status()
-        cv = next((asset for asset in response.json() if asset.get("asset_type") == "cv"), None)
-        if not cv:
-            await message.answer("The base CV is not available right now.")
-            return
-        file_response = await client.get(cv["url"])
-        file_response.raise_for_status()
-    if not file_response.content.startswith(b"%PDF-"):
-        await message.answer("The stored CV file is invalid or unavailable.")
+    try:
+        generated = await render_current_cv()
+        async with httpx.AsyncClient(timeout=30) as client:
+            file_response = await client.get(generated["pdf_url"])
+            file_response.raise_for_status()
+    except Exception:
+        logger.exception("Current portfolio CV generation failed")
+        await message.answer("I couldn't generate the current portfolio CV right now.")
         return
-    filename = cv.get("label") or "CV.pdf"
-    if not filename.lower().endswith(".pdf"):
-        filename += ".pdf"
-    await message.answer_document(types.BufferedInputFile(file_response.content, filename=filename), caption="CV")
+    if not file_response.content.startswith(b"%PDF-"):
+        await message.answer("The generated CV file is invalid or unavailable.")
+        return
+    await message.answer_document(types.BufferedInputFile(file_response.content, filename="Current-Portfolio-CV.pdf"), caption="Current portfolio CV")
 
 
 def format_cv_patch(patch: dict) -> str:

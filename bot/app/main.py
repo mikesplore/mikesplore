@@ -18,7 +18,7 @@ from .tools import list_certificates
 from .config import settings
 from .llm import answer
 from .llm import extract_entry, extract_job_description_from_image, extract_update, friendly_error, present_admin_result, tailor_cv
-from .admin import apply_sync, bulk_manage_links, create_entry, delete_asset, delete_certificate, delete_entry, get_cv_base, get_profile, list_admin_resource, list_certificates as list_certificate_records, manage_content, preview_sync, render_cv, save_cv_base, update_entry, update_profile, upload_asset, upload_certificate
+from .admin import apply_sync, bulk_manage_links, create_entry, delete_asset, delete_certificate, delete_entry, get_cv_tailoring_context, get_profile, list_admin_resource, list_certificates as list_certificate_records, manage_content, preview_sync, render_current_cv, render_cv, update_entry, update_profile, upload_asset, upload_certificate
 from .formatting import telegram_html
 from .state import admin_result_context, awaiting_cv, awaiting_entry, conversation_history, last_cv_delivery, list_context, pending, pending_cv, pending_mutation, pending_sync, pending_upload, pending_upload_target, wizard_sessions
 from .admin_operations import execute_admin_operation as run_admin_operation
@@ -95,7 +95,7 @@ HELP_TEXT = (
     "• Free text - just ask anything. Questions are answered by AI grounded in the live "
     "portfolio data.\n"
     "• /cancel - cancel a pending change (portfolio owner only).\n"
-    "• /apply - recheck and apply a pending CV proposal after the base CV changes.\n"
+    "• /apply - rebuild a pending CV proposal after portfolio data changes.\n"
     "\n"
     "<b>Portfolio owner</b>\n"
     "• /manage - edit profile, projects, links, skills, education, bucket list or "
@@ -130,11 +130,11 @@ async def help_command(message: types.Message):
 
 @dispatcher.message(Command("apply"))
 async def apply_command(message: types.Message):
-    """Reconcile a pending CV proposal with the current base CV.
+    """Reconcile a pending CV proposal with the current portfolio records.
 
-    Rendering is protected by a base revision check. If the base CV changed
-    while the proposal was waiting for approval, regenerate the proposal
-    against the current base so the owner can review it again.
+    Rendering is protected by a portfolio revision check. If portfolio data changed
+    while the proposal was waiting for approval, regenerate it from the current
+    portfolio records so the owner can review it again.
     """
     if not is_admin(message):
         await message.answer("This command is restricted to the portfolio owner.")
@@ -147,7 +147,7 @@ async def apply_command(message: types.Message):
     await prepare_cv_patch(
         message,
         job_description,
-        "The base CV changed while this proposal was pending. Rebuild the proposal using the current base CV and show the updated proposed changes for approval.",
+    "Portfolio data changed while this proposal was pending. Rebuild it using the current portfolio records and show the updated proposed changes for approval.",
     )
 
 
@@ -216,6 +216,7 @@ register_callbacks(dispatcher, {
     "manage_content": manage_content,
     "bulk_manage_links": bulk_manage_links,
     "render_cv": render_cv,
+    "render_current_cv": render_current_cv,
     "cv_filename": cv_filename,
     "present_admin_result": present_admin_result,
     "telegram_html": telegram_html,
@@ -236,7 +237,6 @@ register_upload_handler(dispatcher, {
     "bot": bot,
     "extract_job_description_from_image": extract_job_description_from_image,
     "prepare_cv_patch": prepare_cv_patch,
-    "save_cv_base": save_cv_base,
     "upload_certificate": upload_certificate,
     "upload_asset": upload_asset,
     "manage_content": manage_content,
@@ -254,7 +254,7 @@ register_upload_handler(dispatcher, {
 configure_cv_handlers({
     "pending_cv": pending_cv,
     "tailor_cv": tailor_cv,
-    "get_cv_base": get_cv_base,
+    "get_cv_tailoring_context": get_cv_tailoring_context,
     "format_cv_patch": format_cv_patch,
     "logger": logger,
     "html": html,
@@ -265,6 +265,7 @@ configure_cv_handlers({
     "types": types,
     "settings": settings,
     "friendly_error": friendly_error,
+    "render_current_cv": render_current_cv,
 })
 
 
@@ -282,6 +283,7 @@ register_message_handlers(dispatcher, {
     "tailor_cv": tailor_cv,
     "apply_sync": apply_sync,
     "render_cv": render_cv,
+    "render_current_cv": render_current_cv,
     "send_cv": send_cv,
     "deliver_certificates": deliver_certificates,
     "last_cv_delivery": last_cv_delivery,
