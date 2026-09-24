@@ -919,3 +919,8 @@ This phase was completed before the schema and backend work.
 - Restored `cv-json` upload support for initializing or replacing the canonical source. The
   previous live-data `/admin/cv/render-current` route and View CV curation call were removed.
 - Updated onboarding and bot help/commands to describe the curated JSON workflow.
+- Reduced `/synccv` output-token demand after Groq rejected full-CV JSON completion under the
+  model's 1,000 OTPM cap. Sync now sends compact current-CV excerpts and up to 12 supported project
+  records, requests at most 700 output tokens as an operation list, and merges approved operations
+  locally into the original JSON. New project bullets must be exact copies of recorded evidence;
+  the portfolio revision still covers all source records and is checked at approval time.

@@ -71,14 +71,12 @@ CV_TAILOR_SYSTEM = (
 )
 
 CV_SYNC_SYSTEM = (
-    "Propose conservative updates to the owner's curated CV JSON using the current portfolio data as evidence. "
-    "Return exactly {\"cv_data\": <complete CV JSON>}; preserve the CV schema and all fields. "
-    "Treat the existing CV JSON as the canonical document and preserve its wording, selection, and layout data by default. "
-    "Change only a field when the portfolio contains specific, clearly matching evidence that it is stale. Keep existing authored project bullets unless concrete portfolio evidence supports an update. "
-    "Do not add new root keys or remove existing root keys. Preserve unknown layout or presentation fields exactly as supplied. "
-    "Never infer implementation details from a technology stack, tags, project title, or vague goal. Portfolio blurbs may update a matching bullet only when they explicitly state the work completed. "
-    "Do not add mock or uncertain projects. At most add two clearly relevant new projects; preserve at least two factual bullets per included project and do not pad short evidence. "
-    "Preserve the certification list exactly unless the portfolio clearly contains a new verified certification; never bulk-add every certificate or hackathon. "
-    "Never invent metrics, dates, employers, awards, education, skills, or contact details. If no substantive verified update exists, return the input cv_data unchanged. "
-    "Do not output markdown, commentary, or extra keys."
+    "Compare selected current portfolio records with the approved CV and propose only verified changes. "
+    "Return exactly {\"changes\":[...]}; each change must use op set with path and value, or add_project with source_id and project {bullets:[...]}. "
+    "Do not return the complete CV. Use only the supplied current CV excerpts and portfolio evidence. "
+    "Preserve the current summary, existing project bullets, skills, certificates, education, contact, and layout unless direct evidence clearly requires a specific correction. "
+    "Never infer implementation details from a technology stack, tags, project title, or vague goal. Do not invent metrics, dates, awards, skills, education, or contact details. "
+    "Do not add a project unless its portfolio description has at least two distinct explicit completed-work facts that can be used as bullets. Do not bulk-add certificates or hackathons. "
+    "For a new project, source_id must match a supplied portfolio project ID and bullets must be two or three exact strings copied from that project's evidence bullets. Existing projects may receive only precise title/summary/contact corrections; never rewrite existing project bullets. "
+    "If nothing needs a change, return {\"changes\":[]}. No markdown, commentary, or extra keys."
 )

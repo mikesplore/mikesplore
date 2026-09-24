@@ -141,25 +141,92 @@ async def tailor_cv(job_description: str, existing_patch: dict | None = None, re
     raise ValueError("CV tailoring did not produce a final patch after searching")
 
 
-async def sync_cv_data(base_data: dict, portfolio_context: dict) -> dict:
-    """Make one conservative LLM proposal; persistence requires owner approval."""
+async def sync_cv_data(base_data: dict, portfolio_context: dict) -> list[dict]:
+    """Ask for a small change set, then apply it locally to the approved CV."""
+    import copy
+
+    projects = portfolio_context.get("projects", [])
+    # Send compact evidence, prioritizing projects not already represented in the CV.
+    existing_names = {str(p.get("name", "")).casefold() for p in base_data.get("projects", []) if isinstance(p, dict)}
+    candidates = sorted(projects, key=lambda p: (str(p.get("name", "")).casefold() in existing_names, not p.get("featured", False)))[:12]
+    cv_excerpt = {
+        "name": base_data.get("name"), "title": base_data.get("title"), "summary": base_data.get("summary"),
+        "contact": base_data.get("contact"),
+        "projects": [{"name": p.get("name"), "date": p.get("date"), "bullets": (p.get("bullets") or [])[:4]} for p in base_data.get("projects", [])[:8]],
+        "skills": base_data.get("skills", [])[:8], "certifications": base_data.get("certifications", [])[:10],
+        "education": base_data.get("education", [])[:5],
+    }
+    evidence = [{key: p.get(key) for key in ("id", "name", "date", "featured", "stack", "bullets")} for p in candidates if len(p.get("bullets") or []) >= 2]
+    prompt_data = {"approved_cv": cv_excerpt, "portfolio_projects": evidence,
+                   "portfolio_skills": portfolio_context.get("skills", [])[:8],
+                   "portfolio_certifications": portfolio_context.get("certifications", [])[:15],
+                   "portfolio_education": portfolio_context.get("education", [])[:5]}
+    portfolio_revision = portfolio_context.get("revision")
     completion = await complete(
         model=settings.groq_model,
         messages=[
             {"role": "system", "content": CV_SYNC_SYSTEM},
-            {"role": "user", "content": "CURRENT APPROVED CV JSON:\n" + json.dumps(base_data, ensure_ascii=False) + "\n\nLIVE PORTFOLIO EVIDENCE:\n" + json.dumps(portfolio_context, ensure_ascii=False)},
+            {"role": "user", "content": json.dumps(prompt_data, ensure_ascii=False)},
         ],
         response_format={"type": "json_object"},
-        max_tokens=5000,
+        max_tokens=700,
         temperature=0,
     )
     content = (completion.choices[0].message.content or "").strip()
     if content.startswith("```"):
         content = content.removeprefix("```").removeprefix("json").removesuffix("```").strip()
     result = json.loads(content or "{}")
-    if not isinstance(result, dict) or set(result) != {"cv_data"} or not isinstance(result["cv_data"], dict):
-        raise ValueError("The CV sync proposal did not contain a complete CV JSON object.")
-    return result["cv_data"]
+    if not isinstance(result, dict) or set(result) != {"changes"} or not isinstance(result["changes"], list):
+        raise ValueError("The CV sync proposal did not contain a valid change list.")
+    candidate = copy.deepcopy(base_data)
+    current_projects = candidate.get("projects", [])
+    portfolio_by_id = {str(project.get("id")): project for project in projects if project.get("id")}
+    seen_changes = 0
+    for change in result["changes"][:10]:
+        if not isinstance(change, dict):
+            raise ValueError("A CV sync change was not an object.")
+        operation = change.get("op")
+        if operation == "set":
+            path = change.get("path")
+            value = change.get("value")
+            if not isinstance(path, str) or not isinstance(value, str):
+                raise ValueError("A CV sync field update had invalid path or value.")
+            parts = path.split(".")
+            if len(parts) == 1 and parts[0] in {"title", "summary"}:
+                candidate[parts[0]] = value
+                seen_changes += 1
+            elif len(parts) == 2 and parts[0] == "contact" and parts[1] in candidate.get("contact", {}):
+                candidate["contact"][parts[1]] = value
+                seen_changes += 1
+            else:
+                raise ValueError("The CV sync proposed an unsupported field path.")
+        elif operation == "add_project":
+            source_id = str(change.get("source_id", ""))
+            source = portfolio_by_id.get(source_id)
+            if not source or len(source.get("bullets") or []) < 2:
+                raise ValueError("The CV sync proposed a project without sufficient portfolio evidence.")
+            if any(str(p.get("name", "")).casefold() == str(source.get("name", "")).casefold() for p in current_projects):
+                continue
+            proposed = change.get("project")
+            if not isinstance(proposed, dict) or not isinstance(proposed.get("bullets"), list):
+                raise ValueError("The CV sync proposed an invalid project.")
+            if len(proposed["bullets"]) < 2 or len(proposed["bullets"]) > 3:
+                raise ValueError("New CV projects need two or three bullets.")
+            evidence_bullets = [str(bullet).strip() for bullet in source.get("bullets", []) if str(bullet).strip()]
+            if any(not isinstance(bullet, str) or not bullet.strip() or bullet.strip() not in evidence_bullets for bullet in proposed["bullets"]):
+                raise ValueError("The CV sync proposed invalid project bullets.")
+            stack = source.get("stack") or []
+            if isinstance(stack, str):
+                stack = [item.strip() for item in stack.split(",") if item.strip()]
+            current_projects.append({"name": source["name"], "date": source.get("date") or "", "stack": stack, "bullets": proposed["bullets"], "id": source_id})
+            seen_changes += 1
+        elif operation == "remove_project":
+            raise ValueError("Automatic project removal is not supported; edit the approved CV directly.")
+        else:
+            raise ValueError("The CV sync proposed an unsupported operation.")
+    if len(result["changes"]) > 10:
+        raise ValueError("The CV sync proposed too many changes; run /synccv again for a smaller proposal.")
+    return {"changes": result["changes"], "candidate": candidate, "change_count": seen_changes, "portfolio_revision": portfolio_revision}
 
 
 async def propose_role_policies() -> list[dict]:

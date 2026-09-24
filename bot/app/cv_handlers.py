@@ -154,18 +154,19 @@ async def prepare_cv_sync(message: types.Message):
     try:
         base = await get_cv_base()
         portfolio = await get_cv_portfolio_context()
-        candidate = await sync_cv_data(base["data"], portfolio["data"])
+        proposal = await sync_cv_data(base["data"], portfolio["data"])
+        candidate = proposal["candidate"]
         if set(candidate) != set(base["data"]):
             raise ValueError("The CV sync proposal changed the CV JSON shape. No changes were saved.")
         candidate = await validate_cv_base(candidate)
         diff = format_cv_sync_diff(base["data"], candidate)
         if candidate == base["data"]:
-            await status.edit_text(html.unescape(diff))
+            await status.edit_text("No verified updates were found. The approved CV JSON is already current.")
             return
         pending_cv_sync[message.from_user.id] = {
             "data": candidate,
             "base_revision": base["revision"],
-            "portfolio_revision": portfolio["revision"],
+        "portfolio_revision": proposal["portfolio_revision"],
         }
         await status.edit_text(diff, reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
             InlineKeyboardButton(text="Save CV updates", callback_data="cv-sync:save"),
@@ -177,9 +178,9 @@ async def prepare_cv_sync(message: types.Message):
             await status.edit_text("No approved CV JSON is configured. Upload the curated CV JSON file first, then run /synccv.")
         else:
             await status.edit_text("I couldn't prepare a CV sync proposal. Please check the backend and try again.")
-    except Exception:
+    except Exception as error:
         logger.exception("CV sync proposal failed")
-        await status.edit_text("I couldn't prepare a CV sync proposal. Please try again shortly.")
+        await status.edit_text(friendly_error(error, "I couldn't prepare a CV sync proposal. Please try again shortly."))
 
 
 def format_cv_patch(patch: dict) -> str:

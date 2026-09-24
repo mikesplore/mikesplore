@@ -21,6 +21,12 @@ def get_cv_base(db: Session = Depends(get_db)):
 @router.get("/admin/cv/portfolio-context", dependencies=[Depends(require_service_key)])
 def get_cv_portfolio_context(db: Session = Depends(get_db)):
     data = cv_service.build_cv_data(db)
+    data["projects"] = [
+        project for project in data.get("projects", [])
+        if len(project.get("bullets") or []) >= 2
+    ]
+    data["certifications"] = data.get("certifications", [])[:15]
+    data["skills"] = data.get("skills", [])[:8]
     return {"data": data, "revision": cv_service.cv_base_hash(data)}
 
 
