@@ -230,6 +230,20 @@ async def sync_cv_data(base_data: dict, portfolio_context: dict) -> list[dict]:
         if isinstance(item, str) and item.strip()
     ]
 
+    def certificate_tokens(value: str) -> set[str]:
+        ignored = {"certificate", "certificates", "certification", "certifications", "participation", "of", "the", "award"}
+        return {
+            part[:-1] if len(part) > 4 and part.endswith("s") else part
+            for part in re.sub(r"[^a-z0-9]+", " ", value.casefold()).split()
+            if len(part) > 2 and part not in ignored
+        }
+
+    def is_certificate_present(title: str, existing: list[str]) -> bool:
+        title_tokens = certificate_tokens(title)
+        if not title_tokens:
+            return any(str(value).strip().casefold() == title.strip().casefold() for value in existing)
+        return any(title_tokens.issubset(certificate_tokens(str(value))) for value in existing)
+
     def profile_link_for_change(change: dict) -> dict | None:
         requested = change.get("profile_id") or change.get("source_id")
         profile_payload = change.get("profile") if isinstance(change.get("profile"), dict) else {}
@@ -362,6 +376,18 @@ async def sync_cv_data(base_data: dict, portfolio_context: dict) -> list[dict]:
         else:
             logger.warning("Rejected CV sync operation=%r fields=%s", operation, sorted(str(key) for key in change.keys()))
             raise ValueError("The CV sync proposed an unsupported operation.")
+    # Certificate table records are authoritative, so reconcile them locally
+    # instead of relying on the model to remember or rewrite certificate facts.
+    added_certificates = []
+    for title in portfolio_context.get("certifications", []):
+        if not isinstance(title, str) or not title.strip():
+            continue
+        if not is_certificate_present(title, candidate.get("certifications", [])):
+            candidate.setdefault("certifications", []).append(title)
+            added_certificates.append(title)
+    seen_changes += len(added_certificates)
+    if added_certificates:
+        logger.info("CV sync added %d verified certificate-table records", len(added_certificates))
     if len(result["changes"]) > 10:
         raise ValueError("The CV sync proposed too many changes; run /synccv again for a smaller proposal.")
     return {"changes": result["changes"], "candidate": candidate, "change_count": seen_changes, "portfolio_revision": portfolio_revision}

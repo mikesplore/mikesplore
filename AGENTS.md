@@ -978,3 +978,8 @@ This phase was completed before the schema and backend work.
   `/synccv` was switched back to Groq only. It keeps the compact JSON operation-list prompt and
   local evidence validation, caps output at 350 tokens, sets a 30-second request timeout, and uses
   the shared Groq usage/error path. Removed Gemini-only configuration and dependency references.
+- Comparing the public `/certificates` endpoint with the approved CV showed five visible database
+  certificates but only two rendered. `/synccv` now reconciles missing certificate titles locally
+  from the verified certificate-table context, using normalized token matching to avoid duplicating
+  entries already represented with extra issuer/result/date wording. The model does not author or
+  invent certificate claims.
