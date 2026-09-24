@@ -120,6 +120,14 @@ def test_validate_value_text_and_textarea():
     assert value is None and error
 
 
+def test_about_prompt_escapes_html_examples_for_telegram():
+    session = {"resource": "profile", "mode": "update", "current": {}, "step": "value"}
+    prompt = wizard._prompt_value_text(session, wizard.field_by_key("profile", "about"))
+    assert "&lt;p&gt;" in prompt
+    assert "&lt;h2&gt;" in prompt
+    assert "<p>" not in prompt
+
+
 def test_validate_value_url_and_slug():
     assert wizard.validate_value({"type": "url"}, "https://github.com/a") == ("https://github.com/a", None)
     _, error = wizard.validate_value({"type": "url"}, "github.com/a")

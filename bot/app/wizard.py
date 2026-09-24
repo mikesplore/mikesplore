@@ -73,7 +73,9 @@ VALUE_HINTS = {
 }
 
 FIELD_VALUE_HINTS = {
-    "about": "HTML is supported. Use <p>…</p> for paragraphs and <h2>…</h2> for section headings.",
+    # Prompt messages use Telegram HTML, whose parser rejects tags like <p>.
+    # Escape examples so they display literally instead of being parsed by Telegram.
+    "about": "HTML is supported. Use &lt;p&gt;…&lt;/p&gt; for paragraphs and &lt;h2&gt;…&lt;/h2&gt; for section headings.",
 }
 
 FIELD_DESCRIPTIONS = {
