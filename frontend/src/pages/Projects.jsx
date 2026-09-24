@@ -3,6 +3,15 @@ import { ExternalLink, Github } from 'lucide-react';
 import { fetchProjects } from '../lib/portfolioApi';
 import EmptyState from '../components/EmptyState';
 
+const externalUrl = (value) => {
+  try {
+    const url = new URL(value);
+    return ['http:', 'https:'].includes(url.protocol) ? url.href : null;
+  } catch {
+    return null;
+  }
+};
+
 const Projects = () => {
   const [projects, setProjects] = useState([]);
   const [status, setStatus] = useState('loading');
@@ -19,7 +28,10 @@ const Projects = () => {
   if (projects.length === 0) return <EmptyState title="No projects to show yet">Projects will appear here once they are added to the portfolio.</EmptyState>;
   return (
     <ul className="divide-y divide-divider rounded-xl bg-elevated overflow-hidden">
-      {projects.map((project) => (
+      {projects.map((project) => {
+        const repoUrl = externalUrl(project.links?.repo);
+        const demoUrl = externalUrl(project.links?.demo);
+        return (
         <li key={project.id}>
           <div className="group flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:gap-4 sm:p-5 transition-colors hover:bg-accent/5">
             <div className="h-36 w-full shrink-0 overflow-hidden rounded-lg bg-elevated sm:h-24 sm:w-24">
@@ -44,46 +56,39 @@ const Projects = () => {
 
               <p className="mt-1.5 text-sm leading-relaxed text-muted">{project.summary}</p>
 
-              {(project.links?.repo || project.links?.demo) && (
+              {(repoUrl || demoUrl) && (
                 <div className="mt-1.5 flex flex-wrap items-center gap-3 text-xs font-medium">
-                  {project.links?.repo && (
-                    <span
+                  {repoUrl && (
+                    <a
+                      href={repoUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
                       className="inline-flex items-center gap-1 text-teal hover:opacity-80"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        window.open(project.links.repo, '_blank', 'noopener,noreferrer');
-                      }}
-                      role="link"
-                      tabIndex={0}
                       aria-label={`${project.title} GitHub repository`}
                     >
                       <Github className="h-3.5 w-3.5" aria-hidden="true" />
                       GitHub
-                    </span>
+                    </a>
                   )}
-                  {project.links?.demo && (
-                    <span
+                  {demoUrl && (
+                    <a
+                      href={demoUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
                       className="inline-flex items-center gap-1 text-accent hover:text-accent/80"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        window.open(project.links.demo, '_blank', 'noopener,noreferrer');
-                      }}
-                      role="link"
-                      tabIndex={0}
                       aria-label={`${project.title} live demo`}
                     >
                       <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
                       Live
-                    </span>
+                    </a>
                   )}
                 </div>
               )}
             </div>
           </div>
         </li>
-      ))}
+        );
+      })}
     </ul>
   );
 };
