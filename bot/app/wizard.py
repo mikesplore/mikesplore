@@ -488,7 +488,10 @@ def field_picker_text(session: dict) -> str:
         label = session["record"].get("label")
         if label:
             target = f"{spec['label']}: {label}"
-    return f"<b>✏️ Manage {html.escape(target, quote=False)}</b>\nPick a field to change (✓ marks a pending change)."
+    return (
+        f"<b>✏️ Manage {html.escape(target, quote=False)}</b>\n"
+        "Pick any fields to change; ✓ marks staged edits. Tap Finish &amp; save when you're done."
+    )
 
 
 def resource_keyboard() -> types.InlineKeyboardMarkup:
@@ -787,10 +790,12 @@ async def show_field_picker(message: types.Message, session: dict, edit: bool = 
     if edit:
         try:
             await message.edit_text(text, reply_markup=kb)
+            session["picker_message"] = message
             return
         except Exception:
             pass
-    await message.answer(text, reply_markup=kb)
+    sent = await message.answer(text, reply_markup=kb)
+    session["picker_message"] = sent or message
 
 
 async def show_summary(message: types.Message, session: dict) -> None:
@@ -832,7 +837,8 @@ async def handle_wizard_text(message: types.Message, session: dict) -> bool:
                 await prompt_value(message, session, next_field)
             return True
     session["step"] = "field"
-    await show_summary(message, session)
+    picker = session.get("picker_message")
+    await show_field_picker(picker or message, session, edit=bool(picker))
     return True
 
 
@@ -1052,7 +1058,8 @@ async def handle_wizard_callback(callback) -> None:
             await _prompt_field(message, session, field_by_key(session["resource"], session["pending_field"]))
         else:
             session["step"] = "field"
-            await show_summary(message, session)
+            picker = session.get("picker_message")
+            await show_field_picker(picker or message, session, edit=bool(picker))
         return
 
     if action == "create":
@@ -1087,7 +1094,7 @@ async def handle_wizard_callback(callback) -> None:
                 await _prompt_field(message, session, next_field)
                 return
         session["step"] = "field"
-        await show_summary(message, session)
+        await show_field_picker(message, session, edit=True)
         return
 
     if action == "field":
@@ -1097,6 +1104,7 @@ async def handle_wizard_callback(callback) -> None:
             await callback.answer("Unknown field", show_alert=True)
             return
         session["pending_field"] = key
+        session["picker_message"] = message
         if field["type"] == "media":
             session["step"] = "media"
             await prompt_media(message, field)
@@ -1107,7 +1115,7 @@ async def handle_wizard_callback(callback) -> None:
 
     if action == "yes":
         session["step"] = "field"
-        await show_field_picker(message, session, edit=True)
+        await show_field_picker(session.get("picker_message") or message, session, edit=True)
         return
 
     if action == "done":
@@ -1211,4 +1219,5 @@ async def media_upload_complete(message: types.Message) -> None:
     if field:
         session.setdefault("media_done", []).append(field["label"])
     session["step"] = "field"
-    await show_summary(message, session)
+    picker = session.get("picker_message")
+    await show_field_picker(picker or message, session, edit=bool(picker))

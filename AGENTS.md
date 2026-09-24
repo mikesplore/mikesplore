@@ -847,3 +847,13 @@ This phase was completed before the schema and backend work.
 - Fixed the blank project detail page caused by rendering the JSONB `details` object as a React
   child and calling string methods on absent metadata. Detail mapping now separates textual overview
   and technical details and renders optional platform, type, and status fields safely.
+
+### Staged Telegram manage editing (2026-09-24)
+
+- Changed `/manage` so completing a field edit returns to the same field picker, where staged values
+  remain marked with a check. Users can continue editing fields and only write changes by pressing
+  **Finish & save**. Boolean/select edits and media-upload completion return to that picker too.
+- This replaces the prior per-field summary and “Edit another field” loop. Create flows continue
+  through their required-field prompts, then use the same staged picker before saving.
+- Added wizard regression tests for text and boolean edits returning to the picker without writing.
+  Wizard and admin-operation tests pass (33 total).

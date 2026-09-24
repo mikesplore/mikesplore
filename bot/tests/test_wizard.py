@@ -20,6 +20,7 @@ class FakeMessage:
 
     async def answer(self, text, reply_markup=None):
         self.answered.append((text, reply_markup))
+        return self
 
     async def edit_text(self, text, reply_markup=None):
         self.edited.append((text, reply_markup))
@@ -304,6 +305,29 @@ def test_handle_wizard_text_stores_validation_and_returns_true():
     assert message.answered and message.answered[0][0]  # summary posted
 
 
+def test_handle_wizard_text_returns_to_picker_with_staged_value():
+    _configure()
+    picker = FakeMessage()
+    message = FakeMessage()
+    message.text = "New Name"
+    session = _session(
+        step="value",
+        pending_field="name",
+        current={"name": "Old Name"},
+        picker_message=picker,
+    )
+
+    handled = asyncio.run(wizard.handle_wizard_text(message, session))
+
+    assert handled and session["pending"]["name"] == "New Name"
+    assert picker.edited
+    labels = [button.text for row in picker.edited[-1][1].inline_keyboard for button in row]
+    assert any("✓ Name → New Name" in label for label in labels)
+    callbacks = [button.callback_data for row in picker.edited[-1][1].inline_keyboard for button in row]
+    assert "mng:done" in callbacks
+    assert not message.answered
+
+
 def test_handle_wizard_text_rejects_invalid_value():
     _configure()
     message = FakeMessage()
@@ -345,6 +369,27 @@ def test_cancel_callback_clears_session_and_edits_message():
     asyncio.run(wizard.handle_wizard_callback(callback))
     assert 1 not in sessions
     assert callback.message.edited and callback.message.edited[0][0] == "Cancelled."
+
+
+def test_boolean_choice_returns_to_picker_without_saving():
+    updates = []
+
+    async def update_profile(payload):
+        updates.append(payload)
+
+    picker = FakeMessage()
+    session = _session(resource="links", step="field", picker_message=picker)
+    _configure({"wizard_sessions": {1: session}, "update_profile": update_profile})
+    callback = FakeCallback("mng:bval:is_visible:0")
+    callback.message = picker
+
+    asyncio.run(wizard.handle_wizard_callback(callback))
+
+    assert session["pending"]["is_visible"] is False
+    assert picker.edited
+    labels = [button.text for row in picker.edited[-1][1].inline_keyboard for button in row]
+    assert any("✓ Visible → No" in label for label in labels)
+    assert not updates
 
 
 def test_finish_save_applies_ops_and_clears_session():
