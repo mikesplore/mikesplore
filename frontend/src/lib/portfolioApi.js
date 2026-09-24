@@ -1,4 +1,34 @@
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const CACHE_TTL_MS = 30_000;
+const MAX_CACHE_ENTRIES = 100;
+const responseCache = new Map();
+
+const clone = (value) => JSON.parse(JSON.stringify(value));
+
+function readCache(key) {
+  const cached = responseCache.get(key);
+  if (!cached) return null;
+  if (cached.expiresAt <= Date.now()) {
+    responseCache.delete(key);
+    return null;
+  }
+  // Refresh insertion order so frequently used pages stay in the bounded cache.
+  responseCache.delete(key);
+  responseCache.set(key, cached);
+  return clone(cached.value);
+}
+
+function writeCache(key, value) {
+  responseCache.delete(key);
+  responseCache.set(key, { value: clone(value), expiresAt: Date.now() + CACHE_TTL_MS });
+  while (responseCache.size > MAX_CACHE_ENTRIES) {
+    responseCache.delete(responseCache.keys().next().value);
+  }
+}
+
+export function clearPortfolioCache() {
+  responseCache.clear();
+}
 
 const content = (entry, key) => entry.content_blocks?.[key] || entry[key] || [];
 
@@ -25,16 +55,27 @@ const toTimelineEntry = (rawEntry) => {
 };
 
 export async function fetchTimelineEntries(page = 1, signal) {
-  const response = await fetch(`${API_BASE_URL}/entries?content_type=article&page=${page}&page_size=10`, { signal });
-  if (!response.ok) throw new Error(`Portfolio API request failed (${response.status})`);
-  const entries = await response.json();
-  return { items: entries.map(toTimelineEntry), total: Number(response.headers.get('X-Total-Count') || entries.length) };
+  const path = `/entries?content_type=article&page=${page}&page_size=10`;
+  const result = await fetchJson(path, signal, true);
+  return { items: result.data.map(toTimelineEntry), total: result.total };
 }
 
-async function fetchJson(path, signal) {
-  const response = await fetch(`${API_BASE_URL}${path}`, { signal });
+async function fetchJson(path, signal, includeTotal = false) {
+  const url = `${API_BASE_URL}${path}`;
+  const cacheKey = `${includeTotal ? 'total:' : ''}${url}`;
+  if (signal?.aborted) throw new DOMException('Request aborted', 'AbortError');
+  const cached = readCache(cacheKey);
+  if (cached !== null) return cached;
+
+  const response = await fetch(url, { signal });
   if (!response.ok) throw new Error(`Portfolio API request failed (${response.status})`);
-  return response.json();
+  const data = await response.json();
+  const result = includeTotal
+    ? { data, total: Number(response.headers.get('X-Total-Count') || data.length) }
+    : data;
+  // A component that unmounted during the request must not repopulate the cache.
+  if (!signal?.aborted) writeCache(cacheKey, result);
+  return clone(result);
 }
 
 export function fetchBucketList(signal) {

@@ -857,3 +857,11 @@ This phase was completed before the schema and backend work.
   through their required-field prompts, then use the same staged picker before saving.
 - Added wizard regression tests for text and boolean edits returning to the picker without writing.
   Wizard and admin-operation tests pass (33 total).
+
+### Frontend API response caching (2026-09-24)
+
+- Added a shared 30-second cache for successful portfolio GET responses, covering profile,
+  projects, collections, counts, and paginated Timeline reads. The cache is capped at 100 entries
+  with least-recently-used eviction, returns cloned values so page code cannot mutate cached data,
+  and skips writes when a request has been aborted. Exported `clearPortfolioCache()` for future
+  admin or mutation flows that need immediate invalidation.
