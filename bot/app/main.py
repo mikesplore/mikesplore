@@ -67,9 +67,11 @@ async def register_commands():
         types.BotCommand(command="start", description="Welcome and portfolio menu"),
         types.BotCommand(command="menu", description="Browse the portfolio with buttons"),
         types.BotCommand(command="help", description="How to use this bot"),
+        # Keep it in Telegram's default command suggestions too. The handler
+        # still enforces the owner-only restriction, so showing it is safe.
+        types.BotCommand(command="manage", description="Edit portfolio content (owner only)"),
     ]
     admin_commands = public_commands + [
-        types.BotCommand(command="manage", description="Edit portfolio content with buttons"),
         types.BotCommand(command="cancel", description="Cancel a pending change"),
         types.BotCommand(command="apply", description="Recheck and apply a pending CV proposal"),
     ]
