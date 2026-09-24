@@ -96,8 +96,8 @@ FIELD_DESCRIPTIONS = {
 }
 
 SUB_LABELS = {
-    "technologies": "🔧 Technologies",
-    "repositories": "📦 Repositories",
+    "technologies": "Technologies",
+    "repositories": "Repositories",
 }
 
 # Resource aliases accepted by /manage so the command reads naturally.
@@ -477,7 +477,7 @@ def render_summary(session: dict) -> str:
     elif not session.get("media_done"):
         lines.append("<i>No changes yet.</i>")
     for media_label in session.get("media_done", []):
-        lines.append(f"• {html.escape(media_label, quote=False)}: ✅ attached (saved immediately)")
+        lines.append(f"• {html.escape(media_label, quote=False)}: attached (saved immediately)")
     return "\n".join(lines)
 
 
@@ -489,8 +489,8 @@ def field_picker_text(session: dict) -> str:
         if label:
             target = f"{spec['label']}: {label}"
     return (
-        f"<b>✏️ Manage {html.escape(target, quote=False)}</b>\n"
-        "Pick any fields to change; ✓ marks staged edits. Tap Finish &amp; save when you're done."
+        f"<b>Manage {html.escape(target, quote=False)}</b>\n"
+        "Pick any fields to change; [edited] marks staged changes. Tap Finish &amp; save when you're done."
     )
 
 
@@ -537,7 +537,7 @@ def field_keyboard(session: dict, media: dict | None = None) -> types.InlineKeyb
             continue
         if key in pending:
             value = format_value(pending[key]) or "empty"
-            label = f"✓ {field['label']} → {truncate(value, MAX_BUTTON_TEXT - 4)}"
+            label = f"[edited] {field['label']} → {truncate(value, MAX_BUTTON_TEXT - 9)}"
         else:
             hint = format_value(current.get(key))
             if not hint:
@@ -548,10 +548,10 @@ def field_keyboard(session: dict, media: dict | None = None) -> types.InlineKeyb
         for sub in spec.get("subs", []):
             rows.append([types.InlineKeyboardButton(text=SUB_LABELS[sub], callback_data=f"mng:sub:{sub}")])
     if spec["kind"] == "collection" and session.get("mode") == "update":
-        rows.append([types.InlineKeyboardButton(text="🗑  Delete this record", callback_data="mng:delete")])
+        rows.append([types.InlineKeyboardButton(text="Delete this record", callback_data="mng:delete")])
     rows.append(
         [
-            types.InlineKeyboardButton(text="💾 Finish & save", callback_data="mng:done"),
+            types.InlineKeyboardButton(text="Finish & save", callback_data="mng:done"),
             types.InlineKeyboardButton(text="Cancel", callback_data="mng:cancel"),
         ]
     )
@@ -561,9 +561,9 @@ def field_keyboard(session: dict, media: dict | None = None) -> types.InlineKeyb
 def summary_keyboard() -> types.InlineKeyboardMarkup:
     return types.InlineKeyboardMarkup(
         inline_keyboard=[
-            [types.InlineKeyboardButton(text="✏️ Edit another field", callback_data="mng:yes")],
+            [types.InlineKeyboardButton(text="Edit another field", callback_data="mng:yes")],
             [
-                types.InlineKeyboardButton(text="💾 Finish & save", callback_data="mng:done"),
+                types.InlineKeyboardButton(text="Finish & save", callback_data="mng:done"),
                 types.InlineKeyboardButton(text="Cancel", callback_data="mng:cancel"),
             ],
         ]
@@ -624,7 +624,7 @@ def _prompt_value_text(session: dict, field: dict) -> str:
     if session.get("mode") == "create" and session.get("create_queue"):
         total = len(spec.get("create_queue") or [])
         done = total - len(session["create_queue"]) + 1
-        lines.insert(0, f"🆕 <b>{html.escape(spec['label'], quote=False)}</b> - field {done} of {total}")
+        lines.insert(0, f"<b>New {html.escape(spec['label'], quote=False)}</b> - field {done} of {total}")
     current_text = format_value(current.get(field["key"]))
     if current_text:
         lines.append(f"Currently: <b>{html.escape(current_text, quote=False)}</b>")
@@ -684,7 +684,7 @@ async def prompt_select(message: types.Message, session: dict, field: dict) -> N
 
 async def prompt_media(message: types.Message, field: dict) -> None:
     await message.answer(
-        f"📎 <b>{field['label']}</b>\n\nSend the file as a photo or document and I'll attach it.",
+        f"<b>{field['label']}</b>\n\nSend the file as a photo or document and I'll attach it.",
         reply_markup=cancel_keyboard(),
     )
 
@@ -822,7 +822,7 @@ async def handle_wizard_text(message: types.Message, session: dict) -> bool:
         return False
     value, error = validate_value(field, message.text or "")
     if error:
-        await message.answer("❌ " + error + "\n\nTry again, or /cancel.")
+        await message.answer("Error: " + error + "\n\nTry again, or /cancel.")
         return True
     session.setdefault("pending", {})[field["key"]] = value
     if session.get("step") == "create":
@@ -847,7 +847,7 @@ async def show_sub_panel(message: types.Message, session: dict) -> None:
     kind = sub.get("kind")
     entry_id = (session.get("record") or {}).get("id")
     if kind == "technologies":
-        lines = ["<b>🔧 Technologies</b>"]
+        lines = ["<b>Technologies</b>"]
         try:
             technologies = await list_admin_resource("technologies")
             links = await list_admin_resource("entry-technologies", {"entry_id": str(entry_id)}) if entry_id else []
@@ -858,7 +858,7 @@ async def show_sub_panel(message: types.Message, session: dict) -> None:
             lines.append("I couldn't load the current technologies.")
         badge = "➕  Add technologies"
     elif kind == "repositories":
-        lines = ["<b>📦 Repositories</b>"]
+        lines = ["<b>Repositories</b>"]
         try:
             repositories = await list_admin_resource("repositories")
             repos = [r for r in repositories if entry_id and str(r.get("entry_id")) == str(entry_id)]
@@ -918,7 +918,7 @@ async def handle_wizard_sub_text(message: types.Message, session: dict) -> bool:
         await message.answer("Nothing could be added - check the format and try again, or go back to fields.")
     else:
         report = "\n".join("• " + html.escape(item, quote=False) for item in added)
-        await message.answer("✅ Added:\n" + report)
+        await message.answer("Added:\n" + report)
     session["step"] = "sub"
     await show_sub_panel(message, session)
     return True
@@ -969,11 +969,11 @@ async def finish_save(callback, session: dict) -> None:
                 session.pop("create_queue", None)
                 session["step"] = "field"
                 if callback.message:
-                    await callback.message.edit_text("✅ Project saved. Add technologies, repositories, or edit another field.", reply_markup=field_keyboard(session))
+                    await callback.message.edit_text("Project saved. Add technologies, repositories, or edit another field.", reply_markup=field_keyboard(session))
                 return
         wizard_sessions.pop(user_id, None)
         if callback.message:
-            await callback.message.edit_text("✅ Saved.")
+            await callback.message.edit_text("Saved.")
     except httpx.HTTPStatusError as error:
         logger.exception("Wizard finish rejected by the backend")
         if callback.message:
@@ -1133,7 +1133,7 @@ async def handle_wizard_callback(callback) -> None:
         )
         if message:
             await message.answer(
-                f"⚠️ Delete <b>{html.escape(str(label), quote=False)}</b>?\nThis cannot be undone.",
+                f"Delete <b>{html.escape(str(label), quote=False)}</b>?\nThis cannot be undone.",
                 reply_markup=kb,
             )
         return
@@ -1153,7 +1153,7 @@ async def handle_wizard_callback(callback) -> None:
             )
             wizard_sessions.pop(user_id, None)
             if message:
-                await message.edit_text("🗑 Deleted.")
+                await message.edit_text("Deleted.")
         except httpx.HTTPStatusError as error:
             if message:
                 await message.edit_text(f"The backend rejected the deletion:\n{error.response.text[:400]}")

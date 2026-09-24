@@ -322,7 +322,7 @@ def test_handle_wizard_text_returns_to_picker_with_staged_value():
     assert handled and session["pending"]["name"] == "New Name"
     assert picker.edited
     labels = [button.text for row in picker.edited[-1][1].inline_keyboard for button in row]
-    assert any("✓ Name → New Name" in label for label in labels)
+    assert any("[edited] Name → New Name" in label for label in labels)
     callbacks = [button.callback_data for row in picker.edited[-1][1].inline_keyboard for button in row]
     assert "mng:done" in callbacks
     assert not message.answered
@@ -335,7 +335,7 @@ def test_handle_wizard_text_rejects_invalid_value():
     session = _session(resource="projects", step="value", pending_field="date", current={})
     handled = asyncio.run(wizard.handle_wizard_text(message, session))
     assert handled and "date" not in session.get("pending", {})
-    assert message.answered[0][0].startswith("❌")
+    assert message.answered[0][0].startswith("Error:")
 
 
 def test_handle_wizard_text_ignored_outside_value_steps():
@@ -388,7 +388,7 @@ def test_boolean_choice_returns_to_picker_without_saving():
     assert session["pending"]["is_visible"] is False
     assert picker.edited
     labels = [button.text for row in picker.edited[-1][1].inline_keyboard for button in row]
-    assert any("✓ Visible → No" in label for label in labels)
+    assert any("[edited] Visible → No" in label for label in labels)
     assert not updates
 
 
@@ -415,7 +415,7 @@ def test_finish_save_applies_ops_and_clears_session():
     asyncio.run(wizard.finish_save(callback, sessions[1]))
     assert applied_payloads == [{"name": "Mike"}]
     assert 1 not in sessions
-    assert callback.message.edited and callback.message.edited[0][0] == "✅ Saved."
+    assert callback.message.edited and callback.message.edited[0][0] == "Saved."
 
 
 def test_media_upload_complete_requires_active_media_step():
