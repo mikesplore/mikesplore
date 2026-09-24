@@ -26,10 +26,6 @@ function writeCache(key, value) {
   }
 }
 
-export function clearPortfolioCache() {
-  responseCache.clear();
-}
-
 const content = (entry, key) => entry.content_blocks?.[key] || entry[key] || [];
 
 export const normalizeEntry = (entry) => {

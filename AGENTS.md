@@ -863,5 +863,4 @@ This phase was completed before the schema and backend work.
 - Added a shared 30-second cache for successful portfolio GET responses, covering profile,
   projects, collections, counts, and paginated Timeline reads. The cache is capped at 100 entries
   with least-recently-used eviction, returns cloned values so page code cannot mutate cached data,
-  and skips writes when a request has been aborted. Exported `clearPortfolioCache()` for future
-  admin or mutation flows that need immediate invalidation.
+  and skips writes when a request has been aborted.
