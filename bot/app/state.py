@@ -9,6 +9,7 @@ pending_mutation: dict[int, tuple[str, str, dict | None]] = {}
 pending_sync: dict[int, tuple[str, list[dict], list[str]]] = {}
 awaiting_cv: set[int] = set()
 pending_cv: dict[int, tuple[dict, str, str, str]] = {}
+pending_cv_sync: dict[int, dict] = {}
 last_cv_delivery: dict[int, tuple[str, str]] = {}
 list_context: dict[int, tuple[str, int]] = {}
 admin_result_context: dict[int, dict] = {}

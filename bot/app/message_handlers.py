@@ -28,11 +28,20 @@ def register_message_handlers(dispatcher, dependencies):
                     pending_sync.pop(message.from_user.id, None)
                     awaiting_cv.discard(message.from_user.id)
                     pending_cv.pop(message.from_user.id, None)
+                    pending_cv_sync.pop(message.from_user.id, None)
                     wizard_sessions.pop(message.from_user.id, None)
                     await message.answer("Cancelled.")
                     return
                 if message.text.strip().startswith("/"):
-                    await message.answer("Only /start, /menu, /help, /manage, and /cancel are available. Use /menu to browse the portfolio with buttons, or describe what you need in ordinary language.")
+                    # Commands are registered as specific aiogram handlers, but this
+                    # catch-all handler also matches them. Only reject unknown commands.
+                    command = message.text.split(maxsplit=1)[0].split("@", 1)[0].lower()
+                    if command in {"/start", "/menu", "/help", "/manage", "/apply", "/synccv", "/cancel"}:
+                        return
+                    await message.answer("Use /start, /menu, /help, /manage, /apply, /synccv, or /cancel. Use /menu to browse the portfolio, or describe what you need in ordinary language.")
+                    return
+                if message.from_user.id in pending_cv_sync:
+                    await message.answer("A CV sync proposal is waiting for review. Use its Save CV updates or Discard button, or /cancel.")
                     return
                 active_wizard = wizard_sessions.get(message.from_user.id)
                 if active_wizard:

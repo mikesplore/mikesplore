@@ -3,6 +3,8 @@
 import json
 import re
 
+from fastapi import HTTPException
+
 from sqlalchemy import cast, func, or_, select, String
 from sqlalchemy.orm import Session
 
@@ -21,7 +23,7 @@ from ..models import (
     SkillGroup,
     Technology,
 )
-from .cv import build_cv_data
+from .cv import get_cv_base
 
 
 def model_record(item) -> dict:
@@ -70,7 +72,12 @@ def admin_search(db: Session, q: str) -> list[dict]:
 
 
 def search_cv(db: Session, q: str) -> dict:
-    data = build_cv_data(db)
+    try:
+        data = get_cv_base(db)["data"]
+    except HTTPException as error:
+        if isinstance(error, HTTPException) and error.status_code == 404:
+            return {"matches": [], "total": 0}
+        raise
     text = json.dumps(data, ensure_ascii=False)
     terms = [word.lower() for word in re.findall(r"[a-z0-9]+", q.lower()) if len(word) > 2]
     if not terms or not all(term in text.lower() for term in terms):

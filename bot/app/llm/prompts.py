@@ -69,3 +69,16 @@ CV_TAILOR_SYSTEM = (
     "If the role is outside technology or primarily executive/people leadership, return {status:rejected,reason}. With a pending patch, treat a short affirmative reply such as yes, okay, that's okay, looks good, approve, confirmed, or confirm as approval and return exactly {\"action\":\"confirm\"}. "
     "If wording is unsupported, revise it to the closest verified wording; otherwise approve it. For any non-affirmative change request, return only the revised patch JSON. Never output analysis, reasoning, apologies, policy discussion, or commentary."
 )
+
+CV_SYNC_SYSTEM = (
+    "Propose conservative updates to the owner's curated CV JSON using the current portfolio data as evidence. "
+    "Return exactly {\"cv_data\": <complete CV JSON>}; preserve the CV schema and all fields. "
+    "Treat the existing CV JSON as the canonical document and preserve its wording, selection, and layout data by default. "
+    "Change only a field when the portfolio contains specific, clearly matching evidence that it is stale. Keep existing authored project bullets unless concrete portfolio evidence supports an update. "
+    "Do not add new root keys or remove existing root keys. Preserve unknown layout or presentation fields exactly as supplied. "
+    "Never infer implementation details from a technology stack, tags, project title, or vague goal. Portfolio blurbs may update a matching bullet only when they explicitly state the work completed. "
+    "Do not add mock or uncertain projects. At most add two clearly relevant new projects; preserve at least two factual bullets per included project and do not pad short evidence. "
+    "Preserve the certification list exactly unless the portfolio clearly contains a new verified certification; never bulk-add every certificate or hackathon. "
+    "Never invent metrics, dates, employers, awards, education, skills, or contact details. If no substantive verified update exists, return the input cv_data unchanged. "
+    "Do not output markdown, commentary, or extra keys."
+)

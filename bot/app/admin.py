@@ -52,6 +52,37 @@ async def get_cv_tailoring_context() -> dict:
         return response.json()
 
 
+async def get_cv_base() -> dict:
+    async with httpx.AsyncClient(base_url=settings.backend_url, timeout=15) as client:
+        response = await client.get("/admin/cv/base", headers={"X-Service-Api-Key": settings.service_api_key})
+        response.raise_for_status()
+        return response.json()
+
+
+async def get_cv_portfolio_context() -> dict:
+    async with httpx.AsyncClient(base_url=settings.backend_url, timeout=30) as client:
+        response = await client.get("/admin/cv/portfolio-context", headers={"X-Service-Api-Key": settings.service_api_key})
+        response.raise_for_status()
+        return response.json()
+
+
+async def validate_cv_base(data: dict) -> dict:
+    async with httpx.AsyncClient(base_url=settings.backend_url, timeout=15) as client:
+        response = await client.post("/admin/cv/base/validate", json=data, headers={"X-Service-Api-Key": settings.service_api_key})
+        response.raise_for_status()
+        return response.json()
+
+
+async def save_cv_base(data: dict, base_revision: str | None = None, portfolio_revision: str | None = None) -> dict:
+    payload = data if base_revision is None and portfolio_revision is None else {
+        "data": data, "base_revision": base_revision, "portfolio_revision": portfolio_revision,
+    }
+    async with httpx.AsyncClient(base_url=settings.backend_url, timeout=20) as client:
+        response = await client.post("/admin/cv/base", json=payload, headers={"X-Service-Api-Key": settings.service_api_key})
+        response.raise_for_status()
+        return response.json()
+
+
 async def get_cv_profile() -> dict:
     async with httpx.AsyncClient(base_url=settings.backend_url, timeout=10) as client:
         response = await client.get("/admin/cv/profile", headers={"X-Service-Api-Key": settings.service_api_key})
@@ -66,9 +97,9 @@ async def render_cv(patch: dict, base_revision: str, job_description: str, label
         return response.json()
 
 
-async def render_current_cv() -> dict:
+async def render_base_cv() -> dict:
     async with httpx.AsyncClient(base_url=settings.backend_url, timeout=60) as client:
-        response = await client.post("/admin/cv/render-current", headers={"X-Service-Api-Key": settings.service_api_key})
+        response = await client.post("/admin/cv/render-base", headers={"X-Service-Api-Key": settings.service_api_key})
         response.raise_for_status()
         return response.json()
 

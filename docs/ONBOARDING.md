@@ -93,15 +93,18 @@ Add my GitHub profile as a professional link and my WhatsApp as a contact link.
 
 Repeat requests are safe because normalized links are upserted.
 
-## 6. Populate current CV source data
+## 6. Set up and maintain the CV
 
-CV tailoring reads the current profile, visible projects and their highlights/technologies, visible
-skill groups, education records, certificates, and hackathon results directly from the portfolio
-database. Keep those records current; no base CV upload is required. The bot selects from those
-verified records and rewrites only the summary for the job description.
+The curated CV JSON in the backend's `cv_data` setting is the canonical source for CV wording,
+project selection, bullets, and layout data. Upload the known-good JSON through the bot upload flow
+as `cv-json` if it is not configured. View CV renders this approved JSON directly and makes no LLM
+call.
 
-The PDF layout remains the existing CV layout. A separately uploaded CV PDF can still be stored
-and delivered when requested in chat, but it is not the source for tailored CV content.
+After changing portfolio records, run `/synccv`. The bot compares the approved JSON with current
+portfolio data, makes one conservative LLM proposal, and displays the proposed changes. Save only
+after reviewing the diff; Discard leaves the approved CV unchanged. The save is rejected if either
+the CV or portfolio data changes while the proposal is waiting. Per-job tailoring also reads only
+the approved CV JSON, keeping its content consistent with the curated source.
 
 ## 7. Populate portfolio content
 

@@ -6,6 +6,7 @@ from aiogram import types
 
 def configure(dependencies):
     globals().update(dependencies)
+    globals().setdefault("pending_cv_sync", {})
 
 
 async def prepare_cv_patch(message: types.Message, job_description: str, revision: str | None = None):
@@ -65,19 +66,120 @@ async def deliver_certificates(message: types.Message, query: str = ""):
 
 
 async def send_cv(message: types.Message):
+    status = await message.answer("Rendering the approved CV…")
     try:
-        generated = await render_current_cv()
+        generated = await render_base_cv()
         async with httpx.AsyncClient(timeout=30) as client:
             file_response = await client.get(generated["pdf_url"])
             file_response.raise_for_status()
+    except httpx.HTTPStatusError as error:
+        logger.exception("Approved CV rendering failed")
+        if error.response.status_code == 404:
+            await status.edit_text("There is no approved CV JSON yet. Upload the curated JSON file, then use /synccv to propose updates.")
+            return
+        await status.edit_text("I couldn't render the approved CV right now. Please try again shortly.")
+        return
     except Exception:
-        logger.exception("Current portfolio CV generation failed")
-        await message.answer("I couldn't generate the current portfolio CV right now.")
+        logger.exception("Approved CV rendering failed")
+        await status.edit_text("I couldn't render the approved CV right now. Please try again shortly.")
         return
     if not file_response.content.startswith(b"%PDF-"):
-        await message.answer("The generated CV file is invalid or unavailable.")
+        await status.edit_text("The generated CV file is invalid or unavailable.")
         return
-    await message.answer_document(types.BufferedInputFile(file_response.content, filename="Current-Portfolio-CV.pdf"), caption="Current portfolio CV")
+    await status.edit_text("Here is the approved CV, rendered from its current JSON data.")
+    await message.answer_document(types.BufferedInputFile(file_response.content, filename="Current-Portfolio-CV.pdf"), caption="Approved portfolio CV")
+
+
+def _compact(value, limit=180):
+    text = " ".join(str(value or "").split())
+    return text if len(text) <= limit else text[:limit - 1] + "…"
+
+
+def format_cv_sync_diff(old: dict, new: dict) -> str:
+    """Create a review diff locally so the approval text reflects actual JSON changes."""
+    lines = ["<b>Proposed CV JSON updates</b>"]
+    scalar_fields = ("name", "title", "summary")
+    for field in scalar_fields:
+        if old.get(field) != new.get(field):
+            lines.append(f"\n<b>{html.escape(field.title())}</b>")
+            lines.append(f"Before: {html.escape(_compact(old.get(field)), quote=False)}")
+            lines.append(f"After: {html.escape(_compact(new.get(field)), quote=False)}")
+    if old.get("contact") != new.get("contact"):
+        lines.append("\n<b>Contact</b>")
+        before, after = old.get("contact") or {}, new.get("contact") or {}
+        for key in sorted(set(before) | set(after)):
+            if before.get(key) != after.get(key):
+                lines.append(f"{html.escape(key)}: {html.escape(_compact(before.get(key), 90), quote=False)} → {html.escape(_compact(after.get(key), 90), quote=False)}")
+    old_projects = {str(item.get("id") or item.get("name")): item for item in old.get("projects", []) if isinstance(item, dict)}
+    new_projects = {str(item.get("id") or item.get("name")): item for item in new.get("projects", []) if isinstance(item, dict)}
+    added, removed = set(new_projects) - set(old_projects), set(old_projects) - set(new_projects)
+    if added or removed:
+        lines.append("\n<b>Projects</b>")
+        lines.extend("Added: " + html.escape(_compact(new_projects[key].get("name") or key, 100), quote=False) for key in sorted(added))
+        lines.extend("Removed: " + html.escape(_compact(old_projects[key].get("name") or key, 100), quote=False) for key in sorted(removed))
+    changed_projects = []
+    for key in sorted(set(old_projects) & set(new_projects)):
+        before, after = old_projects[key], new_projects[key]
+        changed_fields = [field for field in ("date", "stack", "bullets") if before.get(field) != after.get(field)]
+        if changed_fields:
+            changed_projects.append((key, after, changed_fields))
+    if changed_projects:
+        lines.append("\n<b>Project edits</b>")
+        for _key, project, fields in changed_projects[:10]:
+            lines.append(html.escape(_compact(project.get("name"), 100), quote=False) + ": " + ", ".join(fields))
+            if "bullets" in fields:
+                for bullet in (project.get("bullets") or [])[:3]:
+                    lines.append("• " + html.escape(_compact(bullet, 160), quote=False))
+    for field in ("skills", "certifications", "education"):
+        if old.get(field) != new.get(field):
+            before, after = old.get(field) or [], new.get(field) or []
+            lines.append(f"\n<b>{field.title()}</b>: {len(before)} → {len(after)} items")
+            if field == "certifications":
+                old_set, new_set = set(map(str, before)), set(map(str, after))
+                lines.extend("Added: " + html.escape(item, quote=False) for item in sorted(new_set - old_set)[:5])
+                lines.extend("Removed: " + html.escape(item, quote=False) for item in sorted(old_set - new_set)[:5])
+    if old == new:
+        return "No verified updates were found. The approved CV JSON is already current."
+    rendered = "\n".join(lines)
+    if len(rendered) <= 3600:
+        return rendered
+    return rendered[:3500] + "\n… diff truncated"
+
+
+async def prepare_cv_sync(message: types.Message):
+    if pending_cv_sync.get(message.from_user.id):
+        await message.answer("A CV sync proposal is already waiting for approval. Use its Save or Discard button, or /cancel it first.")
+        return
+    status = await message.answer("Comparing the approved CV with current portfolio data…")
+    try:
+        base = await get_cv_base()
+        portfolio = await get_cv_portfolio_context()
+        candidate = await sync_cv_data(base["data"], portfolio["data"])
+        if set(candidate) != set(base["data"]):
+            raise ValueError("The CV sync proposal changed the CV JSON shape. No changes were saved.")
+        candidate = await validate_cv_base(candidate)
+        diff = format_cv_sync_diff(base["data"], candidate)
+        if candidate == base["data"]:
+            await status.edit_text(html.unescape(diff))
+            return
+        pending_cv_sync[message.from_user.id] = {
+            "data": candidate,
+            "base_revision": base["revision"],
+            "portfolio_revision": portfolio["revision"],
+        }
+        await status.edit_text(diff, reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
+            InlineKeyboardButton(text="Save CV updates", callback_data="cv-sync:save"),
+            InlineKeyboardButton(text="Discard", callback_data="cv-sync:cancel"),
+        ]]))
+    except httpx.HTTPStatusError as error:
+        logger.exception("CV sync proposal failed")
+        if error.response.status_code == 404:
+            await status.edit_text("No approved CV JSON is configured. Upload the curated CV JSON file first, then run /synccv.")
+        else:
+            await status.edit_text("I couldn't prepare a CV sync proposal. Please check the backend and try again.")
+    except Exception:
+        logger.exception("CV sync proposal failed")
+        await status.edit_text("I couldn't prepare a CV sync proposal. Please try again shortly.")
 
 
 def format_cv_patch(patch: dict) -> str:

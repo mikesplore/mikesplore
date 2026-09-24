@@ -48,6 +48,22 @@ def register_upload_handler(dispatcher, dependencies):
                     return
                 if asset_request:
                     asset_type, label = asset_request
+                    if asset_type == "cv-json":
+                        if mime_type not in {"application/json", "text/json", "text/plain"} and not filename.lower().endswith(".json"):
+                            await message.answer("Please upload the curated CV data as a .json file.")
+                            return
+                        import json
+                        try:
+                            cv_data = json.loads(buffer.getvalue().decode("utf-8-sig"))
+                            cv_data = await validate_cv_base(cv_data)
+                            await save_cv_base(cv_data)
+                        except Exception as error:
+                            logger.exception("CV JSON upload validation/save failed")
+                            await message.answer(f"That CV JSON could not be saved: {str(error)[:400]}")
+                            return
+                        pending_upload.pop(message.from_user.id, None)
+                        await message.answer("Curated CV JSON saved. View CV now renders it directly; run /synccv to propose reviewed updates.")
+                        return
                     if asset_type == "certificate":
                         # Certificates have their own database collection and public
                         # listing endpoint. Do not store them as generic site assets.

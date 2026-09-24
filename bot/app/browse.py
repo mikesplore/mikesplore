@@ -156,6 +156,7 @@ def menu_keyboard() -> types.InlineKeyboardMarkup:
 def menu_keyboard() -> types.InlineKeyboardMarkup:
     buttons = [types.InlineKeyboardButton(text=RESOURCE_LABELS[resource], callback_data=f"pub:list:{resource}", style="primary") for resource in MENU_ORDER]
     rows = [buttons[index:index + 2] for index in range(0, len(buttons), 2)]
+    rows.append([types.InlineKeyboardButton(text="View CV", callback_data="pub:cv", style="primary")])
     return types.InlineKeyboardMarkup(inline_keyboard=rows)
 
 
@@ -541,4 +542,3 @@ async def handle_public_callback(callback: types.CallbackQuery) -> None:
         await handle_detail(callback, resource, page, index)
         return
     await acknowledge(callback, "Unknown action", show_alert=True, logger=logger)
-

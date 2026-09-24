@@ -89,6 +89,8 @@ def section_header(text, styles, story, glue=None):
 
 
 def bullets(items, styles):
+    if not items:
+        return None
     return ListFlowable(
         [ListItem(Paragraph(b, styles["BulletText"]), leftIndent=8, bulletIndent=0) for b in items],
         bulletType="bullet", start="•", leftIndent=14, spaceAfter=4,
@@ -109,7 +111,8 @@ def render(data, out_path):
 
     # Header
     story.append(Paragraph(esc(data["name"]), styles["CVName"]))
-    story.append(Paragraph(esc(data["title"]), styles["CVTitle"]))
+    if data.get("title"):
+        story.append(Paragraph(esc(data["title"]), styles["CVTitle"]))
     c = data["contact"]
     parts = [esc(c.get("location")), esc(c.get("email")), esc(c.get("phone"))]
     if c.get("email"):
@@ -121,7 +124,8 @@ def render(data, out_path):
             url = escape(c[key] if c[key].startswith("http") else f'https://{c[key]}', {'"': '&quot;'})
             parts.append(f'<link href="{url}" color="#555555">{display}</link>')
     contact_line = " | ".join(filter(None, parts))
-    story.append(Paragraph(contact_line, styles["CVContact"]))
+    if contact_line:
+        story.append(Paragraph(contact_line, styles["CVContact"]))
 
     ai = data.get("additional_info", {})
     footnote = " &nbsp;|&nbsp; ".join(esc(b) for b in (ai.get("languages"), ai.get("work_style")) if b)
@@ -129,32 +133,43 @@ def render(data, out_path):
         story.append(Paragraph(footnote, styles["CVContact"]))
 
     # Summary
-    section_header("Summary", styles, story, Paragraph(esc(data["summary"]), styles["Body"]))
+    if data.get("summary"):
+        section_header("Summary", styles, story, Paragraph(esc(data["summary"]), styles["Body"]))
 
     # Skills
     skill_paras = [Paragraph(f"<b>{esc(g['category'])}:</b> " + ", ".join(esc(item) for item in g["items"]), styles["Body"]) for g in data["skills"]]
-    section_header("Technical Skills", styles, story, skill_paras[0] if skill_paras else None)
-    for para in skill_paras[1:]:
-        story.append(Spacer(1, 2))
-        story.append(para)
+    if skill_paras:
+        section_header("Technical Skills", styles, story, skill_paras[0])
+        for para in skill_paras[1:]:
+            story.append(Spacer(1, 2))
+            story.append(para)
 
     # Projects
-    section_header("Key Projects", styles, story)
-    for p in data["projects"]:
-        story.append(Paragraph(f"{esc(p['name'])}  <font color='#555555'>- {esc(p['date'])}</font>", styles["ProjectTitle"]))
-        story.append(Paragraph(esc(p["stack"]), styles["ProjectMeta"]))
-        story.append(bullets([esc(item) for item in p["bullets"]], styles))
+    if data["projects"]:
+        section_header("Key Projects", styles, story)
+        for p in data["projects"]:
+            date_label = f"  <font color='#555555'>- {esc(p['date'])}</font>" if p.get("date") else ""
+            story.append(Paragraph(f"{esc(p['name'])}{date_label}", styles["ProjectTitle"]))
+            if p.get("stack"):
+                story.append(Paragraph(esc(p["stack"]), styles["ProjectMeta"]))
+            project_bullets = bullets([esc(item) for item in p["bullets"]], styles)
+            if project_bullets:
+                story.append(project_bullets)
 
     # Certifications
-    section_header("Certifications & Competitions", styles, story)
-    story.append(bullets([esc(item) for item in data["certifications"]], styles))
+    if data["certifications"]:
+        section_header("Certifications & Competitions", styles, story)
+        certification_bullets = bullets([esc(item) for item in data["certifications"]], styles)
+        if certification_bullets:
+            story.append(certification_bullets)
 
     # Education
-    section_header("Education", styles, story)
-    for e in data["education"]:
-        story.append(Paragraph(f"<b>{esc(e['institution'])}</b>", styles["Body"]))
-        story.append(Paragraph(esc(e["degree"]), styles["Body"]))
-        story.append(Spacer(1, 4))
+    if data["education"]:
+        section_header("Education", styles, story)
+        for e in data["education"]:
+            story.append(Paragraph(f"<b>{esc(e['institution'])}</b>", styles["Body"]))
+            story.append(Paragraph(esc(e["degree"]), styles["Body"]))
+            story.append(Spacer(1, 4))
 
     # Additional info
     ai = data.get("additional_info", {})

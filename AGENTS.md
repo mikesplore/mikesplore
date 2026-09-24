@@ -867,6 +867,9 @@ This phase was completed before the schema and backend work.
 
 ### CV tailoring from live portfolio data (2026-09-24)
 
+> Historical note: the live-data CV refactor recorded in this section was later rolled back by
+> the curated-JSON CV workflow below. Keep it here as implementation history, not current behavior.
+
 - Kept `cv_renderer.py`'s existing renderer contract and PDF layout, but replaced the tailoring
   source snapshot with a backend assembler over the current profile, profile links, visible skill
   groups, visible projects and technologies/highlights, certificates, hackathon results, and
@@ -884,3 +887,35 @@ This phase was completed before the schema and backend work.
 - Updated the Telegram View CV action to call a protected `/admin/cv/render-current` endpoint,
   assemble the same CV layout from current portfolio records, store a generated version, and send
   that PDF. The uploaded CV asset remains untouched; tailoring and View CV now both use live data.
+- Added a public **View CV** button to the `/start` and `/menu` keyboard and routed it to that
+  current-data PDF delivery action. Updated Telegram bot descriptions/help to expose the option.
+- Fixed a ReportLab crash in the new live CV render: empty project bullet arrays or an empty
+  certifications list no longer create an invalid empty `ListFlowable`; populated sections retain
+  the existing layout.
+- Reviewed the current and previous Telegram CV PDFs and the running portfolio API. The current
+  project table has 12 distinct projects after the owner's cleanup, but the profile tagline, focus,
+  experience, and About values are empty; project descriptions mostly contain one sentence, with
+  only one saved project highlight. Reworked View CV to use a bot-side LLM curation step over the
+  live project/skill/education/certification context, selecting up to five projects and producing
+  two or three evidence-grounded bullets per included project. The backend validates every selected
+  project ID and skill against one shared portfolio revision before rendering; stale curation is
+  rejected. Empty PDF sections are omitted instead of drawing blank headings.
+- Tightened project bullet sourcing after review found the curator turned a technology-stack item
+  into an implementation claim (for example, “built in Go”). Bullets may now paraphrase only each
+  project's description/highlights; stack entries remain in the separate technology line.
+
+### Curated CV JSON and reviewed portfolio sync (2026-09-24)
+
+- Reverted the CV source model to the curated `cv_data` JSON contract from pre-refactor commit
+  `9e68bf782bbb11f1a4f0b75d0756ba5f306802a3`. The approved JSON again controls CV content and
+  rendering. Job tailoring reads that same approved JSON, avoiding silent portfolio-to-CV drift.
+- Added protected `/admin/cv/portfolio-context` for sync evidence and revision-checked read,
+  validate, and write paths for `cv_data`. `/admin/cv/render-base` renders the approved JSON as-is;
+  Telegram View CV makes no LLM call. CV text search and tailoring context now read the approved
+  JSON too.
+- Added owner-only `/synccv`. It makes one conservative LLM call to propose a complete JSON
+  update, validates the proposal, and presents a locally computed diff with Save and Discard
+  buttons. Saving requires the CV and portfolio revisions to remain unchanged since the proposal.
+- Restored `cv-json` upload support for initializing or replacing the canonical source. The
+  previous live-data `/admin/cv/render-current` route and View CV curation call were removed.
+- Updated onboarding and bot help/commands to describe the curated JSON workflow.

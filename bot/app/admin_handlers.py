@@ -16,6 +16,9 @@ async def handle_llm_admin_operation(message: types.Message, operation: dict) ->
             await message.answer("The upload request did not specify an asset type.")
             return True
         pending_upload[user_id] = (asset_type, upload.get("label") or asset_type)
+        if asset_type == "cv-json":
+            await message.answer("Please attach the curated CV source as a JSON file.", reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="Cancel upload", callback_data="upload:cancel")]]))
+            return True
         if upload.get("entry_id"):
             pending_upload_target[user_id] = {"entry_id": upload["entry_id"], "role": upload.get("role", "gallery")}
         await message.answer(f"Please attach the {asset_type} file.", reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="Cancel upload", callback_data="upload:cancel")]]))

@@ -10,7 +10,7 @@ ADMIN_TOOLS = [
     {"type": "function", "function": {"name": "find_repository", "description": "Find an existing repository by its exact URL before deciding between create and update.", "parameters": {"type": "object", "properties": {"url": {"type": "string"}}, "required": ["url"]}}},
     {"type": "function", "function": {"name": "list_technologies", "description": "List normalized technologies with IDs and names.", "parameters": {"type": "object", "properties": {}, "required": []}}},
     {"type": "function", "function": {"name": "search_admin_content", "description": "Search existing admin-managed portfolio records when the requested record is not a contact link.", "parameters": {"type": "object", "properties": {"query": {"type": "string"}}, "required": ["query"]}}},
-    {"type": "function", "function": {"name": "request_upload", "description": "Request a file from the administrator. Use for profile images, certificates, CVs, project images, or other project media. Include the exact asset type and, for project media, the resolved entry_id and role.", "parameters": {"type": "object", "properties": {"asset_type": {"type": "string", "enum": ["profile-image", "certificate", "cv", "project-image", "project-media"]}, "label": {"type": "string"}, "entry_id": {"type": "string"}, "role": {"type": "string"}}, "required": ["asset_type"]}}},
+    {"type": "function", "function": {"name": "request_upload", "description": "Request a file from the administrator. Use cv-json for the curated CV source JSON, cv for a PDF, profile-image for a profile photo, certificate for a certificate, or project image/media for project assets. Include the exact asset type and, for project media, the resolved entry_id and role.", "parameters": {"type": "object", "properties": {"asset_type": {"type": "string", "enum": ["profile-image", "certificate", "cv", "cv-json", "project-image", "project-media"]}, "label": {"type": "string"}, "entry_id": {"type": "string"}, "role": {"type": "string"}}, "required": ["asset_type"]}}},
     {"type": "function", "function": {"name": "request_cv_tailoring", "description": "Recognize a bare job description from the portfolio owner and start CV tailoring. Pass the complete job description exactly as provided. Do not use this for ordinary portfolio questions.", "parameters": {"type": "object", "properties": {"job_description": {"type": "string"}}, "required": ["job_description"]}}},
     {"type": "function", "function": {"name": "propose_role_policies", "description": "Analyze the verified CV context and propose pending role-family policies for CV tailoring. Never activate policies and never invent evidence.", "parameters": {"type": "object", "properties": {}, "required": []}}},
     {"type": "function", "function": {"name": "list_role_policies", "description": "List role policies with exact IDs and activation status before activating or revising them.", "parameters": {"type": "object", "properties": {}, "required": []}}},
@@ -56,7 +56,7 @@ import base64
 from ..config import settings
 from ..admin import get_cv_tailoring_context
 from .client import complete
-from .prompts import CV_TAILOR_SYSTEM, EXTRACT_SYSTEM
+from .prompts import CV_SYNC_SYSTEM, CV_TAILOR_SYSTEM, EXTRACT_SYSTEM
 async def extract_entry(instruction: str) -> dict:
     completion = await complete(
         model=settings.groq_model,
@@ -139,6 +139,27 @@ async def tailor_cv(job_description: str, existing_patch: dict | None = None, re
                 return {"status": "rejected", "reason": "There is not enough verified portfolio evidence for this job."}
             return result
     raise ValueError("CV tailoring did not produce a final patch after searching")
+
+
+async def sync_cv_data(base_data: dict, portfolio_context: dict) -> dict:
+    """Make one conservative LLM proposal; persistence requires owner approval."""
+    completion = await complete(
+        model=settings.groq_model,
+        messages=[
+            {"role": "system", "content": CV_SYNC_SYSTEM},
+            {"role": "user", "content": "CURRENT APPROVED CV JSON:\n" + json.dumps(base_data, ensure_ascii=False) + "\n\nLIVE PORTFOLIO EVIDENCE:\n" + json.dumps(portfolio_context, ensure_ascii=False)},
+        ],
+        response_format={"type": "json_object"},
+        max_tokens=5000,
+        temperature=0,
+    )
+    content = (completion.choices[0].message.content or "").strip()
+    if content.startswith("```"):
+        content = content.removeprefix("```").removeprefix("json").removesuffix("```").strip()
+    result = json.loads(content or "{}")
+    if not isinstance(result, dict) or set(result) != {"cv_data"} or not isinstance(result["cv_data"], dict):
+        raise ValueError("The CV sync proposal did not contain a complete CV JSON object.")
+    return result["cv_data"]
 
 
 async def propose_role_policies() -> list[dict]:

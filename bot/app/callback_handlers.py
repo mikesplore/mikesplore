@@ -15,7 +15,45 @@ def register_callbacks(dispatcher, dependencies):
                 return
             # Public button browsing: everyone can use it, and it never calls the LLM.
             if data.startswith("pub:"):
+                if data == "pub:cv":
+                    await acknowledge(callback, "Rendering approved CV…", logger=logger)
+                    if callback.message:
+                        await send_cv(callback.message)
+                    return
                 await browse.handle_public_callback(callback)
+                return
+            if data in {"cv-sync:save", "cv-sync:cancel"}:
+                proposal = pending_cv_sync.get(user_id)
+                if not proposal:
+                    await callback.answer("This CV sync proposal has expired", show_alert=True)
+                    return
+                if data == "cv-sync:cancel":
+                    pending_cv_sync.pop(user_id, None)
+                    await callback.answer("Discarded")
+                    if callback.message:
+                        await callback.message.edit_text("CV updates discarded.")
+                    return
+                try:
+                    await callback.answer("Saving approved CV updates…")
+                    await save_cv_base(proposal["data"], proposal["base_revision"], proposal["portfolio_revision"])
+                    pending_cv_sync.pop(user_id, None)
+                    if callback.message:
+                        await callback.message.edit_text("Approved CV updates saved.")
+                except httpx.HTTPStatusError as error:
+                    if callback.message:
+                        if error.response.status_code == 409:
+                            pending_cv_sync.pop(user_id, None)
+                            await callback.message.edit_text("The CV or portfolio changed after this proposal. Run /synccv again to review a fresh diff.")
+                        else:
+                            await callback.message.edit_text("The CV update could not be saved. The proposal is still pending; try again.")
+                    else:
+                        await callback.answer("The CV update could not be saved", show_alert=True)
+                except Exception:
+                    logger.exception("Saving approved CV sync failed")
+                    if callback.message:
+                        await callback.message.edit_text("The CV update could not be saved. The proposal is still pending; try again.")
+                    else:
+                        await callback.answer("The CV update could not be saved", show_alert=True)
                 return
             if data == "admin:cancel":
                 pending_mutation.pop(user_id, None)
