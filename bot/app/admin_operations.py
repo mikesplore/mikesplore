@@ -29,5 +29,5 @@ async def execute_admin_operation(operation: dict, *, update_profile, manage_con
                 for item in values:
                     await manage_content(resource, action, {"entry_id": payload.get("entry_id"), **item})
         else:
-            await manage_content(resource, action, payload)
+            return await manage_content(resource, action, payload)
     return {"create": f"{resource.title()} created.", "update": f"{resource.title()} updated.", "delete": f"{resource.title()} deleted."}.get(action, "Change applied.")

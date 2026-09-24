@@ -48,7 +48,7 @@ def _project_blocks(project_id, db: Session) -> dict:
 def _project_json(project: Entry, repositories: list[Repository], technologies: list[Technology], blocks: dict, assets: list[tuple[EntryAsset, SiteAsset]]) -> dict:
     return {"id": str(project.id), "slug": project.slug, "title": project.title, "blurb": project.blurb,
             "summary": project.blurb, "tags": project.tags or [], "technologies": [technology.name for technology in technologies],
-            "links": {"repo": next((repo.url for repo in repositories if repo.is_primary), repositories[0].url if repositories else None)},
+            "links": {"repo": next((repo.url for repo in repositories if repo.is_primary), repositories[0].url if repositories else None), "demo": project.live_url},
             "repositories": [{"name": repo.name, "url": repo.url, "is_primary": repo.is_primary, "role_label": repo.role_label, "primary_language": repo.primary_language, "link_label": repo.link_label} for repo in repositories if repo.is_visible],
             "content_blocks": blocks, "media": [{"id": asset.id, "role": link.role, "url": asset.url, "label": asset.label, "alt_text": link.alt_text, "caption": link.caption, "custom_order": link.custom_order} for link, asset in assets], "is_featured": project.is_featured, "icon_label": project.icon_label, "icon_url": project.icon_url, "status": project.status, "version": project.version, "license": project.license, "category": project.category, "author_role": project.author_role, "origin": project.origin, "started_at": project.started_at, "ended_at": project.ended_at, "template": project.template}
 

@@ -5,7 +5,7 @@ never calls the LLM: it performs one HTTP read against the public portfolio API
 and renders the result locally, which sidesteps Groq rate limits entirely.
 
 Callback-data scheme (all payloads stay under Telegram's 64-byte limit; slugs
-and titles are never embedded — entries are addressed by resource/page/index,
+and titles are never embedded. Entries are addressed by resource/page/index,
 so buttons keep working after bot restarts without per-user state):
 
     pub:menu                          -> main menu
@@ -296,7 +296,7 @@ def format_skills(groups: list[dict]) -> str:
     lines = ["<b>Skills</b>", ""]
     for group in groups:
         lines.append(f"<b>{clip(group.get('category'), 60)}</b>")
-        lines.append(clip(", ".join(str(skill) for skill in group.get("skills") or []), 900) or "—")
+        lines.append(clip(", ".join(str(skill) for skill in group.get("skills") or []), 900) or "-")
         lines.append("")
     return "\n".join(lines).strip()
 
@@ -309,7 +309,7 @@ def format_contact(links: list[dict]) -> str:
     lines = ["<b>Contact</b>", ""]
     for link in links:
         handle = str(link.get("handle") or link.get("label") or "").strip()
-        lines.append(f"<b>{clip(link.get('name'), 40)}</b>" + (f" — {clip(handle, 60)}" if handle else ""))
+        lines.append(f"<b>{clip(link.get('name'), 40)}</b>" + (f" - {clip(handle, 60)}" if handle else ""))
     return "\n".join(lines) if len(lines) > 2 else "<b>Contact</b>\n\nNo contact links published yet."
 
 
@@ -347,7 +347,7 @@ def format_bucket_list(items: list[dict]) -> str:
     for item in items:
         mark = "✅" if item.get("done") else "⬜"
         remark = clip(item.get("remark"), 100)
-        lines.append(f"{mark} {clip(item.get('title'), 80)}" + (f" — <i>{remark}</i>" if remark else ""))
+        lines.append(f"{mark} {clip(item.get('title'), 80)}" + (f" - <i>{remark}</i>" if remark else ""))
     return "\n".join(lines) if items else "<b>Bucket list</b>\n\nNothing published yet."
 
 
@@ -434,7 +434,7 @@ async def handle_list(callback: types.CallbackQuery, resource: str, page: int) -
         logger.exception("Browse list failed: %s page %s", resource, page)
         await acknowledge(callback, "The portfolio service is unavailable right now. Please try again shortly.", show_alert=True, logger=logger)
         return
-    await _show(callback, text, markup, alert=f"{RESOURCE_LABELS[resource]} — live data, no AI involved")
+    await _show(callback, text, markup, alert=f"{RESOURCE_LABELS[resource]} - live data, no AI involved")
 
 
 def format_entry_detail(label: str, entry: dict) -> str:
@@ -541,7 +541,4 @@ async def handle_public_callback(callback: types.CallbackQuery) -> None:
         await handle_detail(callback, resource, page, index)
         return
     await acknowledge(callback, "Unknown action", show_alert=True, logger=logger)
-
-
-
 

@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 ContentType = Literal["project", "article", "hackathon", "event"]
 LinkCategory = Literal["professional", "social", "contact"]
@@ -16,6 +16,7 @@ class EntryBase(BaseModel):
     content_type: ContentType
     title: str = Field(min_length=1, max_length=255)
     blurb: str
+    live_url: str | None = None
     date: DateValue | None = None
     year: int | None = Field(default=None, ge=1900, le=2200)
     is_visible: bool = True
@@ -23,6 +24,25 @@ class EntryBase(BaseModel):
     custom_order: int = 0
     tags: list[str] = []
     source: dict[str, Any] = {}
+
+    @field_validator("slug", mode="before")
+    @classmethod
+    def normalize_slug(cls, value: str) -> str:
+        import re
+        return re.sub(r"[^a-z0-9]+", "-", str(value or "").strip().lower()).strip("-")
+
+    @field_validator("live_url", mode="before")
+    @classmethod
+    def normalize_live_url(cls, value: str | None) -> str | None:
+        if not value:
+            return value
+        value = str(value).strip()
+        if not value.lower().startswith("https://"):
+            if "://" not in value:
+                value = "https://" + value
+            else:
+                raise ValueError("live_url must use HTTPS")
+        return value
 
 
 class EntryCreate(EntryBase):
@@ -35,6 +55,7 @@ class EntryUpdate(BaseModel):
     content_type: ContentType | None = None
     title: str | None = Field(default=None, min_length=1, max_length=255)
     blurb: str | None = None
+    live_url: str | None = None
     date: DateValue | None = None
     year: int | None = Field(default=None, ge=1900, le=2200)
     is_visible: bool | None = None
@@ -42,6 +63,27 @@ class EntryUpdate(BaseModel):
     custom_order: int | None = None
     tags: list[str] | None = None
     source: dict[str, Any] | None = None
+
+    @field_validator("slug", mode="before")
+    @classmethod
+    def normalize_slug(cls, value: str | None) -> str | None:
+        import re
+        if value is None:
+            return None
+        return re.sub(r"[^a-z0-9]+", "-", str(value).strip().lower()).strip("-")
+
+    @field_validator("live_url", mode="before")
+    @classmethod
+    def normalize_live_url(cls, value: str | None) -> str | None:
+        if not value:
+            return value
+        value = str(value).strip()
+        if not value.lower().startswith("https://"):
+            if "://" not in value:
+                value = "https://" + value
+            else:
+                raise ValueError("live_url must use HTTPS")
+        return value
 
 
 class EntryRead(EntryBase):

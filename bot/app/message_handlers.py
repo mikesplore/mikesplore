@@ -1,6 +1,17 @@
 from aiogram import types
+from aiogram.exceptions import TelegramBadRequest
 
 from . import browse
+
+
+async def _edit_message(message, text, reply_markup=None):
+    """Edit a Telegram message, ignoring an idempotent no-op edit."""
+    try:
+        return await message.edit_text(text, reply_markup=reply_markup)
+    except TelegramBadRequest as error:
+        if "message is not modified" not in str(error).lower():
+            raise
+        return message
 
 
 def register_message_handlers(dispatcher, dependencies):
@@ -202,7 +213,7 @@ def register_message_handlers(dispatcher, dependencies):
                     if now - last_edit < 0.7 and len(text) < 3900:
                         return
                     last_edit = now
-                    await streamed_message.edit_text(html.escape(text[-4000:]))
+                    await _edit_message(streamed_message, html.escape(text[-4000:]))
         
                 try:
                     response = await answer(
@@ -242,6 +253,6 @@ def register_message_handlers(dispatcher, dependencies):
                 return
             # Browse navigation is available from /menu and deterministic browse
             # commands. Ordinary LLM answers stay as plain replies.
-            await streamed_message.edit_text(telegram_html(response), reply_markup=None)
+            await _edit_message(streamed_message, telegram_html(response), reply_markup=None)
         
         

@@ -125,8 +125,7 @@ def test_validate_value_url_and_slug():
     _, error = wizard.validate_value({"type": "url"}, "github.com/a")
     assert error
     assert wizard.validate_value({"type": "slug"}, "My Cool App") == ("my-cool-app", None)
-    _, error = wizard.validate_value({"type": "slug"}, "My_Cool_App")
-    assert error
+    assert wizard.validate_value({"type": "slug"}, "My_Cool_App") == ("my-cool-app", None)
 
 
 def test_validate_value_date_year_int():

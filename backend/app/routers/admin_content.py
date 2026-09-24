@@ -43,6 +43,16 @@ def manage_content(resource: str, action: str, payload: dict, response: Response
     model = models.get(resource)
     if not model or action not in {"list", "create", "update", "delete"}:
         raise HTTPException(status_code=400, detail="Unsupported resource or action")
+    if resource == "entries" and payload.get("slug"):
+        import re
+        payload["slug"] = re.sub(r"[^a-z0-9]+", "-", str(payload["slug"]).strip().lower()).strip("-")
+    if resource == "entries" and payload.get("live_url"):
+        live_url = str(payload["live_url"]).strip()
+        if "://" not in live_url:
+            live_url = "https://" + live_url
+        if not live_url.lower().startswith("https://"):
+            raise HTTPException(status_code=422, detail="live_url must use HTTPS")
+        payload["live_url"] = live_url
     if resource == "links" and action == "create":
         payload = ProfileLinkCreate.model_validate(payload).model_dump()
         payload["normalized_name"] = payload["name"].strip().lower()
@@ -163,9 +173,10 @@ def manage_content(resource: str, action: str, payload: dict, response: Response
                 import uuid as _uuid
 
                 payload["id"] = str(_uuid.uuid4())
-        db.add(model(**{key: value for key, value in payload.items() if hasattr(model, key)}))
+        item = model(**{key: value for key, value in payload.items() if hasattr(model, key)})
+        db.add(item)
     db.commit()
-    return {"status": action, "resource": resource}
+    return {"status": action, "resource": resource, "id": str(getattr(item, "id", "")) if item is not None else str(getattr(db.get(model, identity), "id", ""))}
 
 
 @router.post("/admin/content/bulk", dependencies=[Depends(require_service_key)])

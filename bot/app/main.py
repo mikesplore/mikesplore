@@ -87,18 +87,18 @@ def is_admin(message: types.Message) -> bool:
 HELP_TEXT = (
     "🧭 <b>How to use this bot</b>\n"
     "\n"
-    "• /menu — browse the portfolio with buttons: projects, articles, hackathons, events, "
+    "• /menu - browse the portfolio with buttons: projects, articles, hackathons, events, "
     "skills, certificates, contact links, and more. Button views read the live portfolio data "
     "directly, so they are instant and never hit AI rate limits.\n"
-    "• Free text — just ask anything. Questions are answered by AI grounded in the live "
+    "• Free text - just ask anything. Questions are answered by AI grounded in the live "
     "portfolio data.\n"
-    "• /cancel — cancel a pending change (portfolio owner only).\n"
-    "• /apply — recheck and apply a pending CV proposal after the base CV changes.\n"
+    "• /cancel - cancel a pending change (portfolio owner only).\n"
+    "• /apply - recheck and apply a pending CV proposal after the base CV changes.\n"
     "\n"
     "<b>Portfolio owner</b>\n"
-    "• /manage — edit profile, projects, links, skills, education, bucket list or "
+    "• /manage - edit profile, projects, links, skills, education, bucket list or "
     "certificates step by step with buttons, and upload new files.\n"
-    "• /manage &lt;resource&gt; — jump straight to a resource (e.g. /manage profile, "
+    "• /manage &lt;resource&gt; - jump straight to a resource (e.g. /manage profile, "
     "/manage projects, /manage projects new)."
 )
 
@@ -157,7 +157,6 @@ async def manage_command(message: types.Message):
     await wizard.handle_manage_command(message)
 
 
-
 def format_preview(entry: dict) -> str:
     if "resource" in entry and "action" in entry and "payload" in entry:
         return "\n".join([
@@ -166,31 +165,31 @@ def format_preview(entry: dict) -> str:
             f"Record ID: {html.escape(str(entry.get('id') or 'new record'), quote=False)}",
             *( ["Target:", html.escape(json.dumps(entry.get("target"), indent=2, default=str), quote=False)] if entry.get("target") else [] ),
             "Changes:",
-            html.escape(str(entry.get("payload") or "—"), quote=False),
+            html.escape(str(entry.get("payload") or "-"), quote=False),
         ])
     if "candidates" in entry:
         return "\n".join(f"{candidate.get('resource')}: {candidate.get('record')}" for candidate in entry["candidates"])
-    fields = ("resource", "action", "id", "title", "content_type", "blurb", "date", "year", "tech_stack", "tags", "links", "payload", "candidates")
-    return "\n".join(f"{field}: {html.escape(str(entry.get(field) or '—'), quote=False)}" for field in fields)
+    fields = ("resource", "action", "id", "title", "content_type", "blurb", "live_url", "date", "year", "tech_stack", "tags", "links", "payload", "candidates")
+    return "\n".join(f"{field}: {html.escape(str(entry.get(field) or '-'), quote=False)}" for field in fields)
 
 
 def format_profile_preview(changes: dict) -> str:
     fields = ("name", "tagline", "location", "focus", "experience", "availability_status", "availability_detail", "about")
-    return "\n".join(f"{field}: {html.escape(str(changes.get(field) or '—'), quote=False)}" for field in fields if field in changes)
+    return "\n".join(f"{field}: {html.escape(str(changes.get(field) or '-'), quote=False)}" for field in fields if field in changes)
 
 
 def format_admin_list(resource: str, items: list[dict]) -> str:
     lines = [f"{html.escape(resource.title(), quote=False)} ({len(items)})", ""]
     for index, item in enumerate(items, 1):
         if resource == "assets":
-            lines += [f"{index}. {html.escape(str(item.get('label') or item.get('asset_type') or 'Unnamed asset'), quote=False)}", f"   Asset ID: {item.get('id', '—')}", f"   Type: {html.escape(str(item.get('asset_type') or '—'), quote=False)}", f"   URL: {html.escape(str(item.get('url') or '—'), quote=False)}", ""]
+            lines += [f"{index}. {html.escape(str(item.get('label') or item.get('asset_type') or 'Unnamed asset'), quote=False)}", f"   Asset ID: {item.get('id', '-')}", f"   Type: {html.escape(str(item.get('asset_type') or '-'), quote=False)}", f"   URL: {html.escape(str(item.get('url') or '-'), quote=False)}", ""]
         elif resource == "entry-assets":
-            lines += [f"{index}. {html.escape(str(item.get('alt_text') or item.get('caption') or 'Unnamed asset'), quote=False)}", f"   Entry ID: {item.get('entry_id', '—')}", f"   Asset ID: {item.get('asset_id', '—')}", f"   Role: {html.escape(str(item.get('role') or '—'), quote=False)}", f"   Caption: {html.escape(str(item.get('caption') or '—'), quote=False)}", f"   Order: {item.get('custom_order', 0)}", ""]
+            lines += [f"{index}. {html.escape(str(item.get('alt_text') or item.get('caption') or 'Unnamed asset'), quote=False)}", f"   Entry ID: {item.get('entry_id', '-')}", f"   Asset ID: {item.get('asset_id', '-')}", f"   Role: {html.escape(str(item.get('role') or '-'), quote=False)}", f"   Caption: {html.escape(str(item.get('caption') or '-'), quote=False)}", f"   Order: {item.get('custom_order', 0)}", ""]
         elif resource == "links":
-            lines += [f"{index}. {html.escape(str(item.get('name') or item.get('label') or 'Unnamed link'), quote=False)}", f"   URL: {html.escape(str(item.get('url') or '—'), quote=False)}", f"   Category: {html.escape(str(item.get('category') or '—'), quote=False)}", f"   Handle: {html.escape(str(item.get('handle') or '—'), quote=False)}", ""]
+            lines += [f"{index}. {html.escape(str(item.get('name') or item.get('label') or 'Unnamed link'), quote=False)}", f"   URL: {html.escape(str(item.get('url') or '-'), quote=False)}", f"   Category: {html.escape(str(item.get('category') or '-'), quote=False)}", f"   Handle: {html.escape(str(item.get('handle') or '-'), quote=False)}", ""]
         else:
             title = item.get("title") or item.get("name") or item.get("label") or item.get("id") or "Record"
-            lines.append(f"{index}. {html.escape(str(title), quote=False)} ({html.escape(str(item.get('id') or '—'), quote=False)})")
+            lines.append(f"{index}. {html.escape(str(title), quote=False)} ({html.escape(str(item.get('id') or '-'), quote=False)})")
     return "\n".join(lines)[:3900]
 
 

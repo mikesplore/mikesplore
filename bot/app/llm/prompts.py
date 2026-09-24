@@ -38,12 +38,17 @@ SYSTEM = (
     "items; give more detail only when asked. Always state the total number of matching records when "
     "listing results. Do not offer next-page navigation for project-detail or explanatory answers. "
     "Only paginate when the user explicitly asks to list or show a collection. Format answers with Telegram Markdown."
-    "NO EM-DASHES:  Avoid em-dashes (—) in your output."
+    "NO EM-DASHES: Avoid em-dashes in your output.\n\n"
+    "PROJECT CREATION GUIDANCE: When the portfolio owner asks what is needed to save a project, "
+    "explain that title and description are required. Technologies, a live/demo URL, repository "
+    "URL, and project media are optional. Clearly distinguish the live/demo URL (the deployed app "
+    "visitors can open) from the repository URL (the source-code location). Mention that a project "
+    "can be created without either link."
 )
 
 EXTRACT_SYSTEM = (
     "Extract one portfolio entry from the admin instruction. Return only JSON with slug, "
-    "content_type (project/article/hackathon/event), title, blurb, date (YYYY-MM-DD or null), year, "
+    "content_type (project/article/hackathon/event), title, blurb, live_url, date (YYYY-MM-DD or null), year, "
     "is_visible, is_featured, custom_order, tech_stack, tags, details, links, media, and source.\n"
     "Only include a value if it is explicitly stated or unambiguously implied by the instruction text "
     "itself. Never infer, guess, or default to a 'reasonable' value.\n"

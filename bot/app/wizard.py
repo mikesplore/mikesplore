@@ -3,18 +3,19 @@
 ``/manage`` replaces the guess-and-extract approach with a button-driven
 conversation: pick a resource, pick a field (current value shown), type the new
 value (validated locally), and only an explicit "Finish & save" writes to the
-backend. This is the admin-side sibling of the public browse mode — every
+backend. This is the admin-side sibling of the public browse mode. Every
 interaction reads verified REST data and renders locally, so there are no Groq
 tokens and no hallucinated field values.
 
 Callback-data scheme (all payloads stay under Telegram's 64-byte limit; record
-ids/slugs are never embedded — records are addressed by page/index):
+ids/slugs are never embedded. Records are addressed by page/index):
 
     mng:res:<resource>          -> pick a resource
     mng:rec:<index>             -> pick a record from the cached list
     mng:prev / mng:next         -> page the record list
     mng:create                  -> start a "new record" create flow
     mng:field:<key>             -> pick an editable field
+    mng:skip                    -> leave the current optional create field empty
     mng:bval:<key>:<0|1>        -> boolean/toggle value
     mng:sel:<key>:<value>       -> select value (options without spaces/colons)
     mng:yes                     -> "edit another field?"
@@ -71,6 +72,23 @@ VALUE_HINTS = {
     "tags": "Comma-separated, e.g. python, fastapi, docker.",
 }
 
+FIELD_DESCRIPTIONS = {
+    "title": "The name visitors will see for this project.",
+    "slug": "The URL-safe identifier used to find the project, for example milo.",
+    "blurb": "The project description shown on the portfolio.",
+    "live_url": "The deployed project URL visitors can open. HTTPS is required; https:// is added if omitted.",
+    "status": "The current project state, for example active, completed, paused, or in progress.",
+    "category": "A broad grouping for the project, for example AI, web, mobile, or infrastructure.",
+    "date": "The project date, usually when it was published or completed.",
+    "year": "The year associated with the project.",
+    "custom_order": "The position in the project list. Lower numbers appear first.",
+    "is_visible": "Whether this project is shown publicly on the portfolio.",
+    "is_featured": "Whether to highlight this project as featured.",
+    "tags": "Searchable keywords for the project.",
+    "icon_label": "A short label or icon name shown with the project.",
+    "template": "The visual presentation template used for the project.",
+}
+
 SUB_LABELS = {
     "technologies": "🔧 Technologies",
     "repositories": "📦 Repositories",
@@ -107,6 +125,7 @@ ENTRY_FIELDS = [
     _field("title", "Title", "text"),
     _field("slug", "Slug", "slug"),
     _field("blurb", "Description", "textarea"),
+    _field("live_url", "Live link", "url", nullable=True),
     _field("status", "Status", "text", nullable=True),
     _field("category", "Category", "text", nullable=True),
     _field("date", "Date", "date", nullable=True),
@@ -116,7 +135,6 @@ ENTRY_FIELDS = [
     _field("is_featured", "Featured", "bool"),
     _field("tags", "Tags", "tags"),
     _field("icon_label", "Icon label", "text", nullable=True),
-    _field("template", "Template", "text"),
 ]
 
 RESOURCES: dict[str, dict] = {
@@ -142,7 +160,7 @@ RESOURCES: dict[str, dict] = {
         "kind": "collection",
         "write": "entries",
         "content_type": "project",
-        "create_queue": ["slug", "title", "blurb"],
+        "create_queue": [field["key"] for field in ENTRY_FIELDS if field["type"] != "media"],
         "subs": ["technologies", "repositories"],
         "fields": ENTRY_FIELDS
         + [
@@ -323,11 +341,17 @@ def validate_value(field: dict, raw: str) -> tuple:
         return (value, None)
     if ftype == "url":
         value = (raw or "").strip()
-        if not re.match(r"^https?://\S+$", value):
+        if field.get("key") == "live_url":
+            if not re.match(r"^https://\S+$", value, re.IGNORECASE):
+                if re.match(r"^[^\s:/]+(?:/.*)?$", value):
+                    value = "https://" + value
+                else:
+                    return (None, "Use an HTTPS URL, e.g. https://example.com.")
+        elif not re.match(r"^https?://\S+$", value):
             return (None, "That doesn't look like a URL. It must start with http:// or https://.")
         return (value, None)
     if ftype == "slug":
-        value = re.sub(r"\s+", "-", (raw or "").strip().lower())
+        value = re.sub(r"[^a-z0-9]+", "-", (raw or "").strip().lower()).strip("-")
         if not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", value):
             return (None, "Use only lowercase letters, numbers and single hyphens, e.g. my-cool-app.")
         return (value, None)
@@ -532,6 +556,14 @@ def cancel_keyboard() -> types.InlineKeyboardMarkup:
     )
 
 
+def create_value_keyboard(field: dict) -> types.InlineKeyboardMarkup:
+    rows = []
+    if field.get("nullable") or field["key"] not in {"slug", "title", "blurb"}:
+        rows.append([types.InlineKeyboardButton(text="Skip", callback_data="mng:skip")])
+    rows.append([types.InlineKeyboardButton(text="Cancel", callback_data="mng:cancel")])
+    return types.InlineKeyboardMarkup(inline_keyboard=rows)
+
+
 # ---------------------------------------------------------------------------
 # Backend reads
 # ---------------------------------------------------------------------------
@@ -572,10 +604,13 @@ def _prompt_value_text(session: dict, field: dict) -> str:
     if session.get("mode") == "create" and session.get("create_queue"):
         total = len(spec.get("create_queue") or [])
         done = total - len(session["create_queue"]) + 1
-        lines.insert(0, f"🆕 <b>{html.escape(spec['label'], quote=False)}</b> — required field {done} of {total}")
+        lines.insert(0, f"🆕 <b>{html.escape(spec['label'], quote=False)}</b> - field {done} of {total}")
     current_text = format_value(current.get(field["key"]))
     if current_text:
         lines.append(f"Currently: <b>{html.escape(current_text, quote=False)}</b>")
+    description = FIELD_DESCRIPTIONS.get(field["key"])
+    if description:
+        lines.append(html.escape(description, quote=False))
     hint = VALUE_HINTS.get(field["type"])
     if hint:
         lines.append(f"<i>{hint}</i>")
@@ -584,7 +619,8 @@ def _prompt_value_text(session: dict, field: dict) -> str:
 
 
 async def prompt_value(message: types.Message, session: dict, field: dict) -> None:
-    await message.answer(_prompt_value_text(session, field), reply_markup=cancel_keyboard())
+    keyboard = create_value_keyboard(field) if session.get("step") == "create" else cancel_keyboard()
+    await message.answer(_prompt_value_text(session, field), reply_markup=keyboard)
 
 
 async def prompt_bool(message: types.Message, session: dict, field: dict) -> None:
@@ -592,6 +628,8 @@ async def prompt_bool(message: types.Message, session: dict, field: dict) -> Non
     text = f"<b>{field['label']}</b>"
     if current:
         text += f"\nCurrently: <b>{html.escape(current, quote=False)}</b>"
+    if FIELD_DESCRIPTIONS.get(field["key"]):
+        text += f"\n{html.escape(FIELD_DESCRIPTIONS[field['key']], quote=False)}"
     text += "\n\nSet it to:"
     kb = types.InlineKeyboardMarkup(
         inline_keyboard=[
@@ -599,6 +637,7 @@ async def prompt_bool(message: types.Message, session: dict, field: dict) -> Non
                 types.InlineKeyboardButton(text="Yes", callback_data=f"mng:bval:{field['key']}:1"),
                 types.InlineKeyboardButton(text="No", callback_data=f"mng:bval:{field['key']}:0"),
             ],
+            ([types.InlineKeyboardButton(text="Skip", callback_data="mng:skip")] if session.get("step") == "create" else []),
             [types.InlineKeyboardButton(text="Cancel", callback_data="mng:cancel")],
         ]
     )
@@ -610,11 +649,15 @@ async def prompt_select(message: types.Message, session: dict, field: dict) -> N
     text = f"<b>{field['label']}</b>"
     if current:
         text += f"\nCurrently: <b>{html.escape(current, quote=False)}</b>"
+    if FIELD_DESCRIPTIONS.get(field["key"]):
+        text += f"\n{html.escape(FIELD_DESCRIPTIONS[field['key']], quote=False)}"
     text += "\n\nChoose one:"
     options = field.get("options") or []
     rows = []
     for option in options:
         rows.append([types.InlineKeyboardButton(text=option.replace("-", " ").title(), callback_data=f"mng:sel:{field['key']}:{option}")])
+    if session.get("step") == "create":
+        rows.append([types.InlineKeyboardButton(text="Skip", callback_data="mng:skip")])
     rows.append([types.InlineKeyboardButton(text="Cancel", callback_data="mng:cancel")])
     await message.answer(text, reply_markup=types.InlineKeyboardMarkup(inline_keyboard=rows))
 
@@ -710,7 +753,7 @@ async def begin_resource(target, resource_key: str, start_create: bool = False, 
     session["records"] = list(records or [])
     session["records_page"] = 0
     session["step"] = "record"
-    text = f"<b>{html.escape(spec['label'], quote=False)}</b> — pick a record to edit, or add a new one:"
+    text = f"<b>{html.escape(spec['label'], quote=False)}</b> - pick a record to edit, or add a new one:"
     if edit:
         await screen.edit_text(text, reply_markup=record_keyboard(session))
     else:
@@ -846,7 +889,7 @@ async def handle_wizard_sub_text(message: types.Message, session: dict) -> bool:
     else:
         return False
     if not added:
-        await message.answer("Nothing could be added — check the format and try again, or go back to fields.")
+        await message.answer("Nothing could be added - check the format and try again, or go back to fields.")
     else:
         report = "\n".join("• " + html.escape(item, quote=False) for item in added)
         await message.answer("✅ Added:\n" + report)
@@ -882,13 +925,26 @@ async def finish_save(callback, session: dict) -> None:
     except Exception:
         pass
     try:
+        last_result = None
         for op in ops:
-            await execute_admin_operation(
+            last_result = await execute_admin_operation(
                 op,
                 update_profile=update_profile,
                 manage_content=manage_content,
                 bulk_manage_links=bulk_manage_links,
             )
+        if session.get("mode") == "create" and session.get("resource") == "projects":
+            entry_id = (last_result or {}).get("id") if isinstance(last_result, dict) else None
+            if entry_id:
+                session["record"] = {"id": entry_id, "label": session.get("pending", {}).get("title", "New project")}
+                session["current"] = dict(session.get("pending") or {})
+                session["mode"] = "update"
+                session["pending"] = {}
+                session.pop("create_queue", None)
+                session["step"] = "field"
+                if callback.message:
+                    await callback.message.edit_text("✅ Project saved. Add technologies, repositories, or edit another field.", reply_markup=field_keyboard(session))
+                return
         wizard_sessions.pop(user_id, None)
         if callback.message:
             await callback.message.edit_text("✅ Saved.")
@@ -896,12 +952,12 @@ async def finish_save(callback, session: dict) -> None:
         logger.exception("Wizard finish rejected by the backend")
         if callback.message:
             await callback.message.edit_text(
-                f"The backend rejected the change:\n{error.response.text[:400]}\n\nYour changes are still pending — fix the value and tap Finish & save again."
+                f"The backend rejected the change:\n{error.response.text[:400]}\n\nYour changes are still pending - fix the value and tap Finish & save again."
             )
     except Exception:
         logger.exception("Wizard finish failed")
         if callback.message:
-            await callback.message.edit_text("I couldn't save the changes. They were kept — tap Finish & save to retry.")
+            await callback.message.edit_text("I couldn't save the changes. They were kept - tap Finish & save to retry.")
 
 
 async def handle_wizard_callback(callback) -> None:
@@ -931,7 +987,7 @@ async def handle_wizard_callback(callback) -> None:
         return
 
     if session is None:
-        await callback.answer("This choice has expired — start again with /manage.", show_alert=True)
+        await callback.answer("This choice has expired - start again with /manage.", show_alert=True)
         return
 
     if action in ("prev", "next"):
@@ -942,7 +998,7 @@ async def handle_wizard_callback(callback) -> None:
         session["records_page"] = max(0, page)
         if message:
             await message.edit_text(
-                f"<b>{html.escape(RESOURCES[session['resource']]['label'], quote=False)}</b> — pick a record to edit, or add a new one:",
+                f"<b>{html.escape(RESOURCES[session['resource']]['label'], quote=False)}</b> - pick a record to edit, or add a new one:",
                 reply_markup=record_keyboard(session),
             )
         return
@@ -954,7 +1010,7 @@ async def handle_wizard_callback(callback) -> None:
             index = -1
         records = session.get("records") or []
         if index < 0 or index >= len(records):
-            await callback.answer("That record is no longer in the list — pick again.", show_alert=True)
+            await callback.answer("That record is no longer in the list - pick again.", show_alert=True)
             return
         record = records[index]
         session["record"] = {"id": record.get("id"), "label": truncate(record_label(session["resource"], record), 60)}
@@ -964,6 +1020,19 @@ async def handle_wizard_callback(callback) -> None:
         session["media_done"] = []
         session["step"] = "field"
         await show_field_picker(message, session, edit=True)
+        return
+
+    if action == "skip":
+        if session.get("step") != "create" or not session.get("pending_field"):
+            await callback.answer("There is nothing to skip.")
+            return
+        session.setdefault("pending", {}).pop(session["pending_field"], None)
+        advance_create_queue(session)
+        if session.get("step") == "create":
+            await _prompt_field(message, session, field_by_key(session["resource"], session["pending_field"]))
+        else:
+            session["step"] = "field"
+            await show_summary(message, session)
         return
 
     if action == "create":
