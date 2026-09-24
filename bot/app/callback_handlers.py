@@ -40,10 +40,16 @@ def register_callbacks(dispatcher, dependencies):
                     if callback.message:
                         await callback.message.edit_text("Approved CV updates saved.")
                 except httpx.HTTPStatusError as error:
+                    logger.warning("CV sync save rejected status=%s response=%s", error.response.status_code, error.response.text[:300])
                     if callback.message:
                         if error.response.status_code == 409:
                             pending_cv_sync.pop(user_id, None)
-                            await callback.message.edit_text("The CV or portfolio changed after this proposal. Run /synccv again to review a fresh diff.")
+                            try:
+                                reason = error.response.json().get("detail")
+                            except ValueError:
+                                reason = None
+                            explanation = reason or "The CV or portfolio changed after this proposal."
+                            await callback.message.edit_text(f"{explanation} Run /synccv again to review a fresh diff.")
                         else:
                             await callback.message.edit_text("The CV update could not be saved. The proposal is still pending; try again.")
                     else:

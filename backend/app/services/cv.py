@@ -1,6 +1,7 @@
 """Curated CV validation, tailoring patch application, and PDF management."""
 
 import hashlib
+import copy
 from html import unescape
 import json
 from io import BytesIO
@@ -37,6 +38,7 @@ from .sync import slugify
 
 
 def validate_cv_data(data: dict) -> dict:
+    data = copy.deepcopy(data)
     required = {"name", "title", "contact", "summary", "skills", "projects", "certifications", "education"}
     if not isinstance(data, dict) or not required.issubset(data):
         raise HTTPException(status_code=422, detail=f"CV JSON must contain: {', '.join(sorted(required))}")
@@ -85,7 +87,7 @@ def get_cv_base(db: Session) -> dict:
 def save_cv_base(db: Session, data: dict, base_revision: str | None = None, portfolio_revision: str | None = None) -> dict:
     data = validate_cv_data(data)
     setting = db.get(SiteSetting, "cv_data")
-    current_data = setting.value if setting else None
+    current_data = validate_cv_data(setting.value) if setting else None
     if base_revision is not None:
         if current_data is None or cv_base_hash(current_data) != base_revision:
             raise HTTPException(status_code=409, detail="The CV JSON changed while this sync proposal was pending; run /synccv again")
@@ -128,7 +130,7 @@ def build_cv_data(db: Session) -> dict:
         raise HTTPException(status_code=404, detail="Profile not found")
 
     links = db.scalars(
-        select(ProfileLink).where(ProfileLink.is_visible.is_(True)).order_by(ProfileLink.custom_order)
+        select(ProfileLink).where(ProfileLink.is_visible.is_(True)).order_by(ProfileLink.custom_order, ProfileLink.normalized_name, ProfileLink.id)
     ).all()
     contact = {
         "location": profile.location,
@@ -140,7 +142,7 @@ def build_cv_data(db: Session) -> dict:
     skills = [
         {"category": group.category, "items": [str(item) for item in (group.skills or [])]}
         for group in db.scalars(
-            select(SkillGroup).where(SkillGroup.is_visible.is_(True)).order_by(SkillGroup.custom_order)
+            select(SkillGroup).where(SkillGroup.is_visible.is_(True)).order_by(SkillGroup.custom_order, SkillGroup.category, SkillGroup.id)
         ).all()
     ]
 
@@ -165,7 +167,7 @@ def build_cv_data(db: Session) -> dict:
         for highlight in db.scalars(
             select(Highlight)
             .where(Highlight.entry_id.in_(project_ids))
-            .order_by(Highlight.entry_id, Highlight.order_index)
+            .order_by(Highlight.entry_id, Highlight.order_index, Highlight.id)
         ).all():
             highlights_by_project.setdefault(highlight.entry_id, []).append(highlight)
 
@@ -194,7 +196,7 @@ def build_cv_data(db: Session) -> dict:
     certificates = [
         item.title
         for item in db.scalars(
-            select(Certificate).where(Certificate.is_visible.is_(True)).order_by(Certificate.custom_order)
+            select(Certificate).where(Certificate.is_visible.is_(True)).order_by(Certificate.custom_order, Certificate.title, Certificate.id)
         ).all()
     ]
     competitions = db.scalars(
@@ -220,7 +222,7 @@ def build_cv_data(db: Session) -> dict:
             "institution": item.school,
             "degree": f"{item.degree} ({item.period})" if item.period else item.degree,
         }
-        for item in db.scalars(select(Education).order_by(Education.custom_order)).all()
+        for item in db.scalars(select(Education).order_by(Education.custom_order, Education.school, Education.degree, Education.id)).all()
     ]
 
     about = _plain_text(profile.about)

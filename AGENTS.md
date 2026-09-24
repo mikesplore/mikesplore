@@ -964,3 +964,9 @@ This phase was completed before the schema and backend work.
   add the matching database profile link to a dedicated header-links field; the merger rejects
   removal when the item matches a verified certificate or competition. PDF bullets now use an
   inline marker, and duplicate languages/location/work-style lines are suppressed.
+- Follow-up from an owner screenshot: the Save action had rejected the proposal as stale, so the
+  old approved PDF remained visible. Root cause: CV validation trimmed project bullets in-place,
+  making the preview revision differ from the untrimmed stored JSON at save time. Validation now
+  normalizes a copy, and save compares against the same normalized representation. Portfolio
+  source queries also now use deterministic tie-break ordering; stale-save logs and messages expose
+  the backend's specific revision conflict instead of a generic warning.
