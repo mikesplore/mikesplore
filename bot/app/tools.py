@@ -3,6 +3,12 @@ import httpx
 from .config import settings
 
 
+def _filter_entry_type(entries: list[dict], content_type: str | None) -> list[dict]:
+    if not content_type:
+        return entries
+    return [entry for entry in entries if entry.get("content_type") == content_type]
+
+
 async def list_entries(content_type: str | None = None, page: int = 1, page_size: int = 5) -> dict:
     params = {"page": page, "page_size": min(page_size, 5)}
     if content_type:
@@ -10,7 +16,7 @@ async def list_entries(content_type: str | None = None, page: int = 1, page_size
     async with httpx.AsyncClient(base_url=settings.backend_url, timeout=10) as client:
         response = await client.get("/entries", params=params)
         response.raise_for_status()
-        entries = response.json()
+        entries = _filter_entry_type(response.json(), content_type)
         total = int(response.headers.get("x-total-count", len(entries)))
         # Keep tool context small; the model only needs public display fields to answer questions.
         return {"total": total, "page": page, "page_size": len(entries), "entries": [
