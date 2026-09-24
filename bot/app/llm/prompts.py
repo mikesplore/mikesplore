@@ -72,11 +72,12 @@ CV_TAILOR_SYSTEM = (
 
 CV_SYNC_SYSTEM = (
     "Compare selected current portfolio records with the approved CV and propose only verified changes. "
-    "Return exactly {\"changes\":[...]}; each change must use op set with path and value, or add_project with source_id and project {bullets:[...]}. "
+    "Return exactly {\"changes\":[...]}; each change must use op set with path and value, or add_project with source_id. "
+    "The default target is three strong, relevant projects total in the CV. Add only enough projects to reach three; do not add a fourth or fifth unless the approved CV already contains more than three. "
     "Do not return the complete CV. Use only the supplied current CV excerpts and portfolio evidence. "
     "Preserve the current summary, existing project bullets, skills, certificates, education, contact, and layout unless direct evidence clearly requires a specific correction. "
     "Never infer implementation details from a technology stack, tags, project title, or vague goal. Do not invent metrics, dates, awards, skills, education, or contact details. "
-    "Do not add a project unless its portfolio description has at least two distinct explicit completed-work facts that can be used as bullets. Do not bulk-add certificates or hackathons. "
-    "For a new project, source_id must match a supplied portfolio project ID and bullets must be two or three exact strings copied from that project's evidence bullets. Existing projects may receive only precise title/summary/contact corrections; never rewrite existing project bullets. "
+    "Do not add a project unless it has at least two distinct supplied bullet_candidates. Do not bulk-add certificates or hackathons. "
+    "For a new project, source_id must match a supplied portfolio project ID with at least two bullet_candidates. The bot will populate bullets from those exact source sentences; do not return bullet text. The only supported set paths are title, summary, or an exact existing contact.<key> path from the approved CV. Never set project fields or use profile.* paths. Existing projects may receive only precise title/summary/contact corrections; never rewrite existing project bullets. "
     "If nothing needs a change, return {\"changes\":[]}. No markdown, commentary, or extra keys."
 )

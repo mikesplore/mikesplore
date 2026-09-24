@@ -16,6 +16,8 @@ class Settings(BaseSettings):
     backend_url: str = "http://localhost:8000"
     groq_model: str = "llama-3.1-8b-instant"
     groq_vision_model: str = "meta-llama/llama-4-scout-17b-16e-instruct"
+    gemini_api_key: str | None = None
+    gemini_cv_sync_model: str = "gemini-3.8-flash"
     admin_telegram_id: int
     service_api_key: str
     model_config = SettingsConfigDict(env_file=ENV_FILE, extra="ignore")

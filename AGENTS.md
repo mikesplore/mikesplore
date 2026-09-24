@@ -924,3 +924,38 @@ This phase was completed before the schema and backend work.
   records, requests at most 700 output tokens as an operation list, and merges approved operations
   locally into the original JSON. New project bullets must be exact copies of recorded evidence;
   the portfolio revision still covers all source records and is checked at approval time.
+- Added optional task-specific Gemini generation for `/synccv` via `GEMINI_API_KEY` and
+  `GEMINI_CV_SYNC_MODEL` (default `gemini-3.8-flash`); other LLM workflows remain on Groq. The
+  current Gemini path uses one direct Interactions API model call with JSON output and no tools,
+  background agent, or polling. Request ID, model, input size, token counts, latency, and failure
+  status are logged and written through `/internal/llm-usage`. If no Gemini key is configured, the
+  Groq fallback explicitly requests JSON in its messages, as required by Groq JSON mode.
+- Reduced CV sync latency and added Gemini request visibility after the owner reported the
+  Antigravity path was slow and absent from usage logs. `/synccv` now calls the configured Gemini
+  Flash model directly through Interactions, with no agent tools/background polling, logs request ID
+  and elapsed time, and records token counts and success/failure in `llm_usage`. The SDK minimum is
+  pinned to `google-genai>=2.18,<3` for the current Interactions API support.
+- Tightened the Gemini response schema for CV sync to require `changes[]` operations with
+  `op=set` or `op=add_project`. The merger also normalizes a small set of equivalent safe aliases
+  and logs rejected operation names plus field names (never CV text) to make future schema drift
+  diagnosable.
+- Follow-up after the owner added the Milo project: the first sync context omitted projects with
+  fewer than two saved highlights, even when the project had a detailed description. The context
+  now includes those descriptions, while keeping the revision hash based on the complete portfolio.
+  `/synccv` deterministically splits descriptions into sentence-level bullet candidates; Gemini
+  selects a project ID only, and the bot inserts those exact sentences as bullets. This lets
+  detailed projects such as Milo enter the review diff without having Gemini compose new claims.
+### CV sync field path guard (2026-09-24)
+
+- Gemini's structured response schema now enumerates valid `set` paths from the approved CV:
+  `title`, `summary`, and only contact keys that already exist. The sync prompt explicitly
+  forbids project and `profile.*` paths, matching the local validator and preventing unsupported
+  field proposals before they reach it.
+- CV sync now targets three total projects by default and the merger stops accepting additions at
+  that target. If the approved CV already contains more than three projects, sync preserves them
+  and does not add more; project selection for tailored CVs remains governed by the job-specific
+  tailoring workflow.
+- CV project bullets are capped at three in the approved JSON source: backend validation trims
+  excess bullets before saving, portfolio-derived CV context and tailoring context expose at most
+  three, and the PDF renderer consumes the validated source. This keeps stored and rendered CV data
+  aligned.

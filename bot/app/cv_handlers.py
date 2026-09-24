@@ -154,6 +154,10 @@ async def prepare_cv_sync(message: types.Message):
     try:
         base = await get_cv_base()
         portfolio = await get_cv_portfolio_context()
+        if settings.gemini_api_key:
+            await status.edit_text("Checking the portfolio evidence with Gemini…")
+        else:
+            await status.edit_text("Checking the portfolio evidence with Groq…")
         proposal = await sync_cv_data(base["data"], portfolio["data"])
         candidate = proposal["candidate"]
         if set(candidate) != set(base["data"]):

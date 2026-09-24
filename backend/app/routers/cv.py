@@ -21,13 +21,10 @@ def get_cv_base(db: Session = Depends(get_db)):
 @router.get("/admin/cv/portfolio-context", dependencies=[Depends(require_service_key)])
 def get_cv_portfolio_context(db: Session = Depends(get_db)):
     data = cv_service.build_cv_data(db)
-    data["projects"] = [
-        project for project in data.get("projects", [])
-        if len(project.get("bullets") or []) >= 2
-    ]
+    revision = cv_service.cv_base_hash(data)
     data["certifications"] = data.get("certifications", [])[:15]
     data["skills"] = data.get("skills", [])[:8]
-    return {"data": data, "revision": cv_service.cv_base_hash(data)}
+    return {"data": data, "revision": revision}
 
 
 @router.post("/admin/cv/base/validate", dependencies=[Depends(require_service_key)])
@@ -55,7 +52,7 @@ def get_cv_tailoring_context(db: Session = Depends(get_db)):
     data = cv_service.get_cv_base(db)["data"]
     projects = []
     for project in data.get("projects", [])[:20]:
-        bullets = [str(bullet)[:500] for bullet in (project.get("bullets") or [])[:6]]
+        bullets = [str(bullet)[:500] for bullet in (project.get("bullets") or [])[:3]]
         stack = project.get("stack") or []
         if isinstance(stack, str):
             stack = [item.strip() for item in stack.split(",") if item.strip()]

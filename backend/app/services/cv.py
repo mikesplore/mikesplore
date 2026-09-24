@@ -52,6 +52,10 @@ def validate_cv_data(data: dict) -> dict:
         raise HTTPException(status_code=422, detail="Each CV project needs name, date, stack, and bullets")
     if any(not isinstance(project.get("name"), str) or not isinstance(project.get("date"), (str, int)) or not isinstance(project.get("stack"), (str, list)) or (isinstance(project.get("stack"), list) and any(not isinstance(item, str) for item in project["stack"])) or any(not isinstance(bullet, str) for bullet in project["bullets"]) for project in data["projects"]):
         raise HTTPException(status_code=422, detail="CV project names, dates, stacks, and bullets have invalid types")
+    # Normalize the canonical source during validation/save so the stored CV
+    # and every later render use the same three-bullet limit.
+    for project in data["projects"]:
+        project["bullets"] = project["bullets"][:3]
     if any(not all(isinstance(item, str) for item in group["items"]) for group in data["skills"]):
         raise HTTPException(status_code=422, detail="CV skill items must be text")
     if any(not isinstance(item, str) for item in data["certifications"]):
@@ -167,7 +171,7 @@ def build_cv_data(db: Session) -> dict:
             _plain_text(item.description or item.title)
             for item in highlights
             if _plain_text(item.description or item.title)
-        ][:6]
+        ][:3]
         if not bullets and _plain_text(project.blurb):
             bullets = [_plain_text(project.blurb)]
         date_value = project.date or project.started_at or project.ended_at
