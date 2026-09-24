@@ -974,3 +974,7 @@ This phase was completed before the schema and backend work.
   merger now resolves profile and certification references by exact ID/name/URL or unique normalized
   evidence, skips unresolved or verified-award moves with sanitized warnings, and continues applying
   other valid proposal operations instead of failing the full sync.
+- After the owner reported Gemini taking over a minute and exhausting its 20/day free-tier cap,
+  `/synccv` was switched back to Groq only. It keeps the compact JSON operation-list prompt and
+  local evidence validation, caps output at 350 tokens, sets a 30-second request timeout, and uses
+  the shared Groq usage/error path. Removed Gemini-only configuration and dependency references.

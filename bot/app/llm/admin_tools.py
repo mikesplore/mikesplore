@@ -4,7 +4,7 @@ import time
 
 from ..admin import list_admin_resource, list_profile_links, search_admin_content, sync_devto_articles
 from ..config import settings
-from .client import _record_usage, complete
+from .client import complete
 from .prompts import CV_SYNC_SYSTEM, CV_TAILOR_SYSTEM, EXTRACT_SYSTEM
 
 logger = logging.getLogger(__name__)
@@ -191,100 +191,27 @@ async def sync_cv_data(base_data: dict, portfolio_context: dict) -> list[dict]:
         f"contact.{key}" for key in (base_data.get("contact") or {}) if isinstance(key, str)
     ]
     portfolio_revision = portfolio_context.get("revision")
-    if settings.gemini_api_key:
-        import asyncio
-        from google import genai
-
-        gemini = genai.Client(api_key=settings.gemini_api_key)
-        input_json = json.dumps(prompt_data, ensure_ascii=False)
-        logger.info("Gemini CV sync started model=%s input_characters=%d", settings.gemini_cv_sync_model, len(input_json))
-        started = time.perf_counter()
-
-        def run_interaction():
-            return gemini.interactions.create(
-                model=settings.gemini_cv_sync_model,
-                input="Return a JSON change list using only this evidence:\n" + input_json,
-                system_instruction=CV_SYNC_SYSTEM + " Return valid JSON only.",
-                generation_config={"max_output_tokens": 700, "thinking_level": "low"},
-                response_format=[{
-                    "type": "text",
-                    "mime_type": "application/json",
-                    "schema": {
-                        "type": "object",
-                        "properties": {
-                            "changes": {
-                                "type": "array",
-                                "items": {
-                                    "type": "object",
-                                    "properties": {
-                                        "op": {"type": "string", "enum": ["set", "add_project", "move_profile_link"]},
-                                        "path": {"type": "string", "enum": allowed_field_paths},
-                                        "value": {"type": "string"},
-                                        "source_id": {"type": "string"},
-                                        "profile_id": {"type": "string"},
-                                        "certification": {"type": "string"},
-                                    },
-                                    "required": ["op"],
-                                },
-                            },
-                        },
-                        "required": ["changes"],
-                    },
-                }],
-            )
-
-        try:
-            interaction = await asyncio.to_thread(run_interaction)
-            latency_ms = round((time.perf_counter() - started) * 1000)
-            if interaction.status == "failed":
-                raise ValueError(f"Gemini CV sync failed: {interaction.error}")
-            usage = getattr(interaction, "usage", None)
-
-            def usage_value(name):
-                return usage.get(name) if isinstance(usage, dict) else getattr(usage, name, None)
-
-            input_tokens = usage_value("total_input_tokens")
-            output_tokens = usage_value("total_output_tokens")
-            total_tokens = usage_value("total_tokens") or (
-                input_tokens + output_tokens
-                if input_tokens is not None and output_tokens is not None
-                else None
-            )
-            await _record_usage({
-                "provider": "gemini", "model": settings.gemini_cv_sync_model, "workflow": "cv-sync",
-                "request_id": getattr(interaction, "id", None), "input_tokens": input_tokens,
-                "output_tokens": output_tokens, "total_tokens": total_tokens,
-                "input_characters": len(input_json), "tool_payload_characters": 0,
-                "latency_ms": latency_ms, "success": True,
-            })
-            logger.info(
-                "Gemini CV sync completed request_id=%s latency_ms=%d input_tokens=%s output_tokens=%s",
-                getattr(interaction, "id", None), latency_ms, input_tokens, output_tokens,
-            )
-            content = (interaction.output_text or "").strip()
-        except Exception as error:
-            latency_ms = round((time.perf_counter() - started) * 1000)
-            await _record_usage({
-                "provider": "gemini", "model": settings.gemini_cv_sync_model, "workflow": "cv-sync",
-                "input_characters": len(input_json), "tool_payload_characters": 0,
-                "latency_ms": latency_ms, "success": False,
-                "error_code": type(error).__name__[:128],
-            })
-            logger.exception("Gemini CV sync failed model=%s latency_ms=%d", settings.gemini_cv_sync_model, latency_ms)
-            raise
-    else:
-        completion = await complete(
-            model=settings.groq_model,
-            messages=[
-                {"role": "system", "content": CV_SYNC_SYSTEM + " Return valid JSON only."},
-                {"role": "user", "content": "Return a JSON object with a changes array.\n" + json.dumps(prompt_data, ensure_ascii=False)},
-            ],
-            response_format={"type": "json_object"},
-            max_tokens=700,
-            temperature=0,
-            _usage_workflow="cv-sync",
-        )
-        content = (completion.choices[0].message.content or "").strip()
+    input_json = json.dumps(prompt_data, ensure_ascii=False)
+    started = time.perf_counter()
+    logger.info("Groq CV sync started model=%s input_characters=%d", settings.groq_model, len(input_json))
+    completion = await complete(
+        model=settings.groq_model,
+        messages=[
+            {"role": "system", "content": CV_SYNC_SYSTEM + " Return valid JSON only."},
+            {"role": "user", "content": "Return a JSON object with a changes array.\n" + input_json},
+        ],
+        response_format={"type": "json_object"},
+        max_tokens=350,
+        temperature=0,
+        timeout=30,
+        _usage_workflow="cv-sync",
+    )
+    content = (completion.choices[0].message.content or "").strip()
+    logger.info(
+        "Groq CV sync completed request_id=%s latency_ms=%d input_tokens=%s output_tokens=%s",
+        getattr(completion, "id", None), round((time.perf_counter() - started) * 1000),
+        getattr(completion.usage, "prompt_tokens", None), getattr(completion.usage, "completion_tokens", None),
+    )
     if content.startswith("```"):
         content = content.removeprefix("```").removeprefix("json").removesuffix("```").strip()
     result = json.loads(content or "{}")

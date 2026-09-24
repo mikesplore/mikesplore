@@ -24,8 +24,6 @@ At minimum, configure:
 - `ADMIN_TELEGRAM_ID`
 - `GROQ_API_KEY`
 - `GROQ_MODEL`
-- `GEMINI_API_KEY` (optional; used for `/synccv` when configured)
-- `GEMINI_CV_SYNC_MODEL` (optional; defaults to `gemini-3.8-flash`)
 - `BACKEND_URL`
 - R2 credentials for file uploads
 
