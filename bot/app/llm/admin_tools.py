@@ -302,6 +302,58 @@ async def sync_cv_data(base_data: dict, portfolio_context: dict) -> list[dict]:
         for item in [*(portfolio_context.get("certifications") or []), *(portfolio_context.get("competitions") or [])]
         if isinstance(item, str) and item.strip()
     ]
+
+    def profile_link_for_change(change: dict) -> dict | None:
+        requested = change.get("profile_id") or change.get("source_id")
+        profile_payload = change.get("profile") if isinstance(change.get("profile"), dict) else {}
+        requested = requested or profile_payload.get("id") or profile_payload.get("url")
+        source = profile_links_by_id.get(str(requested)) if requested else None
+        if source:
+            return source
+        requested_text = str(requested or profile_payload.get("name") or change.get("profile_name") or "").strip().casefold()
+        if requested_text:
+            matches = [
+                item for item in profile_links
+                if requested_text in {str(item.get("name", "")).casefold(), str(item.get("url", "")).casefold()}
+                or requested_text in str(item.get("name", "")).casefold()
+                or requested_text in str(item.get("url", "")).casefold()
+            ]
+            if len(matches) == 1:
+                return matches[0]
+        # Some model responses omit IDs despite the schema. Resolve only a unique
+        # profile whose name/domain is explicitly present in the proposed CV text.
+        proposed = " ".join(str(change.get(key) or "") for key in ("certification", "value", "item", "title")).casefold()
+        matches = []
+        for item in profile_links:
+            name = str(item.get("name") or "").casefold()
+            url = str(item.get("url") or "").casefold()
+            host = re.sub(r"^https?://(?:www\.)?", "", url).split("/", 1)[0]
+            terms = [term for term in (name, host, host.removeprefix("www.")) if len(term) > 2]
+            if any(term in proposed for term in terms):
+                matches.append(item)
+        return matches[0] if len(matches) == 1 else None
+
+    def certification_for_change(change: dict, source: dict | None = None) -> str | None:
+        requested = next((change.get(key) for key in ("certification", "value", "item", "title") if isinstance(change.get(key), str)), None)
+        certifications = candidate.get("certifications", [])
+        if requested in certifications:
+            return requested
+        if isinstance(requested, str):
+            normalized = re.sub(r"[^a-z0-9]+", " ", requested.casefold()).strip()
+            matches = [item for item in certifications if re.sub(r"[^a-z0-9]+", " ", str(item).casefold()).strip() == normalized]
+            if len(matches) == 1:
+                return matches[0]
+        if source:
+            def tokens(value: str) -> set[str]:
+                parts = re.sub(r"[^a-z0-9]+", " ", value.casefold()).split()
+                return {part[:-1] if len(part) > 4 and part.endswith("s") else part for part in parts if len(part) > 2}
+
+            profile_tokens = tokens(str(source.get("name") or "") + " " + str(source.get("url") or ""))
+            profile_tokens -= {"profile", "community", "author", "website", "account", "https", "http", "www"}
+            matches = [item for item in certifications if profile_tokens & tokens(str(item))]
+            if len(matches) == 1:
+                return matches[0]
+        return None
     seen_changes = 0
     for change in result["changes"][:10]:
         if not isinstance(change, dict):
@@ -314,6 +366,7 @@ async def sync_cv_data(base_data: dict, portfolio_context: dict) -> list[dict]:
             "set_field": "set", "update_field": "set", "update": "set",
             "add": "add_project", "include_project": "add_project",
             "select_project": "add_project", "project_add": "add_project",
+            "move_profile": "move_profile_link", "move_link": "move_profile_link",
         }.get(operation, operation)
         if operation == "set":
             path = change.get("path") or change.get("field")
@@ -354,11 +407,14 @@ async def sync_cv_data(base_data: dict, portfolio_context: dict) -> list[dict]:
             seen_changes += 1
             project_additions += 1
         elif operation == "move_profile_link":
-            profile_id = str(change.get("profile_id") or change.get("source_id") or "")
-            source = profile_links_by_id.get(profile_id)
-            certification = change.get("certification")
-            if not source or not isinstance(certification, str) or certification not in candidate.get("certifications", []):
-                raise ValueError("The CV sync proposed an invalid profile-link move.")
+            source = profile_link_for_change(change)
+            certification = certification_for_change(change, source)
+            if not source or not certification:
+                logger.warning(
+                    "Skipping unresolved CV profile-link move fields=%s profile_resolved=%s certification_resolved=%s",
+                    sorted(str(key) for key in change.keys()), bool(source), bool(certification),
+                )
+                continue
             normalized_certification = re.sub(r"[^a-z0-9]+", " ", certification.strip().casefold()).strip()
             if any(
                 normalized_certification == award
@@ -366,7 +422,8 @@ async def sync_cv_data(base_data: dict, portfolio_context: dict) -> list[dict]:
                 or f" {normalized_certification} " in f" {award} "
                 for award in verified_awards
             ):
-                raise ValueError("The CV sync cannot move a verified certificate or competition into profile links.")
+                logger.warning("Skipping attempted move of a verified certificate or competition into profile links")
+                continue
             candidate["certifications"].remove(certification)
             profile_value = {"name": str(source.get("name") or "Profile"), "url": str(source.get("url") or "")}
             candidate.setdefault("profiles", [])

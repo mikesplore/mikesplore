@@ -970,3 +970,7 @@ This phase was completed before the schema and backend work.
   normalizes a copy, and save compares against the same normalized representation. Portfolio
   source queries also now use deterministic tie-break ordering; stale-save logs and messages expose
   the backend's specific revision conflict instead of a generic warning.
+- Gemini occasionally omitted or reformatted one of the profile-link move fields. The CV sync
+  merger now resolves profile and certification references by exact ID/name/URL or unique normalized
+  evidence, skips unresolved or verified-award moves with sanitized warnings, and continues applying
+  other valid proposal operations instead of failing the full sync.
