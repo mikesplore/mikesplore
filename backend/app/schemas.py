@@ -16,6 +16,7 @@ class EntryBase(BaseModel):
     content_type: ContentType
     title: str = Field(min_length=1, max_length=255)
     blurb: str
+    live_url: str | None = None
     date: DateValue | None = None
     year: int | None = Field(default=None, ge=1900, le=2200)
     is_visible: bool = True
@@ -35,6 +36,7 @@ class EntryUpdate(BaseModel):
     content_type: ContentType | None = None
     title: str | None = Field(default=None, min_length=1, max_length=255)
     blurb: str | None = None
+    live_url: str | None = None
     date: DateValue | None = None
     year: int | None = Field(default=None, ge=1900, le=2200)
     is_visible: bool | None = None

@@ -16,6 +16,7 @@ class Entry(Base):
     content_type: Mapped[str] = mapped_column(String(32), index=True)
     title: Mapped[str] = mapped_column(String(255))
     blurb: Mapped[str] = mapped_column(Text)
+    live_url: Mapped[str | None] = mapped_column(Text)
     date: Mapped[date | None] = mapped_column(Date)
     year: Mapped[int | None] = mapped_column(Integer)
     is_visible: Mapped[bool] = mapped_column(Boolean, default=True)
