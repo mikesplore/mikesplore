@@ -4,11 +4,13 @@ export default function ProjectResultStrip({ projects = [], links = [], onProjec
       {projects.length > 0 && <>
         <p className="mb-3 px-0.5 text-xs font-medium text-muted">Projects</p>
         <div className="grid gap-3 sm:grid-cols-2" role="list">
-          {projects.map((project) => <button
+          {projects.map((project) => {
+            const Card = project.url ? 'a' : 'div';
+            return <Card
             key={project.id || project.url || project.title}
-            type="button"
+            {...(project.url ? { href: project.url, target: '_blank', rel: 'noreferrer' } : {})}
             onClick={() => onProjectClick?.(project)}
-            className="w-full overflow-hidden rounded-2xl border border-divider bg-card text-left shadow-sm transition hover:-translate-y-0.5 hover:border-primary hover:shadow-md focus:outline-none focus:ring-2 focus:ring-accent"
+            className={`block w-full overflow-hidden rounded-2xl border border-divider bg-card text-left shadow-sm transition ${project.url ? 'hover:-translate-y-0.5 hover:border-primary hover:shadow-md focus:outline-none focus:ring-2 focus:ring-accent' : ''}`}
             role="listitem"
           >
             <div className="flex h-28 items-center justify-center bg-elevated text-3xl text-muted" aria-hidden="true">
@@ -18,7 +20,8 @@ export default function ProjectResultStrip({ projects = [], links = [], onProjec
               <div className="flex items-start justify-between gap-3"><p className="font-semibold text-ink">{project.title}</p><span className="shrink-0 text-xs text-nav">Open ↗</span></div>
               {project.summary && <p className="mt-2 line-clamp-2 text-xs leading-5 text-muted">{project.summary}</p>}
             </div>
-          </button>)}
+          </Card>;
+          })}
         </div>
       </>}
 
