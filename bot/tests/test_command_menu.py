@@ -20,8 +20,8 @@ def test_public_command_menu_discloses_owner_management_commands(monkeypatch):
     asyncio.run(main.register_commands())
 
     public_commands = {command.command: command.description for command in calls[0][0]}
-    assert {"start", "menu", "help", "manage", "synccv", "referees", "apply"} <= set(public_commands)
-    assert all("owner only" in public_commands[name].lower() for name in ("manage", "synccv", "referees", "apply"))
+    assert {"start", "menu", "help", "manage", "cvprojects", "synccv", "referees", "apply"} <= set(public_commands)
+    assert all("owner only" in public_commands[name].lower() for name in ("manage", "cvprojects", "synccv", "referees", "apply"))
 
     admin_commands = {command.command for command in calls[1][0]}
     assert set(public_commands) <= admin_commands

@@ -266,6 +266,78 @@ def build_cv_data(db: Session) -> dict:
     }
 
 
+def build_cv_project_manager_context(db: Session) -> dict:
+    """Return every project and its authored evidence for the owner CV manager."""
+    project_rows = db.scalars(
+        select(Entry)
+        .where(Entry.content_type == "project")
+        .order_by(Entry.custom_order, Entry.date.desc().nullslast(), Entry.title)
+        .limit(500)
+    ).all()
+    project_ids = [project.id for project in project_rows]
+    stacks: dict = {}
+    highlights_by_project: dict = {}
+    if project_ids:
+        for entry_id, technology_name in db.execute(
+            select(EntryTechnology.entry_id, Technology.name)
+            .join(Technology, EntryTechnology.technology_id == Technology.id)
+            .where(EntryTechnology.entry_id.in_(project_ids))
+            .order_by(Technology.name)
+        ).all():
+            stacks.setdefault(entry_id, []).append(technology_name)
+        for highlight in db.scalars(
+            select(Highlight)
+            .where(Highlight.entry_id.in_(project_ids))
+            .order_by(Highlight.entry_id, Highlight.order_index, Highlight.id)
+        ).all():
+            highlights_by_project.setdefault(highlight.entry_id, []).append(highlight)
+
+    projects = []
+    for project in project_rows:
+        highlights = highlights_by_project.get(project.id, [])
+        evidence = [
+            _plain_text(item.description or item.title)
+            for item in highlights
+            if _plain_text(item.description or item.title)
+        ]
+        description = _plain_text(project.blurb)
+        if not evidence and description:
+            evidence = [description]
+        date_value = project.date or project.started_at or project.ended_at
+        date_label = str(date_value.year if hasattr(date_value, "year") else date_value or project.year or "")
+        projects.append({
+            "id": project.slug,
+            "name": project.title,
+            "date": date_label,
+            "stack": stacks.get(project.id, []),
+            "description": description,
+            "evidence": evidence[:12],
+            "tags": [str(tag) for tag in (project.tags or [])],
+            "author_role": project.author_role,
+            "category": project.category,
+            "featured": bool(project.is_featured),
+            "is_visible": bool(project.is_visible),
+        })
+    revision = cv_base_hash({"projects": projects})
+    return {"projects": projects, "revision": revision}
+
+
+def save_cv_manager_data(
+    db: Session,
+    data: dict,
+    base_revision: str,
+    portfolio_revision: str,
+) -> dict:
+    """Save owner-approved CV edits only if neither the CV nor source projects changed."""
+    current_base = get_cv_base(db)
+    if current_base["revision"] != base_revision:
+        raise HTTPException(status_code=409, detail="The approved CV changed while this edit was pending; reopen the CV project manager")
+    current_portfolio = build_cv_project_manager_context(db)
+    if current_portfolio["revision"] != portfolio_revision:
+        raise HTTPException(status_code=409, detail="Project data changed while this edit was pending; reopen the CV project manager")
+    return save_cv_base(db, data, base_revision=base_revision)
+
+
 def validate_cv_patch(patch: dict) -> dict:
     required = {"summary", "selected_projects", "selected_skills"}
     if not isinstance(patch, dict) or not required.issubset(patch):

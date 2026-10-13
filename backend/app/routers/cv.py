@@ -27,6 +27,24 @@ def get_cv_portfolio_context(db: Session = Depends(get_db)):
     return {"data": data, "revision": revision}
 
 
+@router.get("/admin/cv/project-manager", dependencies=[Depends(require_service_key)])
+def get_cv_project_manager_context(db: Session = Depends(get_db)):
+    return cv_service.build_cv_project_manager_context(db)
+
+
+@router.post("/admin/cv/project-manager", dependencies=[Depends(require_service_key)])
+def save_cv_project_manager(payload: dict, db: Session = Depends(get_db)):
+    required = {"data", "base_revision", "portfolio_revision"}
+    if not required.issubset(payload):
+        raise HTTPException(status_code=422, detail="CV project manager save requires data and both revision values")
+    return cv_service.save_cv_manager_data(
+        db,
+        payload["data"],
+        str(payload["base_revision"]),
+        str(payload["portfolio_revision"]),
+    )
+
+
 @router.post("/admin/cv/base/validate", dependencies=[Depends(require_service_key)])
 def validate_cv_base(payload: dict):
     return cv_service.validate_cv_data(payload)

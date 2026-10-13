@@ -22,12 +22,16 @@ def register_callbacks(dispatcher, dependencies):
                     return
                 await browse.handle_public_callback(callback)
                 return
-            if data in {"cv-sync:save", "cv-sync:cancel"}:
+            if data.startswith("cvp:"):
+                await handle_cv_project_callback(callback)
+                return
+            if data.startswith(("cv-sync:save:", "cv-sync:cancel:")):
+                action, token = data.split(":", 2)[1:]
                 proposal = pending_cv_sync.get(user_id)
-                if not proposal:
+                if not proposal or proposal.get("token") != token:
                     await callback.answer("This CV sync proposal has expired", show_alert=True)
                     return
-                if data == "cv-sync:cancel":
+                if action == "cancel":
                     pending_cv_sync.pop(user_id, None)
                     await callback.answer("Discarded")
                     if callback.message:
@@ -60,6 +64,38 @@ def register_callbacks(dispatcher, dependencies):
                         await callback.message.edit_text("The CV update could not be saved. The proposal is still pending; try again.")
                     else:
                         await callback.answer("The CV update could not be saved", show_alert=True)
+                return
+            if data.startswith(("cv-referee:save:", "cv-referee:cancel:")):
+                action, token = data.split(":", 2)[1:]
+                proposal = pending_cv_referee.get(user_id)
+                if not proposal or proposal.get("token") != token:
+                    await callback.answer("This referee proposal has expired", show_alert=True)
+                    return
+                if action == "cancel":
+                    pending_cv_referee.pop(user_id, None)
+                    await callback.answer("Discarded")
+                    if callback.message:
+                        await callback.message.edit_text("Referee changes discarded.")
+                    return
+                try:
+                    await callback.answer("Saving referee changes…")
+                    await save_cv_base(proposal["data"], base_revision=proposal["base_revision"])
+                    pending_cv_referee.pop(user_id, None)
+                    if callback.message:
+                        await callback.message.edit_text("Referee changes saved to the approved CV. Use /menu → View CV to render the updated PDF.")
+                except httpx.HTTPStatusError as error:
+                    logger.warning("CV referee save rejected status=%s response=%s", error.response.status_code, error.response.text[:300])
+                    if error.response.status_code == 409:
+                        pending_cv_referee.pop(user_id, None)
+                        explanation = "The approved CV changed after this proposal. Please ask me to prepare the referee change again."
+                    else:
+                        explanation = "The referee changes could not be saved. The proposal is still pending; try again."
+                    if callback.message:
+                        await callback.message.edit_text(explanation)
+                except Exception:
+                    logger.exception("Saving CV referee proposal failed")
+                    if callback.message:
+                        await callback.message.edit_text("The referee changes could not be saved. The proposal is still pending; try again.")
                 return
             if data == "admin:cancel":
                 pending_mutation.pop(user_id, None)
@@ -108,12 +144,13 @@ def register_callbacks(dispatcher, dependencies):
                     if callback.message:
                         await callback.message.edit_text("The operation failed. The pending change was kept so you can retry.")
                 return
-            if data in {"cv:generate", "cv:revise"}:
+            if data.startswith(("cv:generate:", "cv:revise:")):
+                action, token = data.split(":", 2)[1:]
                 tailored = pending_cv.get(user_id)
-                if not tailored:
+                if not tailored or pending_cv_tokens.get(user_id) != token:
                     await callback.answer("This CV proposal has expired", show_alert=True)
                     return
-                if data == "cv:revise":
+                if action == "revise":
                     await callback.answer("Reply with the changes you want")
                     if callback.message:
                         await callback.message.answer("Tell me what you want changed in the proposed CV.")
@@ -128,6 +165,7 @@ def register_callbacks(dispatcher, dependencies):
                         pdf_response = await client.get(result["pdf_url"])
                         pdf_response.raise_for_status()
                     pending_cv.pop(user_id, None)
+                    pending_cv_tokens.pop(user_id, None)
                     if callback.message:
                         await callback.message.answer_document(types.BufferedInputFile(pdf_response.content, filename=cv_filename(label)), caption="Tailored CV")
                         last_cv_delivery[user_id] = (result["pdf_url"], label)
@@ -139,8 +177,8 @@ def register_callbacks(dispatcher, dependencies):
                         else:
                             detail = error.response.text[:800] if isinstance(error, httpx.HTTPStatusError) else str(error)[:500]
                         await callback.message.answer(f"The tailored CV could not be generated: {detail}", reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
-                            InlineKeyboardButton(text="Retry", callback_data="cv:generate"),
-                            InlineKeyboardButton(text="Request changes", callback_data="cv:revise"),
+                            InlineKeyboardButton(text="Retry", callback_data=f"cv:generate:{token}"),
+                            InlineKeyboardButton(text="Request changes", callback_data=f"cv:revise:{token}"),
                         ]]))
                 return
             if data == "cv:download-again":

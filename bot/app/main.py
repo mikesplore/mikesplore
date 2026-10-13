@@ -18,18 +18,20 @@ from .tools import list_certificates
 from .config import settings
 from .llm import answer
 from .llm import extract_entry, extract_job_description_from_image, extract_update, friendly_error, present_admin_result, sync_cv_data, tailor_cv
-from .admin import apply_sync, bulk_manage_links, create_entry, delete_asset, delete_certificate, delete_entry, get_cv_base, get_cv_portfolio_context, get_cv_tailoring_context, get_profile, list_admin_resource, list_site_assets, list_certificates as list_certificate_records, manage_content, preview_sync, render_base_cv, render_cv, save_cv_base, update_entry, update_profile, upload_asset, upload_certificate, validate_cv_base
+from .llm.admin_tools import draft_cv_project_bullets
+from .admin import apply_sync, bulk_manage_links, create_entry, delete_asset, delete_certificate, delete_entry, get_cv_base, get_cv_portfolio_context, get_cv_project_manager_context, get_cv_tailoring_context, get_profile, list_admin_resource, list_site_assets, list_certificates as list_certificate_records, manage_content, preview_sync, render_base_cv, render_cv, save_cv_base, save_cv_project_manager, update_entry, update_profile, upload_asset, upload_certificate, validate_cv_base
 from .formatting import telegram_html
-from .state import admin_result_context, awaiting_cv, awaiting_entry, conversation_history, last_cv_delivery, list_context, pending, pending_cv, pending_cv_sync, pending_mutation, pending_sync, pending_upload, pending_upload_target, wizard_sessions
+from .state import admin_result_context, awaiting_cv, awaiting_entry, conversation_history, cv_project_contexts, last_cv_delivery, list_context, pending, pending_cv, pending_cv_bullet_drafts, pending_cv_referee, pending_cv_sync, pending_cv_tokens, pending_mutation, pending_sync, pending_upload, pending_upload_target, wizard_sessions
 from .admin_operations import execute_admin_operation as run_admin_operation
 from .callbacks import acknowledge, is_protected_action
 from . import browse
+from . import cv_projects
 from . import wizard
 from .callback_handlers import register_callbacks
 from .uploads import register_upload_handler
 from .message_handlers import register_message_handlers
 from .admin_handlers import configure as configure_admin_handlers, handle_llm_admin_operation
-from .cv_handlers import configure as configure_cv_handlers, deliver_certificates, format_cv_patch, format_cv_sync_diff, manage_referees, prepare_cv_patch, prepare_cv_sync, send_cv
+from .cv_handlers import configure as configure_cv_handlers, deliver_certificates, format_cv_patch, format_cv_sync_diff, manage_referees, prepare_cv_patch, prepare_cv_referee_operation, prepare_cv_sync, send_cv
 
 bot = Bot(settings.telegram_bot_token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 dispatcher = Dispatcher()
@@ -62,7 +64,7 @@ async def register_commands():
         "certificates, contact links, and the approved CV with the /menu buttons, or ask about the owner's "
         "background and experience. Portfolio browsing reads live data directly; the CV button "
         "renders the approved CV JSON. Questions are answered with AI grounded in portfolio data. "
-        "Owner-only commands (/manage, /synccv, /referees, /apply) edit this portfolio; they do not "
+        "Owner-only commands (/manage, /cvprojects, /synccv, /referees, /apply) edit this portfolio; they do not "
         "create separate user profiles."
     )
     public_commands = [
@@ -70,6 +72,7 @@ async def register_commands():
         types.BotCommand(command="menu", description="Browse the portfolio with buttons"),
         types.BotCommand(command="help", description="How to use this bot"),
         types.BotCommand(command="manage", description="Edit portfolio content (owner only)"),
+        types.BotCommand(command="cvprojects", description="Manage projects in the CV (owner only)"),
         types.BotCommand(command="synccv", description="Review CV updates (owner only)"),
         types.BotCommand(command="referees", description="Manage CV referees (owner only)"),
         types.BotCommand(command="apply", description="Apply a CV proposal (owner only)"),
@@ -95,7 +98,7 @@ HELP_TEXT = (
     "Button views read live portfolio data directly, so they are instant and never hit AI rate limits.\n"
     "• Free text - just ask anything. Questions are answered by AI grounded in the live "
     "portfolio data.\n"
-    "• /manage, /synccv, /referees, /apply - portfolio editing commands are listed for discoverability; "
+    "• /manage, /cvprojects, /synccv, /referees, /apply - portfolio editing commands are listed for discoverability; "
     "only the portfolio owner can use them, and they manage the owner's portfolio rather than personal user accounts.\n"
     "\n"
     "<b>Portfolio owner</b>\n"
@@ -103,9 +106,10 @@ HELP_TEXT = (
     "• /apply - rebuild a pending job-tailored CV proposal after portfolio data changes.\n"
     "• /manage - edit profile, projects, links, skills, education, bucket list or "
     "certificates step by step with buttons, and upload new files.\n"
+    "• /cvprojects - choose projects for the approved CV and draft reviewable CV bullets from project evidence.\n"
     "• /synccv - review a proposed update to the curated CV JSON and save it only after approval.\n"
-    "• /referees - list, add, or remove references on the approved CV.\n"
-    "  Add with: /referees add Name | Title | Organization | Email | Phone.\n"
+    "• /referees - list, add, update, or remove referees on the approved CV. You can also describe the change naturally; the assistant will prepare it for your review.\n"
+    "  Direct add format: /referees add Name | Title | Organization | Email | Phone.\n"
     "• /manage &lt;resource&gt; - jump straight to a resource (e.g. /manage profile, "
     "/manage projects, /manage projects new)."
 )
@@ -173,6 +177,11 @@ async def sync_cv_command(message: types.Message):
     await prepare_cv_sync(message)
 
 
+@dispatcher.message(Command("cvprojects"))
+async def cv_projects_command(message: types.Message):
+    await cv_projects.handle_command(message)
+
+
 @dispatcher.message(Command("referees"))
 async def referees_command(message: types.Message):
     if not is_admin(message):
@@ -232,7 +241,9 @@ register_callbacks(dispatcher, {
     "pending_upload": pending_upload,
     "pending_upload_target": pending_upload_target,
     "pending_cv": pending_cv,
+    "pending_cv_tokens": pending_cv_tokens,
     "pending_cv_sync": pending_cv_sync,
+    "pending_cv_referee": pending_cv_referee,
     "save_cv_base": save_cv_base,
     "last_cv_delivery": last_cv_delivery,
     "admin_result_context": admin_result_context,
@@ -250,6 +261,7 @@ register_callbacks(dispatcher, {
     "InlineKeyboardButton": InlineKeyboardButton,
     "InlineKeyboardMarkup": InlineKeyboardMarkup,
     "wizard": wizard,
+    "handle_cv_project_callback": cv_projects.handle_callback,
 })
 
 
@@ -280,7 +292,9 @@ register_upload_handler(dispatcher, {
 
 configure_cv_handlers({
     "pending_cv": pending_cv,
+    "pending_cv_tokens": pending_cv_tokens,
     "pending_cv_sync": pending_cv_sync,
+    "pending_cv_referee": pending_cv_referee,
     "format_cv_sync_diff": format_cv_sync_diff,
     "tailor_cv": tailor_cv,
     "sync_cv_data": sync_cv_data,
@@ -303,6 +317,23 @@ configure_cv_handlers({
 })
 
 
+cv_projects.configure({
+    "is_admin": is_admin,
+    "settings": settings,
+    "cv_project_contexts": cv_project_contexts,
+    "pending_cv_bullet_drafts": pending_cv_bullet_drafts,
+    "get_cv_project_manager_context": get_cv_project_manager_context,
+    "get_cv_base": get_cv_base,
+    "save_cv_project_manager": save_cv_project_manager,
+    "validate_cv_base": validate_cv_base,
+    "draft_cv_project_bullets": draft_cv_project_bullets,
+    "friendly_error": friendly_error,
+    "logger": logger,
+    "InlineKeyboardButton": InlineKeyboardButton,
+    "InlineKeyboardMarkup": InlineKeyboardMarkup,
+})
+
+
 register_message_handlers(dispatcher, {
     "is_admin": is_admin,
     "pending": pending,
@@ -312,7 +343,11 @@ register_message_handlers(dispatcher, {
     "pending_sync": pending_sync,
     "awaiting_cv": awaiting_cv,
     "pending_cv": pending_cv,
+    "pending_cv_tokens": pending_cv_tokens,
     "pending_cv_sync": pending_cv_sync,
+    "pending_cv_referee": pending_cv_referee,
+    "pending_cv_bullet_drafts": pending_cv_bullet_drafts,
+    "cv_project_contexts": cv_project_contexts,
     "conversation_history": conversation_history,
     "list_context": list_context,
     "tailor_cv": tailor_cv,
@@ -350,6 +385,7 @@ register_message_handlers(dispatcher, {
     "friendly_error": friendly_error,
     "wizard": wizard,
     "wizard_sessions": wizard_sessions,
+    "handle_cv_bullet_edit": cv_projects.handle_bullet_edit,
     "handle_wizard_text": wizard.handle_wizard_text,
     "handle_wizard_sub_text": wizard.handle_wizard_sub_text,
 })
@@ -367,6 +403,7 @@ configure_admin_handlers({
     "update_profile": update_profile,
     "bulk_manage_links": bulk_manage_links,
     "prepare_cv_patch": prepare_cv_patch,
+    "prepare_cv_referee_operation": prepare_cv_referee_operation,
     "logger": logger,
     "InlineKeyboardButton": InlineKeyboardButton,
     "InlineKeyboardMarkup": InlineKeyboardMarkup,

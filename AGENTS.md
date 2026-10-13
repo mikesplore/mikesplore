@@ -1,5 +1,20 @@
 # AGENTS.md — Portfolio Backend + Telegram Bot Conversion
 
+### Owner CV project manager (2026-10-13)
+
+- Added owner-only `/cvprojects` for reviewing all portfolio projects (including hidden ones),
+  explicitly including/removing projects from the approved CV, and requesting up to three
+  evidence-grounded bullet drafts for a selected project. Drafts show source evidence and require
+  explicit approval before they enter the curated CV JSON; thin source material produces a request
+  for more detail.
+- Added protected `/admin/cv/project-manager` GET/POST endpoints. The read returns stable project
+  identities, source descriptions/highlights, visibility, featured state, and a portfolio revision.
+  Saves validate both the approved CV revision and source-project revision to reject stale edits.
+- Kept LLM calls in the Telegram bot, which is already restricted by `ADMIN_TELEGRAM_ID`; the public
+  frontend never receives the service API key. No schema migration was required.
+- Updated the data-management manual and onboarding instructions. The later audit follow-up below
+  covers the review-action safeguards and verification.
+
 ### CV referee section and management (2026-10-13)
 
 - Added optional `referees` records to the canonical CV JSON contract. Validation requires a
@@ -8,6 +23,21 @@
   without the field continues to validate and render.
 - Added owner-only Telegram `/referees list|add|remove` management. Changes use the protected CV
   API and revision check, and `/synccv` retains referee records without generating people.
+- Added natural-language LLM assistance for adding, updating, and removing referees. It extracts
+  only owner-supplied details, omits stored contact details from lookup context, and requires review
+  before saving each change.
+- Updated onboarding and data-management docs.
+
+### CV workflow audit follow-up (2026-10-13)
+
+- Bound referee, CV sync, tailored-CV, and project-bullet review buttons to unique pending proposal
+  tokens so stale Telegram messages cannot approve a newer proposal.
+- Bound project selection buttons to the source-project revision and made include/remove actions
+  idempotent; stale source revisions refresh the manager instead of applying an old index.
+- On bullet approval, refresh project evidence and discard stale drafts; treat project text as data,
+  not instructions, in the bullet drafting prompt.
+- Updated tests for review-before-save behavior and command discoverability. Full bot and backend
+  test suites pass (95 tests); `git diff --check` is clean.
 - Documented the bot commands and field format in onboarding.
 
 ### Telegram owner-command discoverability (2026-10-13)

@@ -9,12 +9,18 @@ not guess database IDs or classify requests with regular expressions.
 
 ## Interface and authorization
 
-The only slash commands used for normal operation are:
+The portfolio owner has a few focused slash commands for multi-step workflows:
 
 - `/start` starts the assistant.
+- `/manage` edits portfolio records.
+- `/cvprojects` manages project inclusion and approved CV bullets.
+- `/synccv` proposes a reviewed portfolio-to-CV update.
+- `/apply` starts job-specific CV tailoring.
+- `/referees` manages CV referees. Natural-language add/update/remove requests are extracted by the
+  LLM from owner-provided details and shown for approval before the approved CV JSON is changed.
 - `/cancel` cancels a pending destructive or high-impact action.
 
-Everything else is expressed as an ordinary-language request.
+Other portfolio requests can be expressed in ordinary language.
 
 Visitors receive public read tools only. The configured portfolio owner receives administrator
 tools. Administrator tools verify authorization before writes, and all writes go through the
@@ -169,6 +175,22 @@ Activate the backend engineering and mobile development policies
 New proposals are saved as `pending` with `is_active=false`. The LLM must not invent evidence or
 activate policies automatically. Activation uses exact IDs returned by a role-policy lookup.
 Repeated analysis upserts by role family instead of creating duplicates.
+
+## CV project manager
+
+Use `/cvprojects` to browse all portfolio projects, including projects hidden from the public
+portfolio. Select a project to inspect its description, technologies, and source highlights. The
+owner can include or remove it from the approved base CV independently of public visibility.
+
+Choose **Draft CV bullets** to ask the LLM for up to three concise drafts based on the saved
+description and highlights. The bot shows the source evidence beside the draft. Review every claim
+edit the bullets in chat if needed, then approve or discard the draft; approval writes it to the
+curated CV JSON. If the evidence is too thin, the bot asks for more project detail instead of saving
+a bullet. The manager checks CV and project revisions before saving, so stale screens cannot
+overwrite newer edits.
+
+Approved projects and bullets are the source for `/apply` tailoring. The LLM may select from those
+projects for each job, but a job-specific CV does not change the approved base CV.
 
 ## CV tailoring
 

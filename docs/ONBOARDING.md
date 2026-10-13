@@ -100,6 +100,12 @@ project selection, bullets, and layout data. Upload the known-good JSON through 
 as `cv-json` if it is not configured. View CV renders this approved JSON directly and makes no LLM
 call.
 
+Use `/cvprojects` for routine project and CV curation. It lists public and hidden portfolio
+projects, shows which ones are in the approved CV, and lets the owner include or remove a project.
+For a selected project, **Draft CV bullets** creates up to three drafts from its saved description
+and highlights. The bot shows the source evidence and saves nothing until the owner approves. If
+the evidence is too thin, it asks for more detail. Approved bullets are then available to `/apply`.
+
 After changing portfolio records, run `/synccv`. The bot compares the approved JSON with current
 portfolio data, makes one conservative LLM proposal, and displays the proposed changes. Save only
 after reviewing the diff; Discard leaves the approved CV unchanged. The save is rejected if either
@@ -107,7 +113,11 @@ the CV or portfolio data changes while the proposal is waiting. Per-job tailorin
 the approved CV JSON, keeping its content consistent with the curated source.
 
 References are stored in the same approved CV JSON and rendered in a References section. The
-portfolio owner can manage them directly in Telegram with `/referees list`, then:
+portfolio owner can manage them in Telegram with `/referees list` or ordinary-language requests
+such as “add Jane Doe as my referee, Engineering Manager at Example Co., jane@example.com.” The
+assistant extracts only details provided, then shows the complete proposed referee list for review
+before saving. It can also update or remove a selected referee after resolving the exact list entry.
+The direct command forms are:
 
 ```text
 /referees add Jane Doe | Engineering Manager | Example Co. | jane@example.com | +1 555 0100
@@ -115,7 +125,8 @@ portfolio owner can manage them directly in Telegram with `/referees list`, then
 ```
 
 Title, organization, email, and phone are optional except that each referee needs at least an
-email address or phone number. `/synccv` preserves these records; it does not invent referees.
+email address or phone number. `/synccv` preserves these records; it does not invent referees. For
+privacy, the LLM lookup used to identify a referee omits stored email addresses and phone numbers.
 
 ## 7. Populate portfolio content
 

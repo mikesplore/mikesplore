@@ -69,6 +69,21 @@ async def get_cv_portfolio_context() -> dict:
         return response.json()
 
 
+async def get_cv_project_manager_context() -> dict:
+    async with httpx.AsyncClient(base_url=settings.backend_url, timeout=30) as client:
+        response = await client.get("/admin/cv/project-manager", headers={"X-Service-Api-Key": settings.service_api_key})
+        response.raise_for_status()
+        return response.json()
+
+
+async def save_cv_project_manager(data: dict, base_revision: str, portfolio_revision: str) -> dict:
+    payload = {"data": data, "base_revision": base_revision, "portfolio_revision": portfolio_revision}
+    async with httpx.AsyncClient(base_url=settings.backend_url, timeout=20) as client:
+        response = await client.post("/admin/cv/project-manager", json=payload, headers={"X-Service-Api-Key": settings.service_api_key})
+        response.raise_for_status()
+        return response.json()
+
+
 async def validate_cv_base(data: dict) -> dict:
     async with httpx.AsyncClient(base_url=settings.backend_url, timeout=15) as client:
         response = await client.post("/admin/cv/base/validate", json=data, headers={"X-Service-Api-Key": settings.service_api_key})

@@ -22,7 +22,8 @@ async def answer(question: str, history: list[dict] | None = None, on_text=None,
         identity_context += (
             " The sender is authorized to manage the portfolio. Treat requests to change portfolio data, "
             "profile text, profile links, assets, project media, repositories, technologies, or CV data "
-            "as legitimate administration requests and use the available admin workflow/tools. Do not "
+            "including referee records as legitimate administration requests and use the available admin workflow/tools. "
+            "For referee listing, adding, updating, or removal, use the CV referee tools; never invent details and prepare a reviewable proposal for every change. Do not "
             "claim that the assistant is read-only."
         )
     else:

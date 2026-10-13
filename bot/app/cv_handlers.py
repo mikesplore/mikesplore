@@ -1,6 +1,7 @@
 import html
 import httpx
 import re
+import secrets
 from aiogram import types
 
 
@@ -10,18 +11,21 @@ def configure(dependencies):
 
 
 async def manage_referees(message: types.Message):
-    """List, add, or remove references in the approved CV source JSON."""
+    """List referees or prepare a reviewable change to the approved CV."""
     command = (message.text or "").partition(" ")[2].strip()
     action, _, payload = command.partition(" ")
     action = action.lower()
     if action not in {"list", "add", "remove"}:
         await message.answer(
-            "Manage CV references with:\n"
+            "Manage CV referees with:\n"
             "/referees list\n"
             "/referees add Name | Title | Organization | Email | Phone\n"
             "/referees remove Number\n"
-            "For add, leave optional fields blank, but provide an email or phone."
+            "You can also ask me in ordinary language to add, update, or remove a referee. I’ll show the proposed change before saving."
         )
+        return
+    if action != "list" and pending_cv_referee.get(message.from_user.id):
+        await message.answer("A referee change is already waiting for review. Save or discard it first, or use /cancel.")
         return
     try:
         base = await get_cv_base()
@@ -31,7 +35,7 @@ async def manage_referees(message: types.Message):
             if not referees:
                 await message.answer("No references are listed on the approved CV yet. Add one with /referees add Name | Title | Organization | Email | Phone.")
                 return
-            lines = ["<b>CV references</b>"]
+            lines = ["<b>CV referees</b>"]
             for index, referee in enumerate(referees, 1):
                 details = " · ".join(str(referee.get(key) or "") for key in ("title", "organization") if referee.get(key))
                 contacts = " · ".join(str(referee.get(key) or "") for key in ("email", "phone") if referee.get(key))
@@ -53,6 +57,8 @@ async def manage_referees(message: types.Message):
                 await message.answer("Please include at least an email address or phone number for the referee.")
                 return
             referees.append(referee)
+            await prepare_cv_referee_proposal(message, data, referees, base["revision"], f"Add referee {referee['name']}")
+            return
         else:
             try:
                 index = int(payload.strip())
@@ -63,16 +69,88 @@ async def manage_referees(message: types.Message):
                 await message.answer(f"Choose a reference number from 1 to {len(referees)}.")
                 return
             removed = referees.pop(index - 1)
-        data["referees"] = referees
-        validated = await validate_cv_base(data)
-        await save_cv_base(validated, base_revision=base["revision"])
-        if action == "add":
-            await message.answer(f"Added {html.escape(referee['name'])} to the approved CV references. Use /menu → View CV to render the updated PDF.")
-        else:
-            await message.answer(f"Removed {html.escape(removed['name'])} from the approved CV references. Use /menu → View CV to render the updated PDF.")
+            await prepare_cv_referee_proposal(message, data, referees, base["revision"], f"Remove referee {removed['name']}")
+            return
     except Exception as error:
         logger.exception("CV referee management failed")
         await message.answer(friendly_error(error, "I couldn't update the CV references. Please try again."))
+
+
+async def prepare_cv_referee_operation(message: types.Message, operation: dict):
+    """Build a validated referee proposal from an owner-requested LLM operation."""
+    operation_payload = operation.get("payload") or {}
+    action = operation.get("action")
+    try:
+        base = await get_cv_base()
+        data = base["data"]
+        referees = [dict(item) for item in (data.get("referees") or [])]
+        if action == "list":
+            if not referees:
+                await message.answer("No referees are listed on the approved CV yet.")
+                return
+            lines = ["<b>CV referees</b>"]
+            for index, referee in enumerate(referees, 1):
+                details = " · ".join(str(referee.get(key) or "") for key in ("title", "organization", "email", "phone") if referee.get(key))
+                lines.append(f"\n{index}. <b>{html.escape(str(referee.get('name') or 'Unnamed'))}</b>")
+                if details:
+                    lines.append(html.escape(details))
+            await message.answer("\n".join(lines))
+            return
+        if action == "create":
+            referee = operation_payload
+            allowed = {"name", "title", "organization", "email", "phone"}
+            if not isinstance(referee, dict) or set(referee) - allowed:
+                raise ValueError("I could not safely identify the referee details. Please give name, role, organization, and a contact method.")
+            referee = {key: str(value).strip() for key, value in referee.items() if value is not None and str(value).strip()}
+            if not referee.get("name") or not (referee.get("email") or referee.get("phone")):
+                raise ValueError("Please provide the referee’s name and an email address or phone number.")
+            referees.append(referee)
+            label = f"Add referee {referee['name']}"
+        elif action in {"update", "delete"}:
+            number = int(operation_payload.get("number", 0))
+            if number < 1 or number > len(referees):
+                raise ValueError("I couldn’t resolve that referee. Run /referees list and specify the exact name.")
+            target = referees[number - 1]
+            if action == "delete":
+                removed = referees.pop(number - 1)
+                label = f"Remove referee {removed.get('name', 'referee')}"
+            else:
+                fields = operation_payload.get("fields") or {}
+                allowed = {"name", "title", "organization", "email", "phone"}
+                if not isinstance(fields, dict) or not fields or set(fields) - allowed:
+                    raise ValueError("Please specify the referee fields you want changed.")
+                for key, value in fields.items():
+                    if value is None or not str(value).strip():
+                        target.pop(key, None)
+                    else:
+                        target[key] = str(value).strip()
+                label = f"Update referee {target.get('name', 'referee')}"
+        else:
+            raise ValueError("I couldn't identify the referee change. Try asking me to add, update, or remove a referee.")
+        data["referees"] = referees
+        await prepare_cv_referee_proposal(message, data, referees, base["revision"], label)
+    except Exception as error:
+        logger.exception("CV referee proposal failed")
+        await message.answer(friendly_error(error, "I couldn't prepare a referee change. Please try again."))
+
+
+async def prepare_cv_referee_proposal(message, data: dict, referees: list[dict], revision: str, label: str):
+    data = dict(data)
+    data["referees"] = referees
+    validated = await validate_cv_base(data)
+    token = secrets.token_urlsafe(6)
+    pending_cv_referee[message.from_user.id] = {"data": validated, "base_revision": revision, "token": token}
+    lines = [f"<b>{html.escape(label)}</b>", ""]
+    for index, referee in enumerate(referees, 1):
+        fields = " · ".join(str(referee.get(key) or "") for key in ("title", "organization", "email", "phone") if referee.get(key))
+        lines.append(f"{index}. <b>{html.escape(str(referee.get('name') or 'Unnamed'))}</b>")
+        if fields:
+            lines.append(html.escape(fields))
+    lines.append("\nReview the complete referee list before saving.")
+    await message.answer("\n".join(lines), reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
+        InlineKeyboardButton(text="Save referee changes", callback_data=f"cv-referee:save:{token}"),
+        InlineKeyboardButton(text="Discard", callback_data=f"cv-referee:cancel:{token}"),
+    ]]))
 
 
 async def prepare_cv_patch(message: types.Message, job_description: str, revision: str | None = None):
@@ -97,7 +175,9 @@ async def prepare_cv_patch(message: types.Message, job_description: str, revisio
             await status.edit_text("I won't create a tailored CV for this job.\n\n" + html.escape(patch.get("reason", "There is not enough verified portfolio evidence for this role.")))
             return
         cv_name = (context.get("profile") or {}).get("name") or "Tailored CV"
+        token = secrets.token_hex(8)
         pending_cv[message.from_user.id] = (patch, job_description, cv_name, context["revision"])
+        pending_cv_tokens[message.from_user.id] = token
         # The LLM may already have streamed a short preflight message and the
         # temporary status message may be stale by the time tailoring finishes.
         # Send the proposal as a fresh message so it is always visible and
@@ -106,8 +186,8 @@ async def prepare_cv_patch(message: types.Message, job_description: str, revisio
         await message.answer(
             "Proposed CV changes:\n\n" + format_cv_patch(patch),
             reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
-                InlineKeyboardButton(text="Generate CV", callback_data="cv:generate"),
-                InlineKeyboardButton(text="Request changes", callback_data="cv:revise"),
+                InlineKeyboardButton(text="Generate CV", callback_data=f"cv:generate:{token}"),
+                InlineKeyboardButton(text="Request changes", callback_data=f"cv:revise:{token}"),
             ]]),
         )
     except Exception as error:
@@ -236,14 +316,16 @@ async def prepare_cv_sync(message: types.Message):
         if candidate == base["data"]:
             await status.edit_text("No verified updates were found. The approved CV JSON is already current.")
             return
+        token = secrets.token_hex(8)
         pending_cv_sync[message.from_user.id] = {
             "data": candidate,
             "base_revision": base["revision"],
         "portfolio_revision": proposal["portfolio_revision"],
+            "token": token,
         }
         await status.edit_text(diff, reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
-            InlineKeyboardButton(text="Save CV updates", callback_data="cv-sync:save"),
-            InlineKeyboardButton(text="Discard", callback_data="cv-sync:cancel"),
+            InlineKeyboardButton(text="Save CV updates", callback_data=f"cv-sync:save:{token}"),
+            InlineKeyboardButton(text="Discard", callback_data=f"cv-sync:cancel:{token}"),
         ]]))
     except httpx.HTTPStatusError as error:
         logger.exception("CV sync proposal failed")

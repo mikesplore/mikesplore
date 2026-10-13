@@ -1,5 +1,6 @@
 from aiogram import types
 from aiogram.exceptions import TelegramBadRequest
+import secrets
 
 from . import browse
 
@@ -29,7 +30,11 @@ def register_message_handlers(dispatcher, dependencies):
                     pending_sync.pop(message.from_user.id, None)
                     awaiting_cv.discard(message.from_user.id)
                     pending_cv.pop(message.from_user.id, None)
+                    pending_cv_tokens.pop(message.from_user.id, None)
                     pending_cv_sync.pop(message.from_user.id, None)
+                    pending_cv_referee.pop(message.from_user.id, None)
+                    pending_cv_bullet_drafts.pop(message.from_user.id, None)
+                    cv_project_contexts.pop(message.from_user.id, None)
                     wizard_sessions.pop(message.from_user.id, None)
                     await message.answer("Cancelled.")
                     return
@@ -37,12 +42,20 @@ def register_message_handlers(dispatcher, dependencies):
                     # Commands are registered as specific aiogram handlers, but this
                     # catch-all handler also matches them. Only reject unknown commands.
                     command = message.text.split(maxsplit=1)[0].split("@", 1)[0].lower()
-                    if command in {"/start", "/menu", "/help", "/manage", "/apply", "/synccv", "/referees", "/cancel"}:
+                    if command in {"/start", "/menu", "/help", "/manage", "/cvprojects", "/apply", "/synccv", "/referees", "/cancel"}:
                         return
-                    await message.answer("Use /start, /menu, /help, /manage, /apply, /synccv, /referees, or /cancel. Use /menu to browse the portfolio, or describe what you need in ordinary language.")
+                    await message.answer("Use /start, /menu, /help, /manage, /cvprojects, /apply, /synccv, /referees, or /cancel. Use /menu to browse the portfolio, or describe what you need in ordinary language.")
                     return
                 if message.from_user.id in pending_cv_sync:
                     await message.answer("A CV sync proposal is waiting for review. Use its Save CV updates or Discard button, or /cancel.")
+                    return
+                if message.from_user.id in pending_cv_referee:
+                    await message.answer("A referee change is waiting for review. Use Save referee changes or Discard, or /cancel.")
+                    return
+                if await handle_cv_bullet_edit(message):
+                    return
+                if message.from_user.id in pending_cv_bullet_drafts:
+                    await message.answer("CV project bullets are waiting for review. Use Approve, Edit, or Discard, or /cancel.")
                     return
                 active_wizard = wizard_sessions.get(message.from_user.id)
                 if active_wizard:
@@ -85,7 +98,15 @@ def register_message_handlers(dispatcher, dependencies):
                             return
                         else:
                             pending_cv[message.from_user.id] = (decision, job_description, label, base_revision)
-                            await message.answer("Updated proposed CV changes:\n\n" + format_cv_patch(decision) + "\n\nConfirm, or tell me what to change.")
+                            token = secrets.token_hex(8)
+                            pending_cv_tokens[message.from_user.id] = token
+                            await message.answer(
+                                "Updated proposed CV changes:\n\n" + format_cv_patch(decision) + "\n\nConfirm, or tell me what to change.",
+                                reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
+                                    InlineKeyboardButton(text="Generate CV", callback_data=f"cv:generate:{token}"),
+                                    InlineKeyboardButton(text="Request changes", callback_data=f"cv:revise:{token}"),
+                                ]]),
+                            )
                             return
                     except Exception as error:
                         logger.exception("CV revision handling failed")
@@ -115,6 +136,7 @@ def register_message_handlers(dispatcher, dependencies):
                             async with httpx.AsyncClient(timeout=30) as client:
                                 pdf_response = await client.get(result["pdf_url"])
                                 pdf_response.raise_for_status()
+                            pending_cv_tokens.pop(message.from_user.id, None)
                             last_cv_delivery[message.from_user.id] = (result["pdf_url"], label)
                             await message.answer_document(types.BufferedInputFile(pdf_response.content, filename=cv_filename(label)), caption="Tailored CV", reply_markup=InlineKeyboardMarkup(inline_keyboard=[[
                                 InlineKeyboardButton(text="Download again", callback_data="cv:download-again"),
@@ -238,6 +260,10 @@ def register_message_handlers(dispatcher, dependencies):
                     )
                     if response.startswith("__ADMIN_OPERATION__"):
                         operation = json.loads(response.removeprefix("__ADMIN_OPERATION__"))
+                        try:
+                            await streamed_message.delete()
+                        except TelegramBadRequest:
+                            pass
                         await handle_llm_admin_operation(message, operation)
                         return
                     history.extend([

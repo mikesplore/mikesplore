@@ -38,6 +38,9 @@ async def handle_llm_admin_operation(message: types.Message, operation: dict) ->
         else:
             await prepare_cv_patch(message, job_description)
         return True
+    if resource == "cv-referees":
+        await prepare_cv_referee_operation(message, operation)
+        return True
     if resource == "role-policies" and action == "propose":
         policies = (operation.get("payload") or {}).get("policies") or []
         for policy in policies:
