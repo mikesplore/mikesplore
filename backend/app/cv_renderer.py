@@ -175,6 +175,25 @@ def render(data, out_path):
             story.append(Paragraph(esc(e["degree"]), styles["Body"]))
             story.append(Spacer(1, 4))
 
+    # Referees are optional so existing approved CV JSON continues to render.
+    referees = data.get("referees") or []
+    if referees:
+        section_header("Referees", styles, story)
+        for referee in referees:
+            story.append(Paragraph(f"<b>{esc(referee['name'])}</b>", styles["Body"]))
+            details = [referee.get("title"), referee.get("organization")]
+            detail_line = " · ".join(esc(value) for value in details if value)
+            if detail_line:
+                story.append(Paragraph(detail_line, styles["ProjectMeta"]))
+            contact_line = " · ".join(
+                esc(f"{label}: {referee[key]}")
+                for key, label in (("email", "Email"), ("phone", "Phone"))
+                if referee.get(key)
+            )
+            if contact_line:
+                story.append(Paragraph(contact_line, styles["Body"]))
+            story.append(Spacer(1, 4))
+
     # Additional info
     ai = data.get("additional_info", {})
     skills_have_languages = any("language" in str(group.get("category", "")).lower() for group in data.get("skills", []))

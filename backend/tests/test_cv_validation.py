@@ -2,6 +2,7 @@ import pytest
 from fastapi import HTTPException
 
 from app.main import _apply_cv_patch, _validate_cv_patch
+from app.services.cv import validate_cv_data
 
 
 def base_cv():
@@ -52,3 +53,27 @@ def test_cv_patch_requires_required_shape():
 def test_cv_patch_ignores_provider_metadata():
     patch = valid_patch() | {"confidence": 0.9, "explanation": "verified"}
     assert _validate_cv_patch(patch) == valid_patch()
+
+
+def test_cv_json_defaults_missing_referees_to_empty_list():
+    assert validate_cv_data(base_cv())["referees"] == []
+
+
+def test_cv_json_accepts_reference_with_contact_details():
+    data = base_cv() | {"referees": [{
+        "name": "Jane Doe", "title": "Engineering Manager", "organization": "Example Co.",
+        "email": "jane@example.com", "phone": "+1 555 0100",
+    }]}
+    assert validate_cv_data(data)["referees"][0]["name"] == "Jane Doe"
+
+
+@pytest.mark.parametrize("referees", [
+    "Jane Doe",
+    [{"title": "Manager", "email": "jane@example.com"}],
+    [{"name": "Jane Doe"}],
+    [{"name": "Jane Doe", "email": 5}],
+    [{"name": "Jane Doe", "email": "jane@example.com", "linkedin": "https://example.com"}],
+])
+def test_cv_json_rejects_invalid_reference_records(referees):
+    with pytest.raises(HTTPException, match="referee|referees"):
+        validate_cv_data(base_cv() | {"referees": referees})

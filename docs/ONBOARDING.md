@@ -106,6 +106,17 @@ after reviewing the diff; Discard leaves the approved CV unchanged. The save is 
 the CV or portfolio data changes while the proposal is waiting. Per-job tailoring also reads only
 the approved CV JSON, keeping its content consistent with the curated source.
 
+References are stored in the same approved CV JSON and rendered in a References section. The
+portfolio owner can manage them directly in Telegram with `/referees list`, then:
+
+```text
+/referees add Jane Doe | Engineering Manager | Example Co. | jane@example.com | +1 555 0100
+/referees remove 1
+```
+
+Title, organization, email, and phone are optional except that each referee needs at least an
+email address or phone number. `/synccv` preserves these records; it does not invent referees.
+
 ## 7. Populate portfolio content
 
 Add projects and other content in batches, using complete verified information:

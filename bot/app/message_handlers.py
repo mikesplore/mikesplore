@@ -37,9 +37,9 @@ def register_message_handlers(dispatcher, dependencies):
                     # Commands are registered as specific aiogram handlers, but this
                     # catch-all handler also matches them. Only reject unknown commands.
                     command = message.text.split(maxsplit=1)[0].split("@", 1)[0].lower()
-                    if command in {"/start", "/menu", "/help", "/manage", "/apply", "/synccv", "/cancel"}:
+                    if command in {"/start", "/menu", "/help", "/manage", "/apply", "/synccv", "/referees", "/cancel"}:
                         return
-                    await message.answer("Use /start, /menu, /help, /manage, /apply, /synccv, or /cancel. Use /menu to browse the portfolio, or describe what you need in ordinary language.")
+                    await message.answer("Use /start, /menu, /help, /manage, /apply, /synccv, /referees, or /cancel. Use /menu to browse the portfolio, or describe what you need in ordinary language.")
                     return
                 if message.from_user.id in pending_cv_sync:
                     await message.answer("A CV sync proposal is waiting for review. Use its Save CV updates or Discard button, or /cancel.")

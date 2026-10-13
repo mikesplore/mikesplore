@@ -29,7 +29,7 @@ from .callback_handlers import register_callbacks
 from .uploads import register_upload_handler
 from .message_handlers import register_message_handlers
 from .admin_handlers import configure as configure_admin_handlers, handle_llm_admin_operation
-from .cv_handlers import configure as configure_cv_handlers, deliver_certificates, format_cv_patch, format_cv_sync_diff, prepare_cv_patch, prepare_cv_sync, send_cv
+from .cv_handlers import configure as configure_cv_handlers, deliver_certificates, format_cv_patch, format_cv_sync_diff, manage_referees, prepare_cv_patch, prepare_cv_sync, send_cv
 
 bot = Bot(settings.telegram_bot_token, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
 dispatcher = Dispatcher()
@@ -55,26 +55,27 @@ async def show_typing(message: types.Message) -> None:
 async def register_commands():
     """Publish Telegram's command menu when the webhook process starts."""
     await bot.set_my_short_description(
-        "Browse the portfolio, view the approved CV, or ask about projects and skills."
+        "Browse and ask about the portfolio; content management is owner only."
     )
     await bot.set_my_description(
     "This is a portfolio assistant. Browse projects, writing, hackathons, skills, "
         "certificates, contact links, and the approved CV with the /menu buttons, or ask about the owner's "
         "background and experience. Portfolio browsing reads live data directly; the CV button "
-        "renders the approved CV JSON. Questions are answered with AI grounded in portfolio data."
+        "renders the approved CV JSON. Questions are answered with AI grounded in portfolio data. "
+        "Owner-only commands (/manage, /synccv, /referees, /apply) edit this portfolio; they do not "
+        "create separate user profiles."
     )
     public_commands = [
         types.BotCommand(command="start", description="Welcome and portfolio menu"),
         types.BotCommand(command="menu", description="Browse the portfolio with buttons"),
         types.BotCommand(command="help", description="How to use this bot"),
-        # Keep it in Telegram's default command suggestions too. The handler
-        # still enforces the owner-only restriction, so showing it is safe.
         types.BotCommand(command="manage", description="Edit portfolio content (owner only)"),
+        types.BotCommand(command="synccv", description="Review CV updates (owner only)"),
+        types.BotCommand(command="referees", description="Manage CV referees (owner only)"),
+        types.BotCommand(command="apply", description="Apply a CV proposal (owner only)"),
     ]
     admin_commands = public_commands + [
         types.BotCommand(command="cancel", description="Cancel a pending change"),
-        types.BotCommand(command="apply", description="Recheck and apply a pending CV proposal"),
-        types.BotCommand(command="synccv", description="Review portfolio updates to the curated CV"),
     ]
     await bot.set_my_commands(public_commands)
     await bot.set_my_commands(
@@ -94,13 +95,17 @@ HELP_TEXT = (
     "Button views read live portfolio data directly, so they are instant and never hit AI rate limits.\n"
     "• Free text - just ask anything. Questions are answered by AI grounded in the live "
     "portfolio data.\n"
-    "• /cancel - cancel a pending change (portfolio owner only).\n"
-    "• /apply - rebuild a pending job-tailored CV proposal after portfolio data changes.\n"
+    "• /manage, /synccv, /referees, /apply - portfolio editing commands are listed for discoverability; "
+    "only the portfolio owner can use them, and they manage the owner's portfolio rather than personal user accounts.\n"
     "\n"
     "<b>Portfolio owner</b>\n"
+    "• /cancel - cancel a pending change.\n"
+    "• /apply - rebuild a pending job-tailored CV proposal after portfolio data changes.\n"
     "• /manage - edit profile, projects, links, skills, education, bucket list or "
     "certificates step by step with buttons, and upload new files.\n"
     "• /synccv - review a proposed update to the curated CV JSON and save it only after approval.\n"
+    "• /referees - list, add, or remove references on the approved CV.\n"
+    "  Add with: /referees add Name | Title | Organization | Email | Phone.\n"
     "• /manage &lt;resource&gt; - jump straight to a resource (e.g. /manage profile, "
     "/manage projects, /manage projects new)."
 )
@@ -166,6 +171,14 @@ async def sync_cv_command(message: types.Message):
         await message.answer("This command is restricted to the portfolio owner.")
         return
     await prepare_cv_sync(message)
+
+
+@dispatcher.message(Command("referees"))
+async def referees_command(message: types.Message):
+    if not is_admin(message):
+        await message.answer("This command is restricted to the portfolio owner.")
+        return
+    await manage_referees(message)
 
 
 def format_preview(entry: dict) -> str:
@@ -286,6 +299,7 @@ configure_cv_handlers({
     "types": types,
     "settings": settings,
     "friendly_error": friendly_error,
+    "save_cv_base": save_cv_base,
 })
 
 

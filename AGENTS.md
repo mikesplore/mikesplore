@@ -1,5 +1,24 @@
 # AGENTS.md — Portfolio Backend + Telegram Bot Conversion
 
+### CV referee section and management (2026-10-13)
+
+- Added optional `referees` records to the canonical CV JSON contract. Validation requires a
+  non-empty name and at least one email/phone contact, with optional title and organization.
+- The backend PDF renderer now prints a References section when records exist; older CV JSON
+  without the field continues to validate and render.
+- Added owner-only Telegram `/referees list|add|remove` management. Changes use the protected CV
+  API and revision check, and `/synccv` retains referee records without generating people.
+- Documented the bot commands and field format in onboarding.
+
+### Telegram owner-command discoverability (2026-10-13)
+
+- Added `/synccv`, `/referees`, and `/apply` to Telegram's default command menu with explicit
+  owner-only labels; they were previously visible only in the developer's chat scope. The owner
+  chat retains `/cancel` in its chat-specific menu.
+- Updated the bot description and `/help` to explain that these commands manage the single
+  portfolio owner's data, and do not provide separate user profiles. Existing owner ID checks
+  remain in force.
+
 ### Content management images and date flow (2026-10-13)
 
 - Shortened `/manage` creation for projects, articles, hackathons, and events to title and

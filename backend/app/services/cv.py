@@ -67,6 +67,17 @@ def validate_cv_data(data: dict) -> dict:
         or any(not isinstance(item, dict) or not isinstance(item.get("name"), str) or not isinstance(item.get("url"), str) for item in data["profiles"])
     ):
         raise HTTPException(status_code=422, detail="CV profiles must be a list of name and URL records")
+    referees = data.setdefault("referees", [])
+    referee_fields = {"name", "title", "organization", "email", "phone"}
+    if not isinstance(referees, list):
+        raise HTTPException(status_code=422, detail="CV referees must be an array")
+    for referee in referees:
+        if not isinstance(referee, dict) or set(referee) - referee_fields or not isinstance(referee.get("name"), str) or not referee["name"].strip():
+            raise HTTPException(status_code=422, detail="Each CV referee needs a name and may include title, organization, email, and phone")
+        if any(key in referee and not isinstance(referee[key], str) for key in referee_fields - {"name"}):
+            raise HTTPException(status_code=422, detail="CV referee details must be text")
+        if not any(str(referee.get(key) or "").strip() for key in ("email", "phone")):
+            raise HTTPException(status_code=422, detail="Each CV referee needs an email address or phone number")
     if any(not isinstance(item, dict) or not all(key in item for key in ("institution", "degree")) for item in data["education"]):
         raise HTTPException(status_code=422, detail="Each CV education item needs institution and degree")
     return data

@@ -9,6 +9,72 @@ def configure(dependencies):
     globals().setdefault("pending_cv_sync", {})
 
 
+async def manage_referees(message: types.Message):
+    """List, add, or remove references in the approved CV source JSON."""
+    command = (message.text or "").partition(" ")[2].strip()
+    action, _, payload = command.partition(" ")
+    action = action.lower()
+    if action not in {"list", "add", "remove"}:
+        await message.answer(
+            "Manage CV references with:\n"
+            "/referees list\n"
+            "/referees add Name | Title | Organization | Email | Phone\n"
+            "/referees remove Number\n"
+            "For add, leave optional fields blank, but provide an email or phone."
+        )
+        return
+    try:
+        base = await get_cv_base()
+        data = base["data"]
+        referees = list(data.get("referees") or [])
+        if action == "list":
+            if not referees:
+                await message.answer("No references are listed on the approved CV yet. Add one with /referees add Name | Title | Organization | Email | Phone.")
+                return
+            lines = ["<b>CV references</b>"]
+            for index, referee in enumerate(referees, 1):
+                details = " · ".join(str(referee.get(key) or "") for key in ("title", "organization") if referee.get(key))
+                contacts = " · ".join(str(referee.get(key) or "") for key in ("email", "phone") if referee.get(key))
+                lines.append(f"\n{index}. <b>{html.escape(referee['name'])}</b>")
+                if details:
+                    lines.append(html.escape(details))
+                if contacts:
+                    lines.append(html.escape(contacts))
+            await message.answer("\n".join(lines))
+            return
+        if action == "add":
+            fields = [field.strip() for field in payload.split("|")]
+            if len(fields) != 5 or not fields[0]:
+                await message.answer("Use /referees add Name | Title | Organization | Email | Phone. Leave unused optional fields blank.")
+                return
+            referee = dict(zip(("name", "title", "organization", "email", "phone"), fields))
+            referee = {key: value for key, value in referee.items() if value}
+            if not referee.get("email") and not referee.get("phone"):
+                await message.answer("Please include at least an email address or phone number for the referee.")
+                return
+            referees.append(referee)
+        else:
+            try:
+                index = int(payload.strip())
+            except ValueError:
+                await message.answer("Use /referees remove Number. Run /referees list to see the current numbering.")
+                return
+            if index < 1 or index > len(referees):
+                await message.answer(f"Choose a reference number from 1 to {len(referees)}.")
+                return
+            removed = referees.pop(index - 1)
+        data["referees"] = referees
+        validated = await validate_cv_base(data)
+        await save_cv_base(validated, base_revision=base["revision"])
+        if action == "add":
+            await message.answer(f"Added {html.escape(referee['name'])} to the approved CV references. Use /menu → View CV to render the updated PDF.")
+        else:
+            await message.answer(f"Removed {html.escape(removed['name'])} from the approved CV references. Use /menu → View CV to render the updated PDF.")
+    except Exception as error:
+        logger.exception("CV referee management failed")
+        await message.answer(friendly_error(error, "I couldn't update the CV references. Please try again."))
+
+
 async def prepare_cv_patch(message: types.Message, job_description: str, revision: str | None = None):
     status = await message.answer("Analyzing the job description…")
     try:

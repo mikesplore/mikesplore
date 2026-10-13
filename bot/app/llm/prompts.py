@@ -77,7 +77,7 @@ CV_SYNC_SYSTEM = (
     "Return exactly {\"changes\":[...]}; each change must use op set with path and value, add_project with source_id, or move_profile_link with profile_id and certification. "
     "The default target is three strong, relevant projects total in the CV. Add only enough projects to reach three; do not add a fourth or fifth unless the approved CV already contains more than three. "
     "Do not return the complete CV. Use only the supplied current CV excerpts and portfolio evidence. "
-    "Preserve the current summary, existing project bullets, skills, certificates, education, contact, and layout unless direct evidence clearly requires a specific correction. "
+    "Preserve the current summary, existing project bullets, skills, certificates, education, referees, contact, and layout unless direct evidence clearly requires a specific correction. Never invent, remove, or alter referee names or contact details. "
     "If an approved CV certification entry is actually a profile or community link, move it only when it clearly matches a supplied portfolio_profile_links record: use move_profile_link with that exact profile_id and the exact certification string to remove. Never remove an item matching a supplied verified certificate or competition. "
     "Never infer implementation details from a technology stack, tags, project title, or vague goal. Do not invent metrics, dates, awards, skills, education, or contact details. "
     "Do not add a project unless it has at least two distinct supplied bullet_candidates. Do not bulk-add certificates or hackathons. "
