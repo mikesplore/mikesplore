@@ -95,7 +95,8 @@ def test_all_wizard_callbacks_are_protected_and_under_64_bytes():
     callbacks += [
         "mng:yes", "mng:done", "mng:cancel", "mng:create",
         "mng:prev", "mng:next", "mng:delete", "mng:confirm-delete",
-        "mng:sub-add", "mng:sub-done",
+        "mng:sub-add", "mng:sub-done", "mng:mediaadd", "mng:medel:99",
+        "mng:medup:99", "mng:meddown:99", "mng:medback", "mng:mediarefresh",
     ]
     assert callbacks
     for data in callbacks:
@@ -418,6 +419,28 @@ def test_finish_save_applies_ops_and_clears_session():
     assert callback.message.edited and callback.message.edited[0][0] == "Saved."
 
 
+def test_entry_create_save_keeps_wizard_open_for_media_and_optional_fields():
+    async def fake_manage(resource, action, payload):
+        assert resource == "entries" and action == "create"
+        return {"id": "event-1", "slug": "community-day"}
+
+    sessions = {1: _session(resource="events", mode="create", step="field", pending={"title": "Community Day", "blurb": "A gathering"})}
+    _configure({
+        "wizard_sessions": sessions,
+        "manage_content": fake_manage,
+        "update_profile": lambda payload: payload,
+        "bulk_manage_links": lambda operations: operations,
+    })
+    callback = FakeCallback("mng:done")
+    asyncio.run(wizard.finish_save(callback, sessions[1]))
+    assert sessions[1]["mode"] == "update"
+    assert sessions[1]["record"]["id"] == "event-1"
+    assert sessions[1]["current"]["slug"] == "community-day"
+    callbacks = [button.callback_data for row in callback.message.edited[0][1].inline_keyboard for button in row]
+    assert "mng:field:cover_image" in callbacks
+    assert "mng:field:gallery" in callbacks
+
+
 def test_media_upload_complete_requires_active_media_step():
     sessions = {1: _session()}
     _configure({"wizard_sessions": sessions})
@@ -441,4 +464,92 @@ def test_prepare_media_upload_arms_pending_upload_for_entry():
     session = _session(resource="projects", step="media", pending_field="card_image", record={"id": "e1", "label": "P"})
     asyncio.run(wizard.prepare_media_upload(message, session))
     assert pending_upload[1][0] == "project-image"
-    assert pending_upload_target[1] == {"entry_id": "e1", "role": "card"}
+    assert pending_upload_target[1] == {
+        "entry_id": "e1", "role": "card", "alt_text": "Card image",
+        "caption": "Card image", "custom_order": 0, "replace_role": True,
+    }
+
+
+def test_entry_media_fields_cover_all_image_bearing_content_types():
+    expected = {
+        "projects": {"card_image", "gallery"},
+        "articles": {"cover_image"},
+        "hackathons": {"cover_image"},
+        "events": {"cover_image", "gallery"},
+    }
+    for resource, keys in expected.items():
+        fields = {field["key"] for field in wizard.RESOURCES[resource]["fields"] if field["type"] == "media"}
+        assert fields == keys
+
+
+def test_entry_creation_starts_with_title_and_description_only():
+    for resource in ("projects", "articles", "hackathons", "events"):
+        assert wizard.RESOURCES[resource]["create_queue"] == ["title", "blurb"]
+
+
+def test_setting_date_stages_year_automatically():
+    _configure()
+    session = _session(resource="projects", step="value", pending_field="date")
+    message = FakeMessage()
+    message.text = "2024-06-01"
+    assert asyncio.run(wizard.handle_wizard_text(message, session))
+    assert session["pending"]["date"] == "2024-06-01"
+    assert session["pending"]["year"] == 2024
+
+
+def test_wizard_cancel_clears_armed_upload_and_target():
+    pending_upload = {1: ("project-image", "Card image")}
+    pending_upload_target = {1: {"entry_id": "e1", "role": "card"}}
+    sessions = {1: _session(resource="projects", step="media")}
+    _configure({"pending_upload": pending_upload, "pending_upload_target": pending_upload_target, "wizard_sessions": sessions})
+    callback = FakeCallback("mng:cancel")
+    asyncio.run(wizard.handle_wizard_callback(callback))
+    assert not pending_upload
+    assert not pending_upload_target
+    assert not sessions
+
+
+def test_media_remove_detaches_selected_entry_asset():
+    operations = []
+
+    async def fake_manage(resource, action, payload):
+        operations.append((resource, action, payload))
+        return {}
+
+    async def empty_list(resource, payload=None):
+        return []
+
+    session = _session(
+        resource="events", record={"id": "e1"}, pending_field="gallery",
+        media_items=[{"id": 18, "role": "gallery", "asset_id": 30, "custom_order": 0}],
+    )
+    _configure({"wizard_sessions": {1: session}, "manage_content": fake_manage, "list_admin_resource": empty_list, "list_site_assets": empty_list})
+    callback = FakeCallback("mng:medel:0")
+    asyncio.run(wizard.handle_wizard_callback(callback))
+    assert operations == [("entry-assets", "delete", {"id": 18})]
+
+
+def test_media_reorder_persists_updated_order():
+    operations = []
+
+    async def fake_manage(resource, action, payload):
+        operations.append((resource, action, payload))
+        return {}
+
+    async def empty_list(resource, payload=None):
+        return []
+
+    session = _session(
+        resource="projects", record={"id": "p1"}, pending_field="gallery",
+        media_items=[
+            {"id": 10, "role": "gallery", "asset_id": 20, "custom_order": 0},
+            {"id": 11, "role": "gallery", "asset_id": 21, "custom_order": 1},
+        ],
+    )
+    _configure({"wizard_sessions": {1: session}, "manage_content": fake_manage, "list_admin_resource": empty_list, "list_site_assets": empty_list})
+    callback = FakeCallback("mng:medup:1")
+    asyncio.run(wizard.handle_wizard_callback(callback))
+    assert operations == [
+        ("entry-assets", "update", {"id": 11, "custom_order": 0}),
+        ("entry-assets", "update", {"id": 10, "custom_order": 1}),
+    ]

@@ -27,7 +27,7 @@ ids/slugs are never embedded. Records are addressed by page/index):
     mng:sub-done                -> return to the field picker
     mng:cancel                  -> abandon the session
 
-Media fields (profile photo, project images) keep the existing immediate-upload
+Media fields (profile photo and entry images) keep the existing immediate-upload
 semantics: the wizard sets ``pending_upload``/``pending_upload_target`` exactly
 like the legacy upload flows, uploads.py saves the file, and the wizard reports
 the result back into the summary. Text edits are batched until Finish & save.
@@ -58,6 +58,7 @@ update_profile = None
 manage_content = None
 bulk_manage_links = None
 list_admin_resource = None
+list_site_assets = None
 get_profile = None
 is_admin = None
 
@@ -85,8 +86,8 @@ FIELD_DESCRIPTIONS = {
     "live_url": "The deployed project URL visitors can open. HTTPS is required; https:// is added if omitted.",
     "status": "The current project state, for example active, completed, paused, or in progress.",
     "category": "A broad grouping for the project, for example AI, web, mobile, or infrastructure.",
-    "date": "The project date, usually when it was published or completed.",
-    "year": "The year associated with the project.",
+    "date": "The content date, usually when it was published, held, or completed. Setting it also updates Year automatically.",
+    "year": "The year associated with the project. A date entry fills this automatically; change it only to override.",
     "custom_order": "The position in the project list. Lower numbers appear first.",
     "is_visible": "Whether this project is shown publicly on the portfolio.",
     "is_featured": "Whether to highlight this project as featured.",
@@ -166,7 +167,7 @@ RESOURCES: dict[str, dict] = {
         "kind": "collection",
         "write": "entries",
         "content_type": "project",
-        "create_queue": [field["key"] for field in ENTRY_FIELDS if field["type"] != "media"],
+        "create_queue": ["title", "blurb"],
         "subs": ["technologies", "repositories"],
         "fields": ENTRY_FIELDS
         + [
@@ -179,24 +180,27 @@ RESOURCES: dict[str, dict] = {
         "kind": "collection",
         "write": "entries",
         "content_type": "article",
-        "create_queue": ["slug", "title", "blurb"],
-        "fields": ENTRY_FIELDS,
+        "create_queue": ["title", "blurb"],
+        "fields": ENTRY_FIELDS + [_field("cover_image", "Cover image", "media", asset_type="article-image", role="cover")],
     },
     "hackathons": {
         "label": "Hackathons",
         "kind": "collection",
         "write": "entries",
         "content_type": "hackathon",
-        "create_queue": ["slug", "title", "blurb"],
-        "fields": ENTRY_FIELDS,
+        "create_queue": ["title", "blurb"],
+        "fields": ENTRY_FIELDS + [_field("cover_image", "Cover image", "media", asset_type="hackathon-image", role="card")],
     },
     "events": {
         "label": "Events",
         "kind": "collection",
         "write": "entries",
         "content_type": "event",
-        "create_queue": ["slug", "title", "blurb"],
-        "fields": ENTRY_FIELDS,
+        "create_queue": ["title", "blurb"],
+        "fields": ENTRY_FIELDS + [
+            _field("cover_image", "Cover image", "media", asset_type="event-image", role="card"),
+            _field("gallery", "Gallery images", "media", asset_type="event-gallery", role="gallery"),
+        ],
     },
     "links": {
         "label": "Contact links",
@@ -602,19 +606,74 @@ async def fetch_media_status(session: dict) -> dict:
     record = session.get("record") or {}
     entry_id = record.get("id")
     if not entry_id:
+        session["media_items"] = []
+        session.pop("media_load_error", None)
         return statuses
+    session["media_items"] = []
+    session.pop("media_load_error", None)
     try:
         links = await list_admin_resource("entry-assets", {"entry_id": str(entry_id)})
+        assets = await (list_site_assets() if list_site_assets else list_admin_resource("assets", {"page_size": 500}))
     except Exception:
+        session["media_load_error"] = True
         return statuses
-    roles: dict[str, int] = {}
+    assets_by_id = {str(asset.get("id")): asset for asset in assets}
+    items = []
     for link in links:
+        asset = assets_by_id.get(str(link.get("asset_id")), {})
+        items.append({**link, "url": asset.get("url"), "label": asset.get("label")})
+    items.sort(key=lambda item: (item.get("role", ""), item.get("custom_order", 0), item.get("id", 0)))
+    session["media_items"] = items
+    roles: dict[str, int] = {}
+    for link in items:
         roles[link.get("role")] = roles.get(link.get("role"), 0) + 1
     if roles.get("card"):
         statuses["card_image"] = f"{roles['card']} image(s)"
     if roles.get("gallery"):
         statuses["gallery"] = f"{roles['gallery']} image(s)"
     return statuses
+
+
+def media_management_keyboard(session: dict) -> types.InlineKeyboardMarkup:
+    field = field_by_key(session["resource"], session.get("pending_field") or "") or {}
+    role = field.get("role", "gallery")
+    items = [item for item in session.get("media_items", []) if item.get("role") == role]
+    rows = [[types.InlineKeyboardButton(text="Replace image" if role in {"card", "cover"} and items else "Add image", callback_data="mng:mediaadd")]]
+    for index, item in enumerate(items):
+        controls = []
+        if index > 0:
+            controls.append(types.InlineKeyboardButton(text="↑", callback_data=f"mng:medup:{index}"))
+        if index < len(items) - 1:
+            controls.append(types.InlineKeyboardButton(text="↓", callback_data=f"mng:meddown:{index}"))
+        controls.append(types.InlineKeyboardButton(text=f"Remove image {index + 1}", callback_data=f"mng:medel:{index}"))
+        rows.append(controls)
+    rows.append([types.InlineKeyboardButton(text="Back to fields", callback_data="mng:medback")])
+    if session.get("media_load_error"):
+        rows.append([types.InlineKeyboardButton(text="Refresh image list", callback_data="mng:mediarefresh")])
+    rows.append([types.InlineKeyboardButton(text="Cancel", callback_data="mng:cancel")])
+    return types.InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+async def show_media_management(message, session: dict, edit: bool = True) -> None:
+    await fetch_media_status(session)
+    field = field_by_key(session["resource"], session.get("pending_field") or "")
+    if not field:
+        return
+    role = field.get("role", "gallery")
+    items = [item for item in session.get("media_items", []) if item.get("role") == role]
+    if session.get("media_load_error"):
+        description = "I couldn't load the current image list. You can retry or add another image."
+    else:
+        description = "No images attached yet." if not items else f"{len(items)} image(s) attached. Use the arrows to reorder, or Remove to detach."
+    text = f"<b>{html.escape(field['label'], quote=False)}</b>\n{description}"
+    keyboard = media_management_keyboard(session)
+    if edit:
+        try:
+            await message.edit_text(text, reply_markup=keyboard)
+            return
+        except Exception:
+            pass
+    await message.answer(text, reply_markup=keyboard)
 
 
 def _prompt_value_text(session: dict, field: dict) -> str:
@@ -725,6 +784,8 @@ def _screen_message(target):
 
 async def begin_resource(target, resource_key: str, start_create: bool = False, edit: bool = False) -> None:
     user_id = target.from_user.id
+    pending_upload.pop(user_id, None)
+    pending_upload_target.pop(user_id, None)
     spec = RESOURCES[resource_key]
     session = wizard_sessions.get(user_id)
     if session is None:
@@ -825,6 +886,8 @@ async def handle_wizard_text(message: types.Message, session: dict) -> bool:
         await message.answer("Error: " + error + "\n\nTry again, or /cancel.")
         return True
     session.setdefault("pending", {})[field["key"]] = value
+    if field["key"] == "date" and value:
+        session["pending"]["year"] = int(value[:4])
     if session.get("step") == "create":
         advance_create_queue(session)
         if session.get("step") == "create":
@@ -959,17 +1022,21 @@ async def finish_save(callback, session: dict) -> None:
                 manage_content=manage_content,
                 bulk_manage_links=bulk_manage_links,
             )
-        if session.get("mode") == "create" and session.get("resource") == "projects":
+        if session.get("mode") == "create" and RESOURCES[session["resource"]].get("write") == "entries":
             entry_id = (last_result or {}).get("id") if isinstance(last_result, dict) else None
             if entry_id:
                 session["record"] = {"id": entry_id, "label": session.get("pending", {}).get("title", "New project")}
-                session["current"] = dict(session.get("pending") or {})
+                session["current"] = dict(session.get("pending") or {}) | {"slug": (last_result or {}).get("slug")}
                 session["mode"] = "update"
                 session["pending"] = {}
                 session.pop("create_queue", None)
                 session["step"] = "field"
                 if callback.message:
-                    await callback.message.edit_text("Project saved. Add technologies, repositories, or edit another field.", reply_markup=field_keyboard(session))
+                    label = RESOURCES[session["resource"]]["label"].rstrip("s")
+                    follow_up = " Add a cover or gallery image now." if any(field["type"] == "media" for field in RESOURCES[session["resource"]]["fields"]) else ""
+                    if session["resource"] == "projects":
+                        follow_up += " You can also add technologies, repositories, and other details."
+                    await callback.message.edit_text(f"{label} saved.{follow_up}", reply_markup=field_keyboard(session))
                 return
         wizard_sessions.pop(user_id, None)
         if callback.message:
@@ -995,6 +1062,8 @@ async def handle_wizard_callback(callback) -> None:
 
     if action == "cancel":
         wizard_sessions.pop(user_id, None)
+        pending_upload.pop(user_id, None)
+        pending_upload_target.pop(user_id, None)
         if message:
             try:
                 await message.edit_text("Cancelled.")
@@ -1106,8 +1175,12 @@ async def handle_wizard_callback(callback) -> None:
         session["pending_field"] = key
         session["picker_message"] = message
         if field["type"] == "media":
-            session["step"] = "media"
-            await prompt_media(message, field)
+            session["step"] = "field"
+            if session.get("resource") == "profile":
+                session["step"] = "media"
+                await prompt_media(message, field)
+            else:
+                await show_media_management(message, session, edit=True)
             return
         session["step"] = "value"
         await _prompt_field(message, session, field)
@@ -1116,6 +1189,60 @@ async def handle_wizard_callback(callback) -> None:
     if action == "yes":
         session["step"] = "field"
         await show_field_picker(session.get("picker_message") or message, session, edit=True)
+        return
+
+    if action == "mediaadd":
+        field = field_by_key(session["resource"], session.get("pending_field") or "")
+        if not field or field.get("type") != "media":
+            await callback.answer("Choose an image field first", show_alert=True)
+            return
+        session["step"] = "media"
+        await callback.answer("Send the image in this chat")
+        if message:
+            await message.answer(f"Send an image for <b>{html.escape(field['label'], quote=False)}</b>. It will attach as soon as it uploads.", reply_markup=cancel_keyboard())
+        return
+
+    if action == "mediarefresh":
+        await callback.answer("Refreshing images…")
+        if message:
+            await show_media_management(message, session)
+        return
+
+    if action in {"medel", "medup", "meddown"}:
+        try:
+            index = int(args[0])
+            items = session.get("media_items") or []
+            field = field_by_key(session["resource"], session.get("pending_field") or "")
+            role = (field or {}).get("role", "gallery")
+            role_items = [item for item in items if item.get("role") == role]
+            selected = role_items[index]
+        except (ValueError, IndexError, TypeError):
+            await callback.answer("That image list changed; open it again.", show_alert=True)
+            if message:
+                await show_media_management(message, session)
+            return
+        try:
+            if action == "medel":
+                await manage_content("entry-assets", "delete", {"id": selected["id"]})
+            else:
+                destination = index - 1 if action == "medup" else index + 1
+                if not 0 <= destination < len(role_items):
+                    await callback.answer("Already at the end")
+                    return
+                ordered = list(role_items)
+                ordered[index], ordered[destination] = ordered[destination], ordered[index]
+                for order, item in enumerate(ordered):
+                    await manage_content("entry-assets", "update", {"id": item["id"], "custom_order": order})
+            await callback.answer("Image removed" if action == "medel" else "Image order updated")
+            await show_media_management(message, session)
+        except Exception:
+            logger.exception("Project media management operation failed")
+            await callback.answer("I couldn't update that image. Please try again.", show_alert=True)
+        return
+
+    if action == "medback":
+        session["step"] = "field"
+        await show_field_picker(message, session, edit=True)
         return
 
     if action == "done":
@@ -1203,10 +1330,21 @@ async def prepare_media_upload(message: types.Message, session: dict) -> None:
     if not field or field["type"] != "media":
         return
     user_id = message.from_user.id
+    pending_upload_target.pop(user_id, None)
     pending_upload[user_id] = (field.get("asset_type", "file"), field["label"])
     record = session.get("record") or {}
     if record.get("id"):
-        pending_upload_target[user_id] = {"entry_id": record["id"], "role": field.get("role", "gallery")}
+        role = field.get("role", "gallery")
+        items = session.get("media_items") or []
+        current_role_items = [item for item in items if item.get("role") == role]
+        pending_upload_target[user_id] = {
+            "entry_id": record["id"],
+            "role": role,
+            "alt_text": field["label"],
+            "caption": field["label"],
+            "custom_order": 0 if role in {"card", "cover"} else len(current_role_items),
+            "replace_role": role in {"card", "cover"},
+        }
 
 
 async def media_upload_complete(message: types.Message) -> None:
@@ -1220,4 +1358,7 @@ async def media_upload_complete(message: types.Message) -> None:
         session.setdefault("media_done", []).append(field["label"])
     session["step"] = "field"
     picker = session.get("picker_message")
-    await show_field_picker(picker or message, session, edit=bool(picker))
+    if field and session.get("resource") != "profile":
+        await show_media_management(picker or message, session, edit=bool(picker))
+    else:
+        await show_field_picker(picker or message, session, edit=bool(picker))

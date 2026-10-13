@@ -37,6 +37,19 @@ from ..services.search import model_record
 router = APIRouter(tags=["admin"])
 
 
+def _unique_entry_slug(title: str, db: Session) -> str:
+    from ..services.sync import slugify
+
+    base_slug = slugify(title or "entry")[:160].strip("-") or "entry"
+    candidate = base_slug
+    suffix = 2
+    while db.scalar(select(Entry.id).where(Entry.slug == candidate)) is not None:
+        tail = f"-{suffix}"
+        candidate = f"{base_slug[:160 - len(tail)].rstrip('-')}{tail}"
+        suffix += 1
+    return candidate
+
+
 @router.post("/admin/content", dependencies=[Depends(require_service_key)])
 def manage_content(resource: str, action: str, payload: dict, response: Response, db: Session = Depends(get_db)):
     models = {"entries": Entry, "certificates": Certificate, "assets": SiteAsset, "links": ProfileLink, "skills": SkillGroup, "education": Education, "bucket-list": BucketListItem, "settings": SiteSetting, "role-policies": RolePolicy, "entry-assets": EntryAsset, "entry-technologies": EntryTechnology, "repositories": Repository, "technologies": Technology, "topology": TopologyStep, "metrics": Metric, "decisions": ArchitectureDecision, "highlights": Highlight, "quotes": Quote, "snippets": CodeSnippet, "documents": Document, "badges": Badge}
@@ -160,6 +173,8 @@ def manage_content(resource: str, action: str, payload: dict, response: Response
             if key not in {"id", "key"} and hasattr(item, key):
                 setattr(item, key, value)
     else:
+        if resource == "entries" and action == "create" and not payload.get("slug"):
+            payload["slug"] = _unique_entry_slug(payload.get("title") or "entry", db)
         # Coerce records whose caller did not supply a primary key. Most
         # tables rely on a server default (UUID/native serial), but
         # BucketListItem is the one exception: a single String PK with no
@@ -178,7 +193,10 @@ def manage_content(resource: str, action: str, payload: dict, response: Response
         item = model(**{key: value for key, value in payload.items() if hasattr(model, key)})
         db.add(item)
     db.commit()
-    return {"status": action, "resource": resource, "id": str(getattr(item, "id", "")) if item is not None else str(getattr(db.get(model, identity), "id", ""))}
+    result = {"status": action, "resource": resource, "id": str(getattr(item, "id", "")) if item is not None else str(getattr(db.get(model, identity), "id", ""))}
+    if resource == "entries" and item is not None:
+        result["slug"] = item.slug
+    return result
 
 
 @router.post("/admin/content/bulk", dependencies=[Depends(require_service_key)])

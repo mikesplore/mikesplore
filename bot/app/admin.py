@@ -38,9 +38,12 @@ async def upload_certificate(title: str, filename: str, content: bytes, content_
         return response.json()
 
 
-async def upload_asset(asset_type: str, label: str, filename: str, content: bytes, content_type: str | None) -> dict:
+async def upload_asset(asset_type: str, label: str, filename: str, content: bytes, content_type: str | None, target: dict | None = None) -> dict:
+    data = {"asset_type": asset_type, "label": label}
+    if target:
+        data.update({key: target[key] for key in ("entry_id", "role", "alt_text", "caption", "custom_order", "replace_role") if key in target})
     async with httpx.AsyncClient(base_url=settings.backend_url, timeout=30) as client:
-        response = await client.post("/assets", data={"asset_type": asset_type, "label": label}, files={"file": (filename, content, content_type or "application/octet-stream")}, headers={"X-Service-Api-Key": settings.service_api_key})
+        response = await client.post("/assets", data=data, files={"file": (filename, content, content_type or "application/octet-stream")}, headers={"X-Service-Api-Key": settings.service_api_key})
         response.raise_for_status()
         return response.json()
 
@@ -166,6 +169,13 @@ async def list_profile_links() -> list[dict]:
 async def list_admin_resource(resource: str, payload: dict | None = None) -> list[dict]:
     async with httpx.AsyncClient(base_url=settings.backend_url, timeout=10) as client:
         response = await client.post("/admin/content", params={"resource": resource, "action": "list"}, json=payload or {}, headers={"X-Service-Api-Key": settings.service_api_key})
+        response.raise_for_status()
+        return response.json()
+
+
+async def list_site_assets() -> list[dict]:
+    async with httpx.AsyncClient(base_url=settings.backend_url, timeout=10) as client:
+        response = await client.get("/assets")
         response.raise_for_status()
         return response.json()
 

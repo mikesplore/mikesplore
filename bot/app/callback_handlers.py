@@ -70,9 +70,15 @@ def register_callbacks(dispatcher, dependencies):
             if data == "upload:cancel":
                 pending_upload.pop(user_id, None)
                 pending_upload_target.pop(user_id, None)
+                session = wizard_sessions.get(user_id)
+                if session and session.get("step") == "media":
+                    session["step"] = "field"
                 await callback.answer("Cancelled")
                 if callback.message:
-                    await callback.message.edit_text("Upload cancelled.")
+                    if session and session.get("pending_field") and session.get("resource") != "profile":
+                        await wizard.show_media_management(callback.message, session, edit=True)
+                    else:
+                        await callback.message.edit_text("Upload cancelled.")
                 return
             if data == "upload:retry":
                 if user_id not in pending_upload:

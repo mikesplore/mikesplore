@@ -18,7 +18,7 @@ from .tools import list_certificates
 from .config import settings
 from .llm import answer
 from .llm import extract_entry, extract_job_description_from_image, extract_update, friendly_error, present_admin_result, sync_cv_data, tailor_cv
-from .admin import apply_sync, bulk_manage_links, create_entry, delete_asset, delete_certificate, delete_entry, get_cv_base, get_cv_portfolio_context, get_cv_tailoring_context, get_profile, list_admin_resource, list_certificates as list_certificate_records, manage_content, preview_sync, render_base_cv, render_cv, save_cv_base, update_entry, update_profile, upload_asset, upload_certificate, validate_cv_base
+from .admin import apply_sync, bulk_manage_links, create_entry, delete_asset, delete_certificate, delete_entry, get_cv_base, get_cv_portfolio_context, get_cv_tailoring_context, get_profile, list_admin_resource, list_site_assets, list_certificates as list_certificate_records, manage_content, preview_sync, render_base_cv, render_cv, save_cv_base, update_entry, update_profile, upload_asset, upload_certificate, validate_cv_base
 from .formatting import telegram_html
 from .state import admin_result_context, awaiting_cv, awaiting_entry, conversation_history, last_cv_delivery, list_context, pending, pending_cv, pending_cv_sync, pending_mutation, pending_sync, pending_upload, pending_upload_target, wizard_sessions
 from .admin_operations import execute_admin_operation as run_admin_operation
@@ -366,6 +366,7 @@ wizard.configure({
     "manage_content": manage_content,
     "bulk_manage_links": bulk_manage_links,
     "list_admin_resource": list_admin_resource,
+    "list_site_assets": list_site_assets,
     "get_profile": get_profile,
     "is_admin": is_admin,
 })

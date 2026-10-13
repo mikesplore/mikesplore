@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 from ..auth import require_service_key
 from ..config import settings
 from ..db import get_db
-from ..models import Certificate, SiteAsset
+from ..models import Certificate, Entry, EntryAsset, SiteAsset
 from ..services.sync import slugify
 
 router = APIRouter(tags=["assets"])
@@ -84,26 +84,68 @@ def delete_asset(asset_id: int, db: Session = Depends(get_db)):
 
 
 @router.post("/assets", response_model=dict, status_code=status.HTTP_201_CREATED, dependencies=[Depends(require_service_key)])
-async def upload_asset(asset_type: str = Form(...), label: str = Form(""), file: UploadFile = File(...), db: Session = Depends(get_db)):
+async def upload_asset(
+    asset_type: str = Form(...),
+    label: str = Form(""),
+    file: UploadFile = File(...),
+    entry_id: UUID | None = Form(None),
+    role: str | None = Form(None),
+    alt_text: str | None = Form(None),
+    caption: str | None = Form(None),
+    custom_order: int = Form(0),
+    replace_role: bool = Form(False),
+    db: Session = Depends(get_db),
+):
     client = _r2_client()
+    if (entry_id is None) != (role is None):
+        raise HTTPException(status_code=422, detail="entry_id and role must be supplied together")
+    entry = db.get(Entry, entry_id) if entry_id else None
+    if entry_id and not entry:
+        raise HTTPException(status_code=404, detail="Entry not found")
+    if role and role not in {"card", "cover", "gallery"}:
+        raise HTTPException(status_code=422, detail="Unsupported media role")
     object_key = f"assets/{slugify(asset_type)}/{slugify(label or file.filename or 'upload')}-{uuid4().hex}-{file.filename}"
     file_bytes = await file.read(MAX_UPLOAD_BYTES + 1)
     if len(file_bytes) > MAX_UPLOAD_BYTES:
         raise HTTPException(status_code=413, detail="Upload exceeds the 5 MB limit")
-    client.upload_fileobj(BytesIO(file_bytes), settings.r2_bucket_name, object_key, ExtraArgs={"ContentType": file.content_type or "application/octet-stream"})
+    content_type = file.content_type or "application/octet-stream"
+    if entry_id and not content_type.startswith("image/"):
+        raise HTTPException(status_code=415, detail="Entry media must be an image")
+    client.upload_fileobj(BytesIO(file_bytes), settings.r2_bucket_name, object_key, ExtraArgs={"ContentType": content_type})
     asset_url = _public_url(object_key)
     item = None
     previous_url = None
-    if asset_type in {"profile-image", "cv"}:
-        item = db.scalar(select(SiteAsset).where(SiteAsset.asset_type == asset_type))
-    if item:
-        previous_url = item.url
-        item.label, item.url = label or file.filename, asset_url
-    else:
-        item = SiteAsset(asset_type=asset_type, label=label or file.filename, url=asset_url)
-        db.add(item)
-    db.commit()
-    db.refresh(item)
+    entry_asset = None
+    try:
+        if asset_type in {"profile-image", "cv"}:
+            item = db.scalar(select(SiteAsset).where(SiteAsset.asset_type == asset_type))
+        if item:
+            previous_url = item.url
+            item.label, item.url = label or file.filename, asset_url
+        else:
+            item = SiteAsset(asset_type=asset_type, label=label or file.filename, url=asset_url)
+            db.add(item)
+        if entry and role:
+            if replace_role:
+                db.query(EntryAsset).filter(EntryAsset.entry_id == entry.id, EntryAsset.role == role).delete(synchronize_session=False)
+            db.flush()
+            entry_asset = EntryAsset(
+                entry_id=entry.id,
+                asset_id=item.id,
+                role=role,
+                alt_text=alt_text or label or file.filename,
+                caption=caption,
+                custom_order=custom_order,
+            )
+            db.add(entry_asset)
+        db.commit()
+    except Exception:
+        db.rollback()
+        try:
+            client.delete_object(Bucket=settings.r2_bucket_name, Key=object_key)
+        except Exception:
+            pass
+        raise
     if previous_url and previous_url.startswith(_public_base()):
         previous_key = previous_url.removeprefix(_public_base())
         if previous_key != object_key:
@@ -111,4 +153,4 @@ async def upload_asset(asset_type: str = Form(...), label: str = Form(""), file:
                 client.delete_object(Bucket=settings.r2_bucket_name, Key=previous_key)
             except Exception:
                 pass
-    return {"id": item.id, "asset_type": item.asset_type, "label": item.label, "url": item.url}
+    return {"id": item.id, "asset_type": item.asset_type, "label": item.label, "url": item.url, "entry_asset_id": entry_asset.id if entry_asset else None}

@@ -24,6 +24,7 @@ def register_message_handlers(dispatcher, dependencies):
                     pending.pop(message.from_user.id, None)
                     awaiting_entry.discard(message.from_user.id)
                     pending_mutation.pop(message.from_user.id, None)
+                    pending_upload.pop(message.from_user.id, None)
                     pending_upload_target.pop(message.from_user.id, None)
                     pending_sync.pop(message.from_user.id, None)
                     awaiting_cv.discard(message.from_user.id)

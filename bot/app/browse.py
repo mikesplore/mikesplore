@@ -147,11 +147,6 @@ def safe_url(url) -> str | None:
 
 def menu_button() -> types.InlineKeyboardButton:
     return types.InlineKeyboardButton(text=f"{ICONS['menu']} Menu", callback_data="pub:menu")
-def menu_button() -> types.InlineKeyboardButton:
-    return types.InlineKeyboardButton(text="Menu", callback_data="pub:menu")
-def menu_keyboard() -> types.InlineKeyboardMarkup:
-    buttons = [types.InlineKeyboardButton(text=f"{RESOURCE_ICONS[resource]} {RESOURCE_LABELS[resource]}", callback_data=f"pub:list:{resource}") for resource in MENU_ORDER]
-
 
 def menu_keyboard() -> types.InlineKeyboardMarkup:
     buttons = [types.InlineKeyboardButton(text=RESOURCE_LABELS[resource], callback_data=f"pub:list:{resource}", style="primary") for resource in MENU_ORDER]

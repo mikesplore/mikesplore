@@ -71,20 +71,16 @@ def register_upload_handler(dispatcher, dependencies):
                         pending_upload.pop(message.from_user.id, None)
                         await message.answer(f"Certificate uploaded: {html.escape(result['title'], quote=False)}")
                         return
-                    result = await upload_asset(asset_type, label, filename, buffer.getvalue(), mime_type)
+                    target = pending_upload_target.get(message.from_user.id)
+                    if target and not mime_type.startswith("image/"):
+                        await message.answer("Please send an image for this media field.")
+                        return
+                    result = await upload_asset(asset_type, label, filename, buffer.getvalue(), mime_type, target=target)
                     pending_upload.pop(message.from_user.id, None)
+                    pending_upload_target.pop(message.from_user.id, None)
                     await message.answer(f"Asset uploaded: {html.escape(result['label'], quote=False)}")
-                    target = pending_upload_target.pop(message.from_user.id, None)
                     if target:
-                        await manage_content("entry-assets", "create", {
-                            "entry_id": target["entry_id"],
-                            "asset_id": result["id"],
-                            "role": target.get("role", "gallery"),
-                            "alt_text": label,
-                            "caption": label,
-                            "custom_order": 0,
-                        })
-                        await message.answer("The uploaded asset was attached to the project.")
+                        await message.answer("The image was attached to the content item.")
                     if asset_type == "profile-image":
                         try:
                             await bot.set_my_profile_photo(

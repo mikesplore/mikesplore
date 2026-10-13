@@ -32,7 +32,10 @@ export const normalizeEntry = (entry) => {
   const repositories = entry.repositories || [];
   const primaryRepository = repositories.find((repo) => repo.is_primary) || repositories[0];
   const links = entry.links || {};
-  return { ...entry, summary: entry.summary || entry.blurb || '', tagline: entry.tagline || entry.subtitle || '', stack: entry.stack || entry.technologies || entry.tech_stack || [], links: { ...links, repo: links.repo || primaryRepository?.url, demo: links.demo || entry.demo_url }, cardImage: entry.card_image || entry.icon_url || entry.media?.image || entry.media?.thumbnail || '', topology: content(entry, 'topology'), metrics: content(entry, 'metrics'), highlights: content(entry, 'highlights'), documents: content(entry, 'documents') };
+  const media = Array.isArray(entry.media) ? entry.media : [];
+  const cardMedia = media.find((item) => ['card', 'cover', 'thumbnail'].includes(item.role));
+  const gallery = media.filter((item) => item.role === 'gallery').sort((a, b) => (a.custom_order || 0) - (b.custom_order || 0)).map((item) => item.url).filter(Boolean);
+  return { ...entry, summary: entry.summary || entry.blurb || '', tagline: entry.tagline || entry.subtitle || '', stack: entry.stack || entry.technologies || entry.tech_stack || [], links: { ...links, repo: links.repo || primaryRepository?.url, demo: links.demo || entry.demo_url }, cardImage: entry.card_image || cardMedia?.url || entry.icon_url || (typeof entry.media?.image === 'string' ? entry.media.image : '') || (typeof entry.media?.thumbnail === 'string' ? entry.media.thumbnail : ''), gallery: entry.gallery || gallery, topology: content(entry, 'topology'), metrics: content(entry, 'metrics'), highlights: content(entry, 'highlights'), documents: content(entry, 'documents') };
 };
 
 const toTimelineEntry = (rawEntry) => {
@@ -46,7 +49,7 @@ const toTimelineEntry = (rawEntry) => {
   tags: entry.tags || [],
   readTime: entry.details?.readTime ?? 0,
   stars: entry.details?.stars ?? 0,
-  thumbnail: entry.media?.thumbnail || entry.media?.image || '',
+  thumbnail: entry.cardImage || '',
   };
 };
 

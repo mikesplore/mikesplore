@@ -1,5 +1,37 @@
 # AGENTS.md — Portfolio Backend + Telegram Bot Conversion
 
+### Content management images and date flow (2026-10-13)
+
+- Shortened `/manage` creation for projects, articles, hackathons, and events to title and
+  description. The backend derives a normalized unique slug when omitted and returns it with
+  the created record. After saving any entry type, the wizard stays open so its image controls
+  and other optional fields are immediately available.
+- Added direct `/manage` image controls for project card/gallery images, article covers,
+  hackathon covers, and event covers/galleries. The owner can upload images from Telegram,
+  replace single-role covers, remove attachments, and reorder galleries. Existing certificate
+  and profile-photo upload paths remain specialized.
+- Extended the protected R2 asset upload endpoint to optionally attach an image to an entry in
+  the same database transaction. It validates entry/role and image content type, removes the
+  uploaded object if the database commit fails, and returns the attached link id. The bot no
+  longer performs a separate attach call after upload. No migration was needed because the
+  existing `site_assets` and `entry_assets` tables already represent this relationship.
+- Added attached media to public `/entries` list/detail responses and normalized media by role in
+  the frontend: `card`/`cover` drives card and timeline images; `gallery` drives event photos.
+  This fixes project cards ignoring their existing `media` array and completes image display for
+  events and hackathons.
+- Date entry now fills `year` automatically in the bot and API schemas; an explicitly entered
+  year remains an override. The LLM extraction prompt also derives year from a supplied full
+  date instead of requesting it separately.
+- Wizard `/cancel`, upload cancel, and starting a different manage session clear armed upload
+  state and stale targets. Added focused tests for media coverage, create progression, slug
+  derivation, date/year behavior, upload cancellation, public media serialization, and atomic
+  upload/attachment rollback.
+- Verification: Python compile check and 83 bot/backend tests pass; frontend production build
+  passes; ESLint passes with one existing Fast Refresh warning in `src/context/ThemeContext.jsx`.
+  OpenAPI confirms the multipart attach fields and public `EntryRead.media`. R2/Telegram
+  behavior was exercised through mocked endpoint and wizard tests, not a live Telegram session
+  or live object-storage upload.
+
 ### Button-driven public browsing mode (2026-09-12)
 
 - Added `bot/app/browse.py`: a deterministic, zero-LLM browsing mode. Every inline-button

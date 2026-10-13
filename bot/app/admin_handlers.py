@@ -19,8 +19,16 @@ async def handle_llm_admin_operation(message: types.Message, operation: dict) ->
         if asset_type == "cv-json":
             await message.answer("Please attach the curated CV source as a JSON file.", reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="Cancel upload", callback_data="upload:cancel")]]))
             return True
+        pending_upload_target.pop(user_id, None)
         if upload.get("entry_id"):
-            pending_upload_target[user_id] = {"entry_id": upload["entry_id"], "role": upload.get("role", "gallery")}
+            pending_upload_target[user_id] = {
+                "entry_id": upload["entry_id"],
+                "role": upload.get("role", "gallery"),
+                "alt_text": upload.get("alt_text") or upload.get("label") or asset_type,
+                "caption": upload.get("caption"),
+                "custom_order": upload.get("custom_order", 0),
+                "replace_role": upload.get("replace_role", upload.get("role") in {"card", "cover"}),
+            }
         await message.answer(f"Please attach the {asset_type} file.", reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="Cancel upload", callback_data="upload:cancel")]]))
         return True
     if resource == "cv-tailoring" and action == "request":

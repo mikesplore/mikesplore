@@ -5,7 +5,7 @@ from datetime import datetime
 from typing import Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 ContentType = Literal["project", "article", "hackathon", "event"]
 LinkCategory = Literal["professional", "social", "contact"]
@@ -43,6 +43,12 @@ class EntryBase(BaseModel):
             else:
                 raise ValueError("live_url must use HTTPS")
         return value
+
+    @model_validator(mode="after")
+    def infer_year_from_date(self):
+        if self.date is not None and self.year is None:
+            self.year = self.date.year
+        return self
 
 
 class EntryCreate(EntryBase):
@@ -85,12 +91,19 @@ class EntryUpdate(BaseModel):
                 raise ValueError("live_url must use HTTPS")
         return value
 
+    @model_validator(mode="after")
+    def infer_year_from_date(self):
+        if self.date is not None and self.year is None:
+            self.year = self.date.year
+        return self
+
 
 class EntryRead(EntryBase):
     model_config = ConfigDict(from_attributes=True)
     id: UUID
     created_at: datetime
     updated_at: datetime
+    media: list[dict[str, Any]] = Field(default_factory=list)
 
 
 class ProfileUpdate(BaseModel):

@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from .auth import require_service_key
 from .config import settings
 from .db import get_db
-from .models import BucketListItem, Certificate, Education, Entry, LLMUsage, Profile, ProfileLink, SkillGroup, SiteSetting
+from .models import BucketListItem, Certificate, Education, Entry, EntryAsset, LLMUsage, Profile, ProfileLink, SkillGroup, SiteAsset, SiteSetting
 from .routers import admin_content, admin_sync, assets, cv as cv_router, public_projects
 from .routers.assets import MAX_UPLOAD_BYTES  # noqa: F401  (kept so tests/tooling can import it from app.main)
 from .schemas import EntryRead, ProfileUpdate
@@ -105,6 +105,36 @@ def search_portfolio(q: str = Query(min_length=1), page: int = Query(default=1, 
     return search_portfolio_service(db, q, page, page_size)
 
 
+def _entries_with_media(entries: list[Entry], db: Session) -> list[dict]:
+    if not entries:
+        return []
+    ids = [entry.id for entry in entries]
+    rows = db.execute(
+        select(EntryAsset, SiteAsset)
+        .join(SiteAsset, EntryAsset.asset_id == SiteAsset.id)
+        .where(EntryAsset.entry_id.in_(ids))
+        .order_by(EntryAsset.custom_order, EntryAsset.id)
+    ).all()
+    media_by_entry: dict[str, list[dict]] = {str(entry_id): [] for entry_id in ids}
+    for link, asset in rows:
+        media_by_entry.setdefault(str(link.entry_id), []).append({
+            "id": link.id,
+            "asset_id": asset.id,
+            "role": link.role,
+            "url": asset.url,
+            "label": asset.label,
+            "alt_text": link.alt_text,
+            "caption": link.caption,
+            "custom_order": link.custom_order,
+        })
+    result = []
+    for entry in entries:
+        data = EntryRead.model_validate(entry).model_dump()
+        data["media"] = media_by_entry.get(str(entry.id), [])
+        result.append(data)
+    return result
+
+
 @app.get("/entries", response_model=list[EntryRead])
 def list_entries(
     response: Response,
@@ -118,7 +148,8 @@ def list_entries(
         query = query.where(Entry.content_type == content_type)
     total = db.scalar(select(func.count()).select_from(query.subquery())) or 0
     response.headers["X-Total-Count"] = str(total)
-    return db.scalars(query.offset((page - 1) * page_size).limit(page_size)).all()
+    entries = db.scalars(query.offset((page - 1) * page_size).limit(page_size)).all()
+    return _entries_with_media(entries, db)
 
 
 @app.get("/entries/{entry_id}", response_model=EntryRead)
@@ -126,7 +157,7 @@ def get_entry(entry_id: UUID, db: Session = Depends(get_db)):
     entry = db.scalar(select(Entry).where(Entry.id == entry_id, Entry.is_visible.is_(True)))
     if not entry:
         raise HTTPException(status_code=404, detail="Entry not found")
-    return entry
+    return _entries_with_media([entry], db)[0]
 
 
 @app.get("/entries/slug/{slug}", response_model=EntryRead)
@@ -134,7 +165,7 @@ def get_entry_by_slug(slug: str, db: Session = Depends(get_db)):
     entry = db.scalar(select(Entry).where(Entry.slug == slug, Entry.is_visible.is_(True)))
     if not entry:
         raise HTTPException(status_code=404, detail="Entry not found")
-    return entry
+    return _entries_with_media([entry], db)[0]
 
 
 app.include_router(public_projects.router)

@@ -55,6 +55,8 @@ EXTRACT_SYSTEM = (
     "- Unspecified string/date fields: null\n"
     "- Unspecified list fields (tech_stack, tags, links, media): []\n"
     "- Unspecified booleans (is_visible, is_featured): null, not True/False\n"
+    "- If a full date is supplied, set year to the year in that date; do not ask the owner for it separately. "
+    "If only a year is supplied, set year and leave date null. An explicitly supplied year may override the date year.\n"
     "- Unspecified numbers (year, custom_order): null"
 )
 

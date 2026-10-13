@@ -7,7 +7,8 @@ from bot.app.callbacks import is_protected_action
 def test_menu_keyboard_uses_public_callback_data_under_limit():
     keyboard = browse.menu_keyboard()
     callbacks = [button.callback_data for row in keyboard.inline_keyboard for button in row]
-    assert len(callbacks) == len(browse.MENU_ORDER)
+    assert len(callbacks) == len(browse.MENU_ORDER) + 1  # View CV is an additional public action.
+    assert callbacks[-1] == "pub:cv"
     for callback_data in callbacks:
         assert callback_data.startswith("pub:")
         assert not is_protected_action(callback_data)
