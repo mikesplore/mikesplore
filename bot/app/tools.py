@@ -54,6 +54,13 @@ async def list_skills() -> list[dict]:
         return [{"category": item["category"], "skills": item["skills"]} for item in response.json()]
 
 
+async def list_work_experience() -> list[dict]:
+    async with httpx.AsyncClient(base_url=settings.backend_url, timeout=10) as client:
+        response = await client.get("/work-experience")
+        response.raise_for_status()
+        return response.json()
+
+
 async def list_contact_links() -> list[dict]:
     async with httpx.AsyncClient(base_url=settings.backend_url, timeout=10) as client:
         response = await client.get("/profile/links")

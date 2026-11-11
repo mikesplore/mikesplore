@@ -33,6 +33,7 @@ from .tools import (
     list_contact_links,
     list_entries,
     list_skills,
+    list_work_experience,
 )
 
 logger = logging.getLogger(__name__)
@@ -73,6 +74,7 @@ ICONS = {
     "camera": "\U0001F4F7",
     "settings": "\u2699",
     "detail": "\U0001F4C4",
+    "work": "\U0001F4BC",
 }
 
 # resource -> (label, entries content_type)
@@ -88,6 +90,7 @@ SINGLE_RESOURCES = {
     "certificates": "Certificates",
     "bucket": "Bucket list",
     "about": "About",
+    "work-experience": "Work Experience",
 }
 RESOURCE_LABELS = {resource: label for resource, (label, _content_type) in ENTRY_RESOURCES.items()}
 RESOURCE_LABELS.update(SINGLE_RESOURCES)
@@ -99,7 +102,7 @@ COUNT_KEYS = {
     "bucket": "bucket_list",
 }
 # Menu order used by the keyboard rows and the counts summary line.
-MENU_ORDER = ("projects", "articles", "hackathons", "events", "skills", "certificates", "contact", "bucket", "about")
+MENU_ORDER = ("projects", "articles", "hackathons", "events", "work-experience", "skills", "certificates", "contact", "bucket", "about")
 # Icon for every menu resource and shared control (defaults keep tests
 # and future resources safe when ICONS lacks a key).
 RESOURCE_ICONS = {resource: ICONS.get(resource, ICONS["detail"]) for resource in MENU_ORDER}
@@ -327,6 +330,26 @@ def format_certificates(items: list[dict]) -> str:
     return "\n".join(lines) if items else "<b>Certificates</b>\n\nNo certificates published yet."
 
 
+def format_work_experience(items: list[dict]) -> str:
+    lines = ["<b>Work Experience</b>", ""]
+    for item in items:
+        role = clip(item.get("role"), 100)
+        organization = clip(item.get("organization"), 100)
+        period = clip(item.get("period"), 60)
+        lines.append(f"<b>{role}</b> · {organization}" + (f" · {period}" if period else ""))
+        details = [item.get("location"), item.get("employment_type")]
+        details = [esc(value) for value in details if value]
+        if details:
+            lines.append(" · ".join(details))
+        description = clip(item.get("description"), 400)
+        if description:
+            lines.append(description)
+        for highlight in (item.get("highlights") or [])[:4]:
+            lines.append("• " + clip(highlight, 240))
+        lines.append("")
+    return "\n".join(lines).rstrip() if items else "<b>Work Experience</b>\n\nNo work experience published yet."
+
+
 def certificates_keyboard(items: list[dict]) -> types.InlineKeyboardMarkup:
     rows = []
     for item in items:
@@ -378,6 +401,9 @@ async def render_resource(resource: str, page: int) -> tuple[str, types.InlineKe
     if resource == "skills":
         groups = await cached(("skills",), list_skills)
         return format_skills(groups), simple_keyboard()
+    if resource == "work-experience":
+        items = await cached(("work-experience",), list_work_experience)
+        return format_work_experience(items), simple_keyboard()
     if resource == "contact":
         links = await cached(("links",), list_contact_links)
         return format_contact(links), contact_keyboard(links)

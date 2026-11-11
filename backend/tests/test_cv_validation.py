@@ -1,7 +1,9 @@
 import pytest
 from fastapi import HTTPException
+from types import SimpleNamespace
 
 from app.main import _apply_cv_patch, _validate_cv_patch
+from app.services import cv as cv_service
 from app.services.cv import validate_cv_data
 
 
@@ -86,6 +88,26 @@ def test_cv_json_defaults_and_accepts_work_experience():
 def test_cv_json_rejects_invalid_work_experience(work_experience):
     with pytest.raises(HTTPException, match="work[_ ]experience"):
         validate_cv_data(base_cv() | {"work_experience": work_experience})
+
+
+def test_base_cv_render_uses_visible_managed_work_experience(monkeypatch):
+    record = SimpleNamespace(
+        role="Software Engineer", organization="Example Co.", location="Nairobi", period="2023-present",
+        employment_type="Full-time", description="Built backend services", highlights=["Improved reliability"],
+    )
+
+    class FakeDb:
+        def scalars(self, _query):
+            return SimpleNamespace(all=lambda: [record])
+
+    monkeypatch.setattr(cv_service, "get_cv_base", lambda _db: {"data": base_cv()})
+    monkeypatch.setattr(cv_service, "_render_and_store", lambda _db, data, *_args: data)
+    rendered = cv_service.render_base_cv(FakeDb())
+    assert rendered["work_experience"] == [{
+        "role": "Software Engineer", "organization": "Example Co.", "location": "Nairobi",
+        "period": "2023-present", "employment_type": "Full-time",
+        "description": "Built backend services", "highlights": ["Improved reliability"],
+    }]
 
 
 @pytest.mark.parametrize("referees", [

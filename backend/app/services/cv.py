@@ -396,6 +396,18 @@ def apply_cv_patch(base: dict, patch: dict) -> dict:
     return tailored
 
 
+def _managed_work_experience(db: Session) -> list[dict]:
+    return [
+        {"role": item.role, "organization": item.organization, "location": item.location, "period": item.period,
+         "employment_type": item.employment_type, "description": _plain_text(item.description),
+         "highlights": [str(point) for point in (item.highlights or [])][:5]}
+        for item in db.scalars(
+            select(WorkExperience).where(WorkExperience.is_visible.is_(True))
+            .order_by(WorkExperience.custom_order, WorkExperience.id)
+        ).all()
+    ]
+
+
 def render_cv(db: Session, payload: dict) -> dict:
     """Render a tailored CV from the reviewed CV JSON and store its snapshot."""
     base = get_cv_base(db)["data"]
@@ -403,6 +415,9 @@ def render_cv(db: Session, payload: dict) -> dict:
         raise HTTPException(status_code=409, detail="Approved CV JSON changed while this proposal was pending; run /apply again")
     patch = validate_cv_patch(payload.get("patch") or {})
     data = apply_cv_patch(base, patch)
+    managed_experience = _managed_work_experience(db)
+    if managed_experience:
+        data["work_experience"] = managed_experience
     job_description = str(payload.get("job_description") or "").strip()
     label = str(payload.get("label") or "Tailored CV")[:255]
     if not job_description:
@@ -429,6 +444,9 @@ def _render_and_store(db: Session, data: dict, label: str, job_description: str,
 
 
 def render_base_cv(db: Session) -> dict:
-    """Render the approved CV JSON as-is; this path does not call an LLM."""
+    """Render approved CV content with the current visible portfolio work history."""
     data = get_cv_base(db)["data"]
+    managed_experience = _managed_work_experience(db)
+    if managed_experience:
+        data["work_experience"] = managed_experience
     return _render_and_store(db, data, "Current Portfolio CV", "Approved CV JSON", {}, data)

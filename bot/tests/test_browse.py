@@ -57,6 +57,24 @@ def test_format_entry_list_empty_state():
     assert "No events published yet." in browse.format_entry_list("Events", [], 1, 0)
 
 
+def test_start_menu_contains_work_experience_browse_option():
+    keyboard = browse.menu_keyboard()
+    buttons = [button for row in keyboard.inline_keyboard for button in row]
+    work_button = next(button for button in buttons if button.callback_data == "pub:list:work-experience")
+    assert work_button.text == "Work Experience"
+    assert "work-experience" in browse.RESOURCE_LABELS
+
+
+def test_format_work_experience_includes_role_employer_and_highlights():
+    text = browse.format_work_experience([{
+        "role": "Software Engineer", "organization": "Example Co.", "period": "2023-present",
+        "location": "Nairobi", "highlights": ["Improved API reliability"],
+    }])
+    assert "Work Experience" in text
+    assert "Software Engineer" in text and "Example Co." in text
+    assert "2023-present" in text and "Improved API reliability" in text
+
+
 def test_entry_list_keyboard_navigation_bounds():
     entries = [{"title": f"Item {index}"} for index in range(5)]
     first = browse.entry_list_keyboard("projects", entries, 1, 12)
