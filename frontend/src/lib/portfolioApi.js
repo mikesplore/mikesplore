@@ -109,6 +109,10 @@ export function fetchEducation(signal) {
   return fetchJson('/education', signal);
 }
 
+export function fetchWorkExperience(signal) {
+  return fetchJson('/work-experience', signal);
+}
+
 export function fetchCounts(signal) {
   return fetchJson('/counts', signal);
 }

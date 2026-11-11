@@ -162,6 +162,21 @@ def render(data, out_path):
                 story.append(Paragraph(esc(p["stack"]), styles["ProjectMeta"]))
             story.extend(bullets([esc(item) for item in p["bullets"][:3]], styles))
 
+    # Work experience
+    if data.get("work_experience"):
+        section_header("Work Experience", styles, story)
+        for job in data["work_experience"]:
+            role = esc(job.get("role"))
+            period = esc(job.get("period"))
+            title_line = f"{role}  <font color='#555555'>- {period}</font>" if period else role
+            story.append(Paragraph(title_line, styles["ProjectTitle"]))
+            organization = " · ".join(esc(value) for value in (job.get("organization"), job.get("location"), job.get("employment_type")) if value)
+            if organization:
+                story.append(Paragraph(organization, styles["ProjectMeta"]))
+            if job.get("description"):
+                story.append(Paragraph(esc(job["description"]), styles["Body"]))
+            story.extend(bullets([esc(item) for item in (job.get("highlights") or [])[:5]], styles))
+
     # Certifications
     if data["certifications"]:
         section_header("Certifications & Competitions", styles, story)

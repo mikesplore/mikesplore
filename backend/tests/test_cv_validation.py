@@ -67,6 +67,27 @@ def test_cv_json_accepts_reference_with_contact_details():
     assert validate_cv_data(data)["referees"][0]["name"] == "Jane Doe"
 
 
+def test_cv_json_defaults_and_accepts_work_experience():
+    assert validate_cv_data(base_cv())["work_experience"] == []
+    data = base_cv() | {"work_experience": [{
+        "role": "Software Engineer", "organization": "Example Co.", "period": "2023-present",
+        "highlights": ["Shipped a product"],
+    }]}
+    assert validate_cv_data(data)["work_experience"][0]["organization"] == "Example Co."
+
+
+@pytest.mark.parametrize("work_experience", [
+    "Engineer at Example Co.",
+    [{"role": "Engineer"}],
+    [{"organization": "Example Co."}],
+    [{"role": "Engineer", "organization": "Example Co.", "highlights": "shipped"}],
+    [{"role": "Engineer", "organization": "Example Co.", "unexpected": "field"}],
+])
+def test_cv_json_rejects_invalid_work_experience(work_experience):
+    with pytest.raises(HTTPException, match="work[_ ]experience"):
+        validate_cv_data(base_cv() | {"work_experience": work_experience})
+
+
 @pytest.mark.parametrize("referees", [
     "Jane Doe",
     [{"title": "Manager", "email": "jane@example.com"}],

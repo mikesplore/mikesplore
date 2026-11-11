@@ -111,6 +111,8 @@ ALIASES = {
     "contact": "links",
     "skill": "skills",
     "education": "education",
+    "experience": "work-experience",
+    "work": "work-experience",
     "bucket": "bucket-list",
     "certificate": "certificates",
 }
@@ -242,6 +244,23 @@ RESOURCES: dict[str, dict] = {
             _field("custom_order", "List order", "int"),
         ],
     },
+    "work-experience": {
+        "label": "Work experience",
+        "kind": "collection",
+        "write": "work-experience",
+        "create_queue": ["role", "organization"],
+        "fields": [
+            _field("role", "Role", "text"),
+            _field("organization", "Organization", "text"),
+            _field("location", "Location", "text", nullable=True),
+            _field("period", "Period", "text", nullable=True),
+            _field("employment_type", "Employment type", "text", nullable=True),
+            _field("description", "Description", "textarea", nullable=True),
+            _field("highlights", "Highlights", "tags"),
+            _field("custom_order", "List order", "int"),
+            _field("is_visible", "Visible", "bool"),
+        ],
+    },
     "bucket-list": {
         "label": "Bucket list",
         "kind": "collection",
@@ -277,6 +296,7 @@ RESOURCE_ORDER = [
     "links",
     "skills",
     "education",
+    "work-experience",
     "bucket-list",
     "certificates",
 ]

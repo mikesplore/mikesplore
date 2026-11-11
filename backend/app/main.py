@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from .auth import require_service_key
 from .config import settings
 from .db import get_db
-from .models import BucketListItem, Certificate, Education, Entry, EntryAsset, LLMUsage, Profile, ProfileLink, SkillGroup, SiteAsset, SiteSetting
+from .models import BucketListItem, Certificate, Education, Entry, EntryAsset, LLMUsage, Profile, ProfileLink, SkillGroup, SiteAsset, SiteSetting, WorkExperience
 from .routers import admin_content, admin_sync, assets, cv as cv_router, public_projects
 from .routers.assets import MAX_UPLOAD_BYTES  # noqa: F401  (kept so tests/tooling can import it from app.main)
 from .schemas import EntryRead, ProfileUpdate
@@ -78,6 +78,11 @@ def list_profile_links(db: Session = Depends(get_db)):
 @app.get("/education")
 def list_education(db: Session = Depends(get_db)):
     return db.scalars(select(Education).order_by(Education.custom_order)).all()
+
+
+@app.get("/work-experience")
+def list_work_experience(db: Session = Depends(get_db)):
+    return db.scalars(select(WorkExperience).where(WorkExperience.is_visible.is_(True)).order_by(WorkExperience.custom_order, WorkExperience.id)).all()
 
 
 @app.get("/skills")

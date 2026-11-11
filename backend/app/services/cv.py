@@ -33,6 +33,7 @@ from ..models import (
     SiteSetting,
     SkillGroup,
     Technology,
+    WorkExperience,
 )
 from .sync import slugify
 
@@ -62,6 +63,18 @@ def validate_cv_data(data: dict) -> dict:
         raise HTTPException(status_code=422, detail="CV skill items must be text")
     if any(not isinstance(item, str) for item in data["certifications"]):
         raise HTTPException(status_code=422, detail="CV certifications must be text values")
+    work_experience = data.setdefault("work_experience", [])
+    experience_fields = {"role", "organization", "location", "period", "employment_type", "description", "highlights"}
+    if not isinstance(work_experience, list):
+        raise HTTPException(status_code=422, detail="CV work_experience must be an array")
+    for job in work_experience:
+        if not isinstance(job, dict) or not isinstance(job.get("role"), str) or not job["role"].strip() or not isinstance(job.get("organization"), str) or not job["organization"].strip() or set(job) - experience_fields:
+            raise HTTPException(status_code=422, detail="Each CV work experience needs a role and organization, with optional location, period, employment_type, description, and highlights")
+        if any(key in job and job[key] is not None and not isinstance(job[key], str) for key in experience_fields - {"highlights"}):
+            raise HTTPException(status_code=422, detail="CV work experience details must be text")
+        if "highlights" in job and (not isinstance(job["highlights"], list) or any(not isinstance(item, str) for item in job["highlights"])):
+            raise HTTPException(status_code=422, detail="CV work experience highlights must be text values")
+        job["highlights"] = job.get("highlights", [])[:5]
     if "profiles" in data and (
         not isinstance(data["profiles"], list)
         or any(not isinstance(item, dict) or not isinstance(item.get("name"), str) or not isinstance(item.get("url"), str) for item in data["profiles"])
@@ -235,6 +248,12 @@ def build_cv_data(db: Session) -> dict:
         }
         for item in db.scalars(select(Education).order_by(Education.custom_order, Education.school, Education.degree, Education.id)).all()
     ]
+    work_experience = [
+        {"role": item.role, "organization": item.organization, "location": item.location, "period": item.period,
+         "employment_type": item.employment_type, "description": _plain_text(item.description),
+         "highlights": [str(point) for point in (item.highlights or [])][:5]}
+        for item in db.scalars(select(WorkExperience).where(WorkExperience.is_visible.is_(True)).order_by(WorkExperience.custom_order, WorkExperience.id)).all()
+    ]
 
     about = _plain_text(profile.about)
     language_skills = next(
@@ -262,6 +281,7 @@ def build_cv_data(db: Session) -> dict:
         "competitions": competitions_data,
         "profile_links": profile_links,
         "education": education,
+        "work_experience": work_experience,
         "additional_info": additional_info,
     }
 

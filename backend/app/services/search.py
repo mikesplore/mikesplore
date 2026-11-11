@@ -22,6 +22,7 @@ from ..models import (
     SiteSetting,
     SkillGroup,
     Technology,
+    WorkExperience,
 )
 from .cv import get_cv_base
 
@@ -52,9 +53,11 @@ def search_portfolio(db: Session, q: str, page: int, page_size: int) -> dict:
     matching_links = [item for item in links if any(word in f"{item.name} {item.label or ''} {item.handle or ''}".lower() for word in terms)]
     education = db.scalars(select(Education)).all()
     matching_education = [item for item in education if any(word in f"{item.degree} {item.school} {item.location or ''}".lower() for word in terms)]
+    work_records = db.scalars(select(WorkExperience).where(WorkExperience.is_visible.is_(True))).all()
+    matching_work = [item for item in work_records if any(word in f"{item.role} {item.organization} {item.location or ''} {item.description or ''} {' '.join(item.highlights or [])}".lower() for word in terms)]
     bucket_items = db.scalars(select(BucketListItem)).all()
     matching_bucket = [item for item in bucket_items if any(word in f"{item.title} {item.remark or ''}".lower() for word in terms)]
-    return {"profile": profile_data, "entries": entries, "certificates": certificates, "skills": skills, "links": matching_links, "education": matching_education, "bucket_list": matching_bucket, "total": total + len(certificates) + len(skills) + len(matching_links) + len(matching_education) + len(matching_bucket), "page": page, "page_size": page_size}
+    return {"profile": profile_data, "entries": entries, "certificates": certificates, "skills": skills, "links": matching_links, "education": matching_education, "work_experience": matching_work, "bucket_list": matching_bucket, "total": total + len(certificates) + len(skills) + len(matching_links) + len(matching_education) + len(matching_work) + len(matching_bucket), "page": page, "page_size": page_size}
 
 
 def admin_search(db: Session, q: str) -> list[dict]:

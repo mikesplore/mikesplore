@@ -282,12 +282,18 @@ def format_cv_sync_diff(old: dict, new: dict) -> str:
             if "bullets" in fields:
                 for bullet in (project.get("bullets") or [])[:3]:
                     lines.append("• " + html.escape(_compact(bullet, 160), quote=False))
-    for field in ("skills", "certifications", "education"):
+    for field in ("skills", "certifications", "education", "work_experience"):
         if old.get(field) != new.get(field):
             before, after = old.get(field) or [], new.get(field) or []
             lines.append(f"\n<b>{field.title()}</b>: {len(before)} → {len(after)} items")
             if field == "certifications":
                 old_set, new_set = set(map(str, before)), set(map(str, after))
+                lines.extend("Added: " + html.escape(item, quote=False) for item in sorted(new_set - old_set)[:5])
+                lines.extend("Removed: " + html.escape(item, quote=False) for item in sorted(old_set - new_set)[:5])
+            elif field == "work_experience":
+                identity = lambda item: f"{item.get('role', '')} @ {item.get('organization', '')}"
+                old_set = {identity(item) for item in before if isinstance(item, dict)}
+                new_set = {identity(item) for item in after if isinstance(item, dict)}
                 lines.extend("Added: " + html.escape(item, quote=False) for item in sorted(new_set - old_set)[:5])
                 lines.extend("Removed: " + html.escape(item, quote=False) for item in sorted(old_set - new_set)[:5])
     if old == new:

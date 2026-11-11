@@ -30,6 +30,7 @@ from ..models import (
     SkillGroup,
     Technology,
     TopologyStep,
+    WorkExperience,
 )
 from ..schemas import BulkLinkMutation, EntryCreate, EntryRead, EntryUpdate, ProfileLinkCreate, ProfileLinkUpdate
 from ..services.search import model_record
@@ -52,7 +53,7 @@ def _unique_entry_slug(title: str, db: Session) -> str:
 
 @router.post("/admin/content", dependencies=[Depends(require_service_key)])
 def manage_content(resource: str, action: str, payload: dict, response: Response, db: Session = Depends(get_db)):
-    models = {"entries": Entry, "certificates": Certificate, "assets": SiteAsset, "links": ProfileLink, "skills": SkillGroup, "education": Education, "bucket-list": BucketListItem, "settings": SiteSetting, "role-policies": RolePolicy, "entry-assets": EntryAsset, "entry-technologies": EntryTechnology, "repositories": Repository, "technologies": Technology, "topology": TopologyStep, "metrics": Metric, "decisions": ArchitectureDecision, "highlights": Highlight, "quotes": Quote, "snippets": CodeSnippet, "documents": Document, "badges": Badge}
+    models = {"entries": Entry, "certificates": Certificate, "assets": SiteAsset, "links": ProfileLink, "skills": SkillGroup, "education": Education, "work-experience": WorkExperience, "bucket-list": BucketListItem, "settings": SiteSetting, "role-policies": RolePolicy, "entry-assets": EntryAsset, "entry-technologies": EntryTechnology, "repositories": Repository, "technologies": Technology, "topology": TopologyStep, "metrics": Metric, "decisions": ArchitectureDecision, "highlights": Highlight, "quotes": Quote, "snippets": CodeSnippet, "documents": Document, "badges": Badge}
     model = models.get(resource)
     if not model or action not in {"list", "create", "update", "delete"}:
         raise HTTPException(status_code=400, detail="Unsupported resource or action")

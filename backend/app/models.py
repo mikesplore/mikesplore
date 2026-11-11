@@ -288,6 +288,20 @@ class Education(Base):
     custom_order: Mapped[int] = mapped_column(Integer, default=0)
 
 
+class WorkExperience(Base):
+    __tablename__ = "work_experience"
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    role: Mapped[str] = mapped_column(String(255))
+    organization: Mapped[str] = mapped_column(String(255))
+    location: Mapped[str | None] = mapped_column(String(255))
+    period: Mapped[str | None] = mapped_column(String(128))
+    employment_type: Mapped[str | None] = mapped_column(String(128))
+    description: Mapped[str | None] = mapped_column(Text)
+    highlights: Mapped[list] = mapped_column(JSONB, default=list)
+    custom_order: Mapped[int] = mapped_column(Integer, default=0)
+    is_visible: Mapped[bool] = mapped_column(Boolean, default=True)
+
+
 class BucketListItem(Base):
     __tablename__ = "bucket_list_items"
     id: Mapped[str] = mapped_column(String(160), primary_key=True)

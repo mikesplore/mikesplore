@@ -67,6 +67,19 @@ Supported fields include name, tagline, location, focus, experience, availabilit
 availability detail, and about text. Updates are partial: changing two fields must preserve every
 other field. Contact methods and social profiles belong in profile links, not profile text.
 
+## Work experience
+
+Manage roles as separate work experience records through `/manage`. Each record supports a role,
+organization, location, period, employment type, description, highlights, visibility, and display
+order. Visible records appear in the portfolio CV page and are included in new portfolio-to-CV
+sync proposals. Existing approved CV JSON can also carry a `work_experience` array; `/synccv`
+shows additions and removals for review before they are saved to the curated CV.
+
+```text
+Add a work experience entry for Software Engineer at Example Company, Nairobi, 2023-present
+Update my work experience highlights for Example Company
+```
+
 ## Contact and social links
 
 ```text
